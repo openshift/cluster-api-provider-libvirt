@@ -1,0 +1,15 @@
+---
+apiVersion: "cluster.k8s.io/v1alpha1"
+kind: Cluster
+metadata:
+  name: tb-asg-35
+  namespace: test
+spec:
+  clusterNetwork:
+    services:
+      cidrBlocks:
+        - ""
+    pods:
+      cidrBlocks:
+        - ""
+    serviceDomain: example.com

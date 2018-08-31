@@ -1,0 +1,98 @@
+# Gopkg.toml example
+#
+# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+
+[[constraint]]
+  name = "github.com/davecgh/go-spew"
+  version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/ghodss/yaml"
+  version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/golang/glog"
+
+[[constraint]]
+  name = "github.com/kubernetes-incubator/apiserver-builder"
+  version = "1.9.0-alpha.4"
+
+[[constraint]]
+  name = "github.com/libvirt/libvirt-go"
+  version = "4.6.0"
+
+[[constraint]]
+  name = "github.com/libvirt/libvirt-go-xml"
+  version = "4.6.0"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.0.6"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "0.0.3"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.2"
+
+[[constraint]]
+  branch = "release-1.9"
+  name = "k8s.io/api"
+
+[[constraint]]
+  branch = "release-1.9"
+  name = "k8s.io/apimachinery"
+
+[[constraint]]
+  branch = "release-1.9"
+  name = "k8s.io/apiserver"
+
+[[constraint]]
+  branch = "release-6.0"
+  name = "k8s.io/client-go"
+
+[[constraint]]
+  name = "sigs.k8s.io/cluster-api"
+  version = "0.0.0-alpha.2"
+
+[[override]]
+  name = "github.com/prometheus/client_golang"
+  revision = "ae27198cdd90bf12cd134ad79d1366a6cf49f632"
+
+[[override]]
+  name = "github.com/gogo/protobuf"
+  version = "=1.1.0"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  version = "=1.1.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
