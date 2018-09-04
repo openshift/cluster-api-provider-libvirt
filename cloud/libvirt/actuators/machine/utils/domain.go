@@ -525,7 +525,6 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, machineConfig prov
 		return fmt.Errorf("machine does not have an DomainVcpu set")
 	}
 
-	domainDef.Devices.Emulator = "/usr/bin/kvm-spice"
 	//setConsoles(d, &domainDef)
 	//setCmdlineArgs(d, &domainDef)
 	//setFirmware(d, &domainDef)
