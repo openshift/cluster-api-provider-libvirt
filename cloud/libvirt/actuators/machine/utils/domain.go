@@ -15,6 +15,7 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
+	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
@@ -374,7 +375,7 @@ func updateHost(n *libvirt.Network, ip, mac, name string) error {
 func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 	virConn *libvirt.Connect, partialNetIfaces map[string]*pendingMapping,
 	waitForLeases *[]*libvirtxml.DomainInterface,
-	networkInterfaceHostname string, networkInterfaceName string, networkInterfaceAddress string, counter int) error {
+	networkInterfaceHostname string, networkInterfaceName string, networkInterfaceAddress string, offset int) error {
 
 	// TODO: support more than 1 interface
 	for i := 0; i < 1; i++ {
@@ -414,15 +415,15 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 				if networkInterfaceHostname != "" {
 					hostname = networkInterfaceHostname
 				}
+				log.Printf("Networkaddress %v", networkInterfaceAddress)
 				if networkInterfaceAddress != "" {
-					// some IP(s) provided
-					ip := net.ParseIP(networkInterfaceAddress)
-					ip = ip.To4()
-					// check ip != nil
-					ip[3] = byte(int(ip[3]) + counter)
-					log.Printf("[INFO] Increasing IP %s", ip.String())
-					if ip == nil {
-						return fmt.Errorf("Could not parse addresses '%s'", networkInterfaceAddress)
+					_, networkCIDR, err := net.ParseCIDR(networkInterfaceAddress)
+					if err != nil {
+						return fmt.Errorf("failed to parse libvirt network ipRange: %v", err)
+					}
+					var ip net.IP
+					if ip, err = cidr.GenerateIP(networkCIDR, offset); err != nil {
+						return fmt.Errorf("failed to generate ip: %v", err)
 					}
 
 					log.Printf("[INFO] Adding IP/MAC/host=%s/%s/%s to %s", ip.String(), mac, hostname, networkName)
@@ -533,7 +534,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, machineConfig prov
 	return nil
 }
 
-func createDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, counter int) error {
+func createDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, offset int) error {
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -588,7 +589,7 @@ func createDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMa
 	partialNetIfaces := make(map[string]*pendingMapping, 1)
 	if err := setNetworkInterfaces(&domainDef, virConn, partialNetIfaces, &waitForLeases,
 		hostName, machineProviderConfig.NetworkInterfaceName,
-		machineProviderConfig.NetworkInterfaceAddress, counter); err != nil {
+		machineProviderConfig.NetworkInterfaceAddress, offset); err != nil {
 		return err
 	}
 
@@ -679,7 +680,7 @@ func deleteDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMa
 	return nil
 }
 
-func CreateVolumeAndMachine(machine *clusterv1.Machine, counter int) error {
+func CreateVolumeAndMachine(machine *clusterv1.Machine, offset int) error {
 	machineProviderConfig, err := MachineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
 	if err != nil {
 		return fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
@@ -689,7 +690,7 @@ func CreateVolumeAndMachine(machine *clusterv1.Machine, counter int) error {
 		return fmt.Errorf("error creating volume: %v", err)
 	}
 
-	if err = createDomain(machine.Name, machineProviderConfig, counter); err != nil {
+	if err = createDomain(machine.Name, machineProviderConfig, offset); err != nil {
 		return fmt.Errorf("error creating domain: %v", err)
 	}
 	return nil
