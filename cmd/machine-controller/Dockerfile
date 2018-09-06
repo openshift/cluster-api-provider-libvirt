@@ -19,7 +19,7 @@ WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 # the cluster-api-provider-libvirt directory.
 # e.g. docker build -t <tag> -f <this_Dockerfile> <path_to_cluster-api-libvirt>
 COPY . . 
-RUN yum install libvirt-devel
+RUN yum install -y libvirt-devel
 RUN CGO_ENABLED=1 go install ./cmd/machine-controller
 
 # Final container
