@@ -13,17 +13,17 @@
 # limitations under the License.
 
 # Reproducible builder image
-FROM golang:1.10.0 as builder
+FROM openshift/origin-release:golang-1.10 as builder
 WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 # This expects that the context passed to the docker build command is
 # the cluster-api-provider-libvirt directory.
 # e.g. docker build -t <tag> -f <this_Dockerfile> <path_to_cluster-api-libvirt>
 COPY . . 
-RUN apt-get update
-RUN apt-get -y install libvirt-dev
+RUN yum install -y libvirt-devel
 RUN CGO_ENABLED=1 go install ./cmd/machine-controller
 
 # Final container
-FROM debian:stretch-slim
-RUN apt-get update && apt-get install -y ca-certificates openssh-server libvirt-dev && rm -rf /var/lib/apt/lists/*
+FROM openshift/origin-base
+RUN yum install -y ca-certificates openssh
+
 COPY --from=builder /go/bin/machine-controller .
