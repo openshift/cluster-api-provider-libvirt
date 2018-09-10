@@ -25,7 +25,7 @@ depend:
 depend-update:
 	dep ensure -update
 
-libvirt:
+deps-cgo:
 	@if [ $(CONTAINERIZED) == 1 ]; then yum install -y libvirt-devel; fi
 
 generate: gendeepcopy
@@ -37,7 +37,7 @@ gendeepcopy:
 	  -O zz_generated.deepcopy \
 	  -h boilerplate.go.txt
 
-build: libvirt
+build: deps-cgo
 	CGO_ENABLED=1 go install sigs.k8s.io/cluster-api-provider-libvirt/cmd/machine-controller
 
 images:
@@ -48,10 +48,10 @@ push:
 
 check: fmt vet
 
-test: libvirt
+test: deps-cgo
 	go test -race -cover ./cmd/... ./cloud/...
 
-integration: libvirt
+integration: deps-cgo
 	go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
 fmt:
