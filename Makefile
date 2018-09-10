@@ -50,7 +50,7 @@ integration:
 	go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
 fmt:
-	hack/verify-gofmt.sh
+	hack/go-fmt.sh .
 
 vet:
-	go vet ./...
+	hack/go-vet.sh ./...
