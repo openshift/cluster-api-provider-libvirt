@@ -26,7 +26,7 @@ depend-update:
 	dep ensure -update
 
 libvirt:
-	@if [ $(CONTAINERIZED) != 1 ]; then yum install -y libvirt-devel; fi
+	@if [ $(CONTAINERIZED) == 1 ]; then yum install -y libvirt-devel; fi
 
 generate: gendeepcopy
 
