@@ -16,7 +16,7 @@
 
 all: generate build images
 
-CONTAINERIZED ?= 0
+INSTALL_DEPS ?= 0
 
 depend:
 	dep version || go get -u github.com/golang/dep/cmd/dep
@@ -26,7 +26,7 @@ depend-update:
 	dep ensure -update
 
 deps-cgo:
-	@if [ $(CONTAINERIZED) == 1 ]; then yum install -y libvirt-devel; fi
+	@if [ $(INSTALL_DEPS) == 1 ]; then yum install -y libvirt-devel; fi
 
 generate: gendeepcopy
 
