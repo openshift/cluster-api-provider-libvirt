@@ -28,6 +28,6 @@ RUN GOPATH=/go CGO_ENABLED=1 go install ./cmd/machine-controller
 
 # Final container
 FROM openshift/origin-base
-RUN yum install -y ca-certificates openssh
+RUN yum install -y ca-certificates libvirt-libs openssh
 
 COPY --from=builder /go/bin/machine-controller .
