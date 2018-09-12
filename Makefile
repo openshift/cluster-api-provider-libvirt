@@ -13,7 +13,7 @@ depend-update:
 	dep ensure -update
 
 deps-cgo:
-	@if [ $(INSTALL_DEPS) == 0 ]; then yum install -y libvirt-devel; fi
+	@if [ $(INSTALL_DEPS) == 2 ]; then yum install -y libvirt-devel; fi
 
 generate: gendeepcopy
 
