@@ -47,6 +47,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
 	a.cidrOffset++
 	if err := libvirtutils.CreateVolumeAndMachine(machine, a.cidrOffset); err != nil {
+		glog.Errorf("Coud not create libvirt machine: %v", err)
 		return fmt.Errorf("error creating machine %v", err)
 	}
 	return nil
