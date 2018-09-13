@@ -25,9 +25,10 @@ WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 COPY . .
 RUN yum install -y libvirt-devel
 RUN GOPATH=/go CGO_ENABLED=1 go install ./cmd/machine-controller
+RUN GOPATH=/go CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/controller-manager
 
 # Final container
 FROM openshift/origin-base
 RUN yum install -y ca-certificates libvirt-libs openssh
 
-COPY --from=builder /go/bin/machine-controller .
+COPY --from=builder /go/bin/machine-controller /go/bin/controller-manager .
