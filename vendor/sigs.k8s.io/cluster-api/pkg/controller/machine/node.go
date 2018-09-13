@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"sigs.k8s.io/cluster-api/pkg/controller/noderefutil"
-	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
 
 const (
@@ -154,5 +154,6 @@ func objectRef(node *corev1.Node) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		Kind: "Node",
 		Name: node.ObjectMeta.Name,
+		UID:  node.UID,
 	}
 }
