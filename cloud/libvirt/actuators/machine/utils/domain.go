@@ -1,4 +1,4 @@
-package machine
+package libvirt
 
 import (
 	"bytes"
@@ -23,7 +23,8 @@ const (
 	baseVolumePath = "/var/lib/libvirt/images/"
 )
 
-var LibVirtConIsNil string = "the libvirt connection was nil"
+// LibVirtConIsNil contains a nil connection error message
+var LibVirtConIsNil = "the libvirt connection was nil"
 
 // Client libvirt
 type Client struct {
@@ -471,8 +472,8 @@ type Config struct {
 }
 
 // Client libvirt, generate libvirt client given URI
-func buildClient(uri string) (*Client, error) {
-	libvirtClient, err := libvirt.NewConnect(uri)
+func buildClient(URI string) (*Client, error) {
+	libvirtClient, err := libvirt.NewConnect(URI)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +486,7 @@ func buildClient(uri string) (*Client, error) {
 	return client, nil
 }
 
-// MachineConfigProviderFromClusterAPIMachineSpec gets the machine provider config MachineSetSpec from the
+// MachineProviderConfigFromClusterAPIMachineSpec gets the machine provider config MachineSetSpec from the
 // specified cluster-api MachineSpec.
 func MachineProviderConfigFromClusterAPIMachineSpec(ms *clusterv1.MachineSpec) (*providerconfigv1.LibvirtMachineProviderConfig, error) {
 	if ms.ProviderConfig.Value == nil {
@@ -538,7 +539,7 @@ func createDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMa
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
-	client, err := buildClient(machineProviderConfig.Uri)
+	client, err := buildClient(machineProviderConfig.URI)
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
@@ -637,7 +638,7 @@ func createDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMa
 func deleteDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig) error {
 	log.Printf("[DEBUG] Delete a domain")
 
-	client, err := buildClient(machineProviderConfig.Uri)
+	client, err := buildClient(machineProviderConfig.URI)
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
@@ -680,6 +681,7 @@ func deleteDomain(name string, machineProviderConfig *providerconfigv1.LibvirtMa
 	return nil
 }
 
+// CreateVolumeAndMachine creates a volume and domain which consumes the former one
 func CreateVolumeAndMachine(machine *clusterv1.Machine, offset int) error {
 	machineProviderConfig, err := MachineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
 	if err != nil {
@@ -696,6 +698,7 @@ func CreateVolumeAndMachine(machine *clusterv1.Machine, offset int) error {
 	return nil
 }
 
+// DeleteVolumeAndDomain deletes a domain and its referenced volume
 func DeleteVolumeAndDomain(machine *clusterv1.Machine) error {
 	machineProviderConfig, err := MachineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
 	if err != nil {
@@ -706,17 +709,18 @@ func DeleteVolumeAndDomain(machine *clusterv1.Machine) error {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
-	if err := deleteVolume(machine.Name, machineProviderConfig.Uri); err != nil {
+	if err := deleteVolume(machine.Name, machineProviderConfig.URI); err != nil {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 	return nil
 }
 
+// DomainExists verify a domain exists for given machine
 func DomainExists(machine *clusterv1.Machine) (bool, error) {
 	log.Printf("[DEBUG] Check if a domain exists")
 
 	machineProviderConfig, err := MachineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
-	client, err := buildClient(machineProviderConfig.Uri)
+	client, err := buildClient(machineProviderConfig.URI)
 	if err != nil {
 		return false, fmt.Errorf("Failed to build libvirt client: %s", err)
 	}

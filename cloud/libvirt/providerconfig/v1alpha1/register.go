@@ -1,16 +1,16 @@
-//// Copyright © 2018 The Kubernetes Authors.
-//// Licensed under the Apache License, Version 2.0 (the "License");
-//// you may not use this file except in compliance with the License.
-//// You may obtain a copy of the License at
-////
-////     http://www.apache.org/licenses/LICENSE-2.0
-////
-//// Unless required by applicable law or agreed to in writing, software
-//// distributed under the License is distributed on an "AS IS" BASIS,
-//// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//// See the License for the specific language governing permissions and
-//// limitations under the License.
+// Copyright © 2018 The Kubernetes Authors.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package v1alpha1
 
 import (
@@ -25,26 +25,35 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig"
 )
 
+// LibvirtProviderConfigCodec contains encoder/decoder to convert this types from/to serialize data
 // +k8s:deepcopy-gen=false
 type LibvirtProviderConfigCodec struct {
 	encoder runtime.Encoder
 	decoder runtime.Decoder
 }
 
+// GroupName is the group which identify this API
 const GroupName = "libvirtproviderconfig"
 
+// SchemeGroupVersion contains the group and version which register these types
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
 
 var (
+	// SchemeBuilder contains the functions to add the libvirtProviderConfig types
 	SchemeBuilder      runtime.SchemeBuilder
 	localSchemeBuilder = &SchemeBuilder
-	AddToScheme        = localSchemeBuilder.AddToScheme
+
+	// AddToScheme applies functions to SchemeBuilder
+	AddToScheme = localSchemeBuilder.AddToScheme
 )
 
 var (
-	// Codecs for creating a server config
-	Scheme, _  = NewScheme()
-	Codecs     = serializer.NewCodecFactory(Scheme)
+	// Scheme contains the methods
+	// for serializing and deserializing these API objects
+	Scheme, _ = NewScheme()
+	// Codecs provides methods for retrieving serializers for this Scheme
+	Codecs = serializer.NewCodecFactory(Scheme)
+	// Encoder targets SchemeGroupVersionprovided
 	Encoder, _ = newEncoder(&Codecs)
 )
 
@@ -68,6 +77,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	return nil
 }
 
+// NewScheme creates a new schema with the necessary methods
+// for serializing and deserializing these API objects
 func NewScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := AddToScheme(scheme); err != nil {
@@ -80,6 +91,7 @@ func NewScheme() (*runtime.Scheme, error) {
 	return scheme, nil
 }
 
+// NewCodec returns a encode/decoder for this API
 func NewCodec() (*LibvirtProviderConfigCodec, error) {
 	scheme, err := NewScheme()
 	if err != nil {
@@ -97,6 +109,7 @@ func NewCodec() (*LibvirtProviderConfigCodec, error) {
 	return &codec, nil
 }
 
+// DecodeFromProviderConfig decodes a serialised ProviderConfig into an object
 func (codec *LibvirtProviderConfigCodec) DecodeFromProviderConfig(providerConfig clusterv1.ProviderConfig, out runtime.Object) error {
 	if providerConfig.Value != nil {
 		_, _, err := codec.decoder.Decode(providerConfig.Value.Raw, nil, out)
@@ -107,6 +120,7 @@ func (codec *LibvirtProviderConfigCodec) DecodeFromProviderConfig(providerConfig
 	return nil
 }
 
+// EncodeToProviderConfig encodes an object into a serialised ProviderConfig
 func (codec *LibvirtProviderConfigCodec) EncodeToProviderConfig(in runtime.Object) (*clusterv1.ProviderConfig, error) {
 	var buf bytes.Buffer
 	if err := codec.encoder.Encode(in, &buf); err != nil {
@@ -117,6 +131,7 @@ func (codec *LibvirtProviderConfigCodec) EncodeToProviderConfig(in runtime.Objec
 	}, nil
 }
 
+// EncodeProviderStatus encodes an object into serialised data
 func (codec *LibvirtProviderConfigCodec) EncodeProviderStatus(in runtime.Object) (*runtime.RawExtension, error) {
 	var buf bytes.Buffer
 	if err := codec.encoder.Encode(in, &buf); err != nil {
@@ -126,6 +141,7 @@ func (codec *LibvirtProviderConfigCodec) EncodeProviderStatus(in runtime.Object)
 	return &runtime.RawExtension{Raw: buf.Bytes()}, nil
 }
 
+// DecodeProviderStatus decodes a serialised providerStatus into an object
 func (codec *LibvirtProviderConfigCodec) DecodeProviderStatus(providerStatus *runtime.RawExtension, out runtime.Object) error {
 	if providerStatus != nil {
 		_, _, err := codec.decoder.Decode(providerStatus.Raw, nil, out)
