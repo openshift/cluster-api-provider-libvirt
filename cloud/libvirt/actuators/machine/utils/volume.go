@@ -1,4 +1,4 @@
-package machine
+package libvirt
 
 import (
 	"encoding/xml"
@@ -134,7 +134,7 @@ func createVolume(machineName string, machineProviderConfig *providerconfigv1.Li
 		return fmt.Errorf("machine does not has a Volume.VolumeName value")
 	}
 
-	client, err := buildClient(machineProviderConfig.Uri)
+	client, err := buildClient(machineProviderConfig.URI)
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
@@ -207,8 +207,8 @@ func createVolume(machineName string, machineProviderConfig *providerconfigv1.Li
 	return nil
 }
 
-func deleteVolume(volumeName string, uri string) error {
-	client, err := buildClient(uri)
+func deleteVolume(volumeName string, URI string) error {
+	client, err := buildClient(URI)
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
