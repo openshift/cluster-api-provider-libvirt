@@ -46,7 +46,7 @@ images:
 push:
 	$(MAKE) -C cmd/machine-controller push
 
-check: fmt vet
+check: fmt vet lint
 
 test: deps-cgo
 	go test -race -cover ./cmd/... ./cloud/...
@@ -59,3 +59,6 @@ fmt:
 
 vet:
 	hack/go-vet.sh ./...
+
+lint:
+	hack/go-lint.sh $(go list -f '{{ .ImportPath }}' ./...)
