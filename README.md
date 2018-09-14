@@ -38,4 +38,3 @@ https://github.com/openshift/installer/blob/master/examples/tectonic.libvirt.yam
 
 ## Video demo
 https://youtu.be/urvXXfdfzVc
-
