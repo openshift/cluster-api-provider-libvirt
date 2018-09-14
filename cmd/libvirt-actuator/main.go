@@ -156,7 +156,9 @@ func readClusterResources(clusterLoc, machineLoc string) (*clusterv1.Cluster, *c
 
 func createActuator(machine *clusterv1.Machine, logger *log.Entry) *machineactuator.Actuator {
 	fakeClient := fake.NewSimpleClientset(machine)
-	params := machineactuator.ActuatorParams{fakeClient}
+	params := machineactuator.ActuatorParams{
+		ClusterClient: fakeClient,
+	}
 	actuator, _ := machineactuator.NewActuator(params)
 	return actuator
 }

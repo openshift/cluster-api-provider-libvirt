@@ -72,7 +72,7 @@ func main() {
 	}
 
 	params := machineactuator.ActuatorParams{
-		client,
+		ClusterClient: client,
 	}
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {
