@@ -753,7 +753,7 @@
 
 [[projects]]
   branch = "release-6.0"
-  digest = "1:71c60c55e56bfb5c1a2b47f3059a951d4d559271238a0afa31fc5fd88a165464"
+  digest = "1:8f3109a3cf1c7476c62ddedec526c07892bb3747f863f1224a86f837b477df2d"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -862,7 +862,6 @@
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
-    "tools/leaderelection",
     "tools/leaderelection/resourcelock",
     "tools/metrics",
     "tools/pager",
@@ -894,7 +893,8 @@
   revision = "7ee50c0aa8059d610950c952a9ed7a5e33ab336a"
 
 [[projects]]
-  digest = "1:8f6a216056d0208badeb4dc6024f44b998458491cd722e217c52b20bbe6113bc"
+  branch = "master"
+  digest = "1:6ddb0e74f12dc430b6817bb32a514e8f514f35359c30fa5452c1505f96112b96"
   name = "sigs.k8s.io/cluster-api"
   packages = [
     "pkg/apis/cluster",
@@ -911,14 +911,14 @@
     "pkg/client/informers_generated/externalversions/internalinterfaces",
     "pkg/client/listers_generated/cluster/v1alpha1",
     "pkg/controller/config",
+    "pkg/controller/error",
     "pkg/controller/machine",
     "pkg/controller/noderefutil",
     "pkg/controller/sharedinformers",
-    "util",
+    "pkg/util",
   ]
-  pruneopts = "UT"
-  revision = "fbc85d97affbf5c9ad97054c66b23ad2bc0ca097"
-  version = "0.0.0-alpha.2"
+  pruneopts = "T"
+  revision = "ba672fe598bc56a7fd155cf959ca6ce6d1882cb8"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -938,18 +938,10 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/runtime/serializer",
-    "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apiserver/pkg/util/logs",
-    "k8s.io/client-go/kubernetes",
-    "k8s.io/client-go/kubernetes/typed/core/v1",
-    "k8s.io/client-go/rest",
-    "k8s.io/client-go/tools/leaderelection",
-    "k8s.io/client-go/tools/leaderelection/resourcelock",
-    "k8s.io/client-go/tools/record",
     "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1",
     "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset",
     "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/fake",
-    "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/scheme",
     "sigs.k8s.io/cluster-api/pkg/controller/config",
     "sigs.k8s.io/cluster-api/pkg/controller/machine",
     "sigs.k8s.io/cluster-api/pkg/controller/sharedinformers",

@@ -18,20 +18,25 @@ package machine
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/apiserver-builder/pkg/builders"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	"sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
 	listers "sigs.k8s.io/cluster-api/pkg/client/listers_generated/cluster/v1alpha1"
-	cfg "sigs.k8s.io/cluster-api/pkg/controller/config"
+	controllerError "sigs.k8s.io/cluster-api/pkg/controller/error"
 	"sigs.k8s.io/cluster-api/pkg/controller/sharedinformers"
-	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/pkg/util"
 )
+
+const NodeNameEnvVar = "NODE_NAME"
 
 // +controller:group=cluster,version=v1alpha1,kind=Machine,resource=machines
 type MachineControllerImpl struct {
@@ -46,6 +51,11 @@ type MachineControllerImpl struct {
 	clientSet           clientset.Interface
 	linkedNodes         map[string]bool
 	cachedReadiness     map[string]bool
+
+	// nodeName is the name of the node on which the machine controller is running, if not present, it is loaded from NODE_NAME.
+	nodeName string
+
+	informers *sharedinformers.SharedInformers
 }
 
 // Init initializes the controller and is called by the generated code
@@ -54,11 +64,18 @@ func (c *MachineControllerImpl) Init(arguments sharedinformers.ControllerInitArg
 	// Use the lister for indexing machines labels
 	c.lister = arguments.GetSharedInformers().Factory.Cluster().V1alpha1().Machines().Lister()
 
+	if c.nodeName == "" {
+		c.nodeName = os.Getenv(NodeNameEnvVar)
+		if c.nodeName == "" {
+			glog.Warningf("environment variable %v is not set, this controller will not protect against deleting its own machine", NodeNameEnvVar)
+		}
+	}
 	clientset, err := clientset.NewForConfig(arguments.GetRestConfig())
 	if err != nil {
 		glog.Fatalf("error creating machine client: %v", err)
 	}
 	c.clientSet = clientset
+	c.informers = arguments.GetSharedInformers()
 	c.kubernetesClientSet = arguments.GetSharedInformers().KubernetesClientSet
 
 	c.linkedNodes = make(map[string]bool)
@@ -74,54 +91,84 @@ func (c *MachineControllerImpl) Init(arguments sharedinformers.ControllerInitArg
 
 // Reconcile handles enqueued messages. The delete will be handled by finalizer.
 func (c *MachineControllerImpl) Reconcile(machine *clusterv1.Machine) error {
+	// Deep-copy otherwise we are mutating our cache.
+	m := machine.DeepCopy()
 	// Implement controller logic here
-	name := machine.Name
+	name := m.Name
 	glog.Infof("Running reconcile Machine for %s\n", name)
 
-	if !machine.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !m.ObjectMeta.DeletionTimestamp.IsZero() {
 		// no-op if finalizer has been removed.
-		if !util.Contains(machine.ObjectMeta.Finalizers, clusterv1.MachineFinalizer) {
+		if !util.Contains(m.ObjectMeta.Finalizers, clusterv1.MachineFinalizer) {
 			glog.Infof("reconciling machine object %v causes a no-op as there is no finalizer.", name)
 			return nil
 		}
-		// Master should not be deleted as part of reconcilation.
-		if cfg.ControllerConfig.InCluster && util.IsMaster(machine) {
-			glog.Infof("skipping reconciling master machine object %v", name)
+		if !c.isDeleteAllowed(machine) {
+			glog.Infof("Skipping reconciling of machine object %v", name)
 			return nil
 		}
 		glog.Infof("reconciling machine object %v triggers delete.", name)
-		if err := c.delete(machine); err != nil {
+		if err := c.delete(m); err != nil {
 			glog.Errorf("Error deleting machine object %v; %v", name, err)
 			return err
 		}
 
 		// Remove finalizer on successful deletion.
 		glog.Infof("machine object %v deletion successful, removing finalizer.", name)
-		machine.ObjectMeta.Finalizers = util.Filter(machine.ObjectMeta.Finalizers, clusterv1.MachineFinalizer)
-		if _, err := c.clientSet.ClusterV1alpha1().Machines(machine.Namespace).Update(machine); err != nil {
+		m.ObjectMeta.Finalizers = util.Filter(m.ObjectMeta.Finalizers, clusterv1.MachineFinalizer)
+		if _, err := c.clientSet.ClusterV1alpha1().Machines(m.Namespace).Update(m); err != nil {
 			glog.Errorf("Error removing finalizer from machine object %v; %v", name, err)
 			return err
 		}
 		return nil
 	}
 
-	cluster, err := c.getCluster(machine)
+	cluster, err := c.getCluster(m)
 	if err != nil {
 		return err
 	}
 
-	exist, err := c.actuator.Exists(cluster, machine)
+	exist, err := c.actuator.Exists(cluster, m)
 	if err != nil {
-		glog.Errorf("Error checking existance of machine instance for machine object %v; %v", name, err)
+		glog.Errorf("Error checking existence of machine instance for machine object %v; %v", name, err)
 		return err
 	}
 	if exist {
-		glog.Infof("reconciling machine object %v triggers idempotent update.", name)
-		return c.update(machine)
+		glog.Infof("Reconciling machine object %v triggers idempotent update.", name)
+		err = c.update(m)
+		if err != nil {
+			if requeueErr, ok := err.(*controllerError.RequeueAfterError); ok {
+				glog.Infof("Actuator returned requeue after error: %v", requeueErr)
+				return c.enqueueAfter(machine, requeueErr.RequeueAfter)
+			}
+		}
+		return err
 	}
 	// Machine resource created. Machine does not yet exist.
-	glog.Infof("reconciling machine object %v triggers idempotent create.", machine.ObjectMeta.Name)
-	return c.create(machine)
+	glog.Infof("Reconciling machine object %v triggers idempotent create.", m.ObjectMeta.Name)
+	if err := c.create(m); err != nil {
+		glog.Warningf("Unable to create machine %v: %v", name, err)
+		if requeueErr, ok := err.(*controllerError.RequeueAfterError); ok {
+			glog.Infof("Actuator returned requeue-after error: %v", requeueErr)
+			return c.enqueueAfter(machine, requeueErr.RequeueAfter)
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *MachineControllerImpl) enqueueAfter(machine *clusterv1.Machine, after time.Duration) error {
+	key, err := cache.MetaNamespaceKeyFunc(machine)
+	if err != nil {
+		glog.Errorf("Couldn't get key for object %+v: %v", machine, after)
+		return err
+	}
+	queue, ok := c.informers.WorkerQueues["Machine"]
+	if !ok {
+		return fmt.Errorf("Unable to find Machine worker queue")
+	}
+	queue.Queue.AddAfter(key, after)
+	return nil
 }
 
 func (c *MachineControllerImpl) Get(namespace, name string) (*clusterv1.Machine, error) {
@@ -171,4 +218,22 @@ func (c *MachineControllerImpl) getCluster(machine *clusterv1.Machine) (*cluster
 	default:
 		return nil, errors.New("multiple clusters defined")
 	}
+}
+
+func (c *MachineControllerImpl) isDeleteAllowed(machine *clusterv1.Machine) bool {
+	if c.nodeName == "" || machine.Status.NodeRef == nil {
+		return true
+	}
+	if machine.Status.NodeRef.Name != c.nodeName {
+		return true
+	}
+	node, err := c.kubernetesClientSet.CoreV1().Nodes().Get(c.nodeName, metav1.GetOptions{})
+	if err != nil {
+		glog.Infof("unable to determine if controller's node is associated with machine '%v', error getting node named '%v': %v", machine.Name, c.nodeName, err)
+		return true
+	}
+	// When the UID of the machine's node reference and this controller's actual node match then then the request is to
+	// delete the machine this machine-controller is running on. Return false to not allow machine controller to delete its
+	// own machine.
+	return node.UID != machine.Status.NodeRef.UID
 }

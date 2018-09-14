@@ -20,6 +20,7 @@ package cluster
 
 import (
 	"fmt"
+
 	"github.com/kubernetes-incubator/apiserver-builder/pkg/builders"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -151,13 +152,14 @@ type MachineStatus struct {
 	ErrorReason    *clustercommon.MachineStatusError
 	ErrorMessage   *string
 	ProviderStatus *pkgruntime.RawExtension
+	Addresses      []corev1.NodeAddress
+	Conditions     []corev1.NodeCondition
 }
 
 type MachineSpec struct {
 	metav1.ObjectMeta
 	Taints         []corev1.Taint
 	ProviderConfig ProviderConfig
-	Roles          []clustercommon.MachineRole
 	Versions       MachineVersionInfo
 	ConfigSource   *corev1.NodeConfigSource
 }
