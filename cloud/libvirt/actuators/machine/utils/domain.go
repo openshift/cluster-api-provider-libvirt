@@ -193,9 +193,13 @@ func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, err
 }
 
 func setCoreOSIgnition(domainDef *libvirtxml.Domain, ignKey string) error {
+	if ignKey == "" {
+		return fmt.Errorf("error setting coreos ignition, ignKey is empty")
+	}
 	domainDef.QEMUCommandline = &libvirtxml.DomainQEMUCommandline{
 		Args: []libvirtxml.DomainQEMUCommandlineArg{
 			{
+				// https://github.com/qemu/qemu/blob/master/docs/specs/fw_cfg.txt
 				Value: "-fw_cfg",
 			},
 			{
