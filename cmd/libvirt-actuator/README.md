@@ -6,7 +6,7 @@ The command allows to directly interact with the libvirt actuator.
 
 You'll need to install libvirt-dev installed on the system you are building and running the binary. e.g. `apt-get -y install libvirt-dev`
 ```sh
-CGO_ENABLED=1 go build -o bin/libvirt-actuator -a github.com/enxebre/cluster-api-provider-libvirt/cmd/libvirt-actuator
+CGO_ENABLED=1 go build -o bin/libvirt-actuator -a github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
 ```
 
 ## Create libvirt instance based on machine manifest
