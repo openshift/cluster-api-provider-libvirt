@@ -8,7 +8,13 @@ if [ "$PACKET_AUTH_TOKEN" == "" ]; then
     exit 1
 fi
 
-export TF_VAR_environment_id=${ENVIRONMENT_ID:-$(uuidgen | cut -c1-8)}
+# Your Packet user account
+if [ "$TF_VAR_packet_project_id" == "" ]; then
+    echo "You need to set TF_VAR_packet_project_id variable first."
+    exit 1
+fi
+
+export TF_VAR_id=${ID:-$(uuidgen | cut -c1-8)}
 
 cd ./prebuild
 case ${1} in
@@ -17,7 +23,7 @@ case ${1} in
     if [ "$TF_VAR_ssh_key_path" == "" ]; then
         echo -e "\e[33mCreating temporary SSH file\e[0m"
         ssh-keygen -t rsa -b 4096 -C "temporary packet.net key" -P "" -f "/tmp/packet_id_rsa" -q
-        ssh_path="/tmp/packet_id_rsa.pub"
+        ssh_path="/tmp/packet_id_rsa"
     fi
     terraform init -input=false
     terraform plan -input=false -out=tfplan.out && terraform apply -input=false -auto-approve tfplan.out
@@ -28,7 +34,7 @@ case ${1} in
     ;;
   "destroy")
     terraform destroy -input=false -auto-approve
-    rm /tmp/packet_id_rsa* || :
+    rm /tmp/packet_id_rsa* 2>/dev/null || :
     ;;
   *)
     echo "Use '$0 install' or '$0 destroy'."

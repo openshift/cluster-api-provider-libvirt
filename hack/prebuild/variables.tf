@@ -3,7 +3,12 @@ variable "ssh_key_path" {
   default = "/tmp/packet_id_rsa.pub"
 }
 
-variable "environment_id" {
+variable "id" {
   type    = "string"
-  default = "testHypervisor"
+  default = "randomid"
+}
+
+variable "packet_project_id" {
+  type    = "string"
+  default = ""
 }
