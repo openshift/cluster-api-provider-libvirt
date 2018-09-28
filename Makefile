@@ -52,13 +52,19 @@ test: # Run unit test
 integration: deps-cgo ## Run integration test
 	go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
+.PHONY: e2e
+e2e: deps-cgo ## Run end-to-end test
+	hack/packet-provision.sh install
+	#TODO run tests
+	hack/packet-provision.sh destroy
+
 .PHONY: lint
 lint: ## Go lint your code
 	hack/go-lint.sh -min_confidence 0.3 $(go list -f '{{ .ImportPath }}' ./...)
 
 .PHONY: fmt
 fmt: ## Go fmt your code
-	hack/verify-gofmt.sh
+	hack/go-fmt.sh
 
 .PHONY: vet
 vet: ## Apply go vet to all go files
