@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set +e
+set -e
 
 # Your Packet user account
 if [ "$PACKET_AUTH_TOKEN" == "" ]; then
@@ -26,7 +26,8 @@ case ${1} in
         ssh_path="/tmp/packet_id_rsa"
     fi
     terraform init -input=false
-    terraform plan -input=false -out=tfplan.out && terraform apply -input=false -auto-approve tfplan.out
+    terraform plan -input=false -out=tfplan.out
+    terraform apply -input=false -auto-approve tfplan.out
     echo -e "\e[32m"
     echo -e "*** Your packet.net host is called ${TF_VAR_environment_id}"
     echo -e "*** You can also access it via SSH with key located in ${ssh_path}"
