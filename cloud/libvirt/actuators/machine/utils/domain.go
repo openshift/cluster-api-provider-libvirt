@@ -38,6 +38,7 @@ type pendingMapping struct {
 }
 
 func newDomainDef() libvirtxml.Domain {
+	serialPort := uint(0)
 	domainDef := libvirtxml.Domain{
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
@@ -75,6 +76,17 @@ func newDomainDef() libvirtxml.Domain {
 					Model: "virtio",
 					Backend: &libvirtxml.DomainRNGBackend{
 						Random: &libvirtxml.DomainRNGBackendRandom{},
+					},
+				},
+			},
+			Consoles: []libvirtxml.DomainConsole{
+				libvirtxml.DomainConsole{
+					Source: &libvirtxml.DomainChardevSource{
+						Pty: &libvirtxml.DomainChardevSourcePty{},
+					},
+					Target: &libvirtxml.DomainConsoleTarget{
+						Type: "virtio",
+						Port: &serialPort,
 					},
 				},
 			},
