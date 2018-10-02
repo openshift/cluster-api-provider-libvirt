@@ -7,7 +7,7 @@ variable "base_domain" {
 variable "libvirt_uri" {
   type        = "string"
   description = "libvirt connection URI"
-  default     = "qemu+tcp://192.168.122.1/system"
+  default     = "qemu:///system"
 }
 
 variable "libvirt_network_name" {
@@ -40,4 +40,22 @@ variable "libvirt_resolver" {
 variable "libvirt_base_image" {
   type    = "string"
   default = "http://aos-ostree.rhev-ci-vms.eng.rdu2.redhat.com/rhcos/images/cloud/latest/rhcos-qemu.qcow2.gz"
+}
+
+# Ignition
+
+variable "ignition_volumes" {
+  type        = "list"
+  description = "list of ignition volumes to be created"
+
+  default = [
+    "bootstrap.ign",
+    "worker.ign",
+    "master.ign",
+  ]
+}
+
+variable "ssh_key" {
+  type        = "string"
+  description = "Contents of your SSH public key"
 }

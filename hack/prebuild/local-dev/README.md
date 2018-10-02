@@ -34,11 +34,11 @@ EOF
 
 ## Run terraform
 ```
-> terraform init
-> terraform apply
+terraform init
+terraform apply
 ```
 
 To clean-up:
 ```
-> terraform destroy
+terraform destroy
 ```
