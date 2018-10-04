@@ -1,7 +1,8 @@
 #/bin/bash
 
-yum install -y -d1 libvirt libvirt-daemon-kvm
-usermod -aG libvirt root
+apt-get update
+apt-get install -y libvirt-bin
+usermod -aG libvirtd root
 
 # Enable ssh+qemu access mode
 cat <<EOF > /etc/libvirt/libvirtd.conf
@@ -21,4 +22,4 @@ EOF
 #echo 'LIBVIRTD_ARGS="--listen"' >> /etc/sysconfig/libvirtd
 #iptables -I INPUT -p tcp --dport 16509 -j ACCEPT -m comment --comment "Allow insecure libvirt clients"
 
-systemctl start libvirtd
+systemctl restart libvirtd

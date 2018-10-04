@@ -7,7 +7,7 @@ resource "packet_device" "libvirt" {
   hostname         = "libvirt-${var.id}"
   plan             = "baremetal_0"
   facility         = "ewr1"
-  operating_system = "centos_7"
+  operating_system = "ubuntu_16_04"
   billing_cycle    = "hourly"
   project_id       = "${var.packet_project_id}"
   user_data        = "#!/bin/bash\nsed -i 's/PasswordAuthentication.*$/PasswordAuthentication yes/g' /etc/ssh/sshd_config && systemctl restart sshd"
