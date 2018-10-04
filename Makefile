@@ -31,7 +31,7 @@ deps-cgo:
 	@if [ $(INSTALL_DEPS) == 1 ]; then yum install -y libvirt-devel; fi
 
 build: deps-cgo ## build binary
-	CGO_ENABLED=1 go install sigs.k8s.io/cluster-api-provider-libvirt/cmd/machine-controller
+	CGO_ENABLED=1 go build -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
 
 .PHONY: images
 images: ## Create images
