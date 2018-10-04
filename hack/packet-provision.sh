@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+script_dir="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd -P)"
+
 # Your Packet user account
 if [ "$PACKET_AUTH_TOKEN" == "" ]; then
     echo "You need to set PACKET_AUTH_TOKEN variable first."
@@ -16,7 +18,8 @@ fi
 
 export TF_VAR_id=${ID:-$(uuidgen | cut -c1-8)}
 
-cd ./prebuild
+pushd $script_dir/prebuild
+
 case ${1} in
   "install")
     ssh_path="$TF_VAR_ssh_key_path"
