@@ -18,6 +18,7 @@ import (
 
 	"github.com/golang/glog"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	clusterclient "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
 )
@@ -46,7 +47,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
 	a.cidrOffset++
-	if err := libvirtutils.CreateVolumeAndMachine(machine, a.cidrOffset); err != nil {
+	if err := createVolumeAndDomain(machine, a.cidrOffset); err != nil {
 		glog.Errorf("Could not create libvirt machine: %v", err)
 		return fmt.Errorf("error creating machine %v", err)
 	}
@@ -56,7 +57,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
-	return libvirtutils.DeleteVolumeAndDomain(machine)
+	return deleteVolumeAndDomain(machine)
 }
 
 // Update updates a machine and is invoked by the Machine Controller
@@ -68,5 +69,98 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
-	return libvirtutils.DomainExists(machine)
+
+	// decode config
+	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	if err != nil {
+		return false, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+	}
+
+	// build libvirtd client
+	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
+	if err != nil {
+		return false, fmt.Errorf("Failed to build libvirt client: %s", err)
+	}
+	return libvirtutils.DomainExists(machine.Name, client)
+}
+
+// CreateVolumeAndMachine creates a volume and domain which consumes the former one
+func createVolumeAndDomain(machine *clusterv1.Machine, offset int) error {
+	// decode config
+	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	if err != nil {
+		return fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+	}
+
+	// build libvirtd client
+	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
+	if err != nil {
+		return fmt.Errorf("failed to build libvirt client: %v", err)
+	}
+
+	// TODO(alberto) create struct and function for converting machineconfig->libvirtConfig
+	name := machine.Name
+	baseVolume := machineProviderConfig.Volume.BaseVolumeID
+	pool := machineProviderConfig.Volume.PoolName
+	ignKey := machineProviderConfig.IgnKey
+	networkInterfaceName := machineProviderConfig.NetworkInterfaceName
+	networkInterfaceAddress := machineProviderConfig.NetworkInterfaceAddress
+	autostart := machineProviderConfig.Autostart
+	memory := machineProviderConfig.DomainMemory
+	vcpu := machineProviderConfig.DomainVcpu
+
+	// Create volume
+	if err := libvirtutils.CreateVolume(name, pool, baseVolume, "", "qcow2", client); err != nil {
+		return fmt.Errorf("error creating volume: %v", err)
+	}
+
+	// Create domain
+	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client); err != nil {
+		return fmt.Errorf("error creating domain: %v", err)
+	}
+	return nil
+}
+
+// deleteVolumeAndDomain deletes a domain and its referenced volume
+func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
+	// decode config
+	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	name := machine.Name
+	if err != nil {
+		return fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+	}
+
+	// build libvirtd client
+	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
+	if err != nil {
+		return fmt.Errorf("Failed to build libvirt client: %s", err)
+	}
+
+	// delete domain
+	if err := libvirtutils.DeleteDomain(name, client); err != nil {
+		return fmt.Errorf("error deleting domain: %v", err)
+	}
+
+	// delete volume
+	if err := libvirtutils.DeleteVolume(name, client); err != nil {
+		return fmt.Errorf("error deleting volume: %v", err)
+	}
+	return nil
+}
+
+// MachineProviderConfigFromClusterAPIMachineSpec gets the machine provider config MachineSetSpec from the
+// specified cluster-api MachineSpec.
+func machineProviderConfigFromClusterAPIMachineSpec(ms *clusterv1.MachineSpec) (*providerconfigv1.LibvirtMachineProviderConfig, error) {
+	if ms.ProviderConfig.Value == nil {
+		return nil, fmt.Errorf("no Value in ProviderConfig")
+	}
+	obj, gvk, err := providerconfigv1.Codecs.UniversalDecoder(providerconfigv1.SchemeGroupVersion).Decode([]byte(ms.ProviderConfig.Value.Raw), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	spec, ok := obj.(*providerconfigv1.LibvirtMachineProviderConfig)
+	if !ok {
+		return nil, fmt.Errorf("unexpected object when parsing machine provider config: %#v", gvk)
+	}
+	return spec, nil
 }

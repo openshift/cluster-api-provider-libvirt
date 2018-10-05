@@ -20,18 +20,11 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
+	"github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-
-	"github.com/ghodss/yaml"
-	machineactuator "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine"
-
-	"sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/fake"
 )
 
 func usage() {
@@ -54,7 +47,7 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := readClusterResources(
+			cluster, machine, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
 				cmd.Flag("machine").Value.String(),
 			)
@@ -62,7 +55,7 @@ func init() {
 				return err
 			}
 
-			actuator := createActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
 			err = actuator.Create(cluster, machine)
 			if err != nil {
 				return err
@@ -79,7 +72,7 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := readClusterResources(
+			cluster, machine, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
 				cmd.Flag("machine").Value.String(),
 			)
@@ -87,7 +80,7 @@ func init() {
 				return err
 			}
 
-			actuator := createActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
 			err = actuator.Delete(cluster, machine)
 			if err != nil {
 				return err
@@ -104,14 +97,14 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := readClusterResources(
+			cluster, machine, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
 				cmd.Flag("machine").Value.String())
 			if err != nil {
 				return err
 			}
 
-			actuator := createActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
 			exists, err := actuator.Exists(cluster, machine)
 			if err != nil {
 				return err
@@ -124,43 +117,6 @@ func init() {
 			return nil
 		},
 	})
-}
-
-func readClusterResources(clusterLoc, machineLoc string) (*clusterv1.Cluster, *clusterv1.Machine, error) {
-	machine := &clusterv1.Machine{}
-	{
-		bytes, err := ioutil.ReadFile(machineLoc)
-		if err != nil {
-			return nil, nil, fmt.Errorf("machine manifest %q: %v", machineLoc, err)
-		}
-
-		if err = yaml.Unmarshal(bytes, &machine); err != nil {
-			return nil, nil, fmt.Errorf("machine manifest %q: %v", machineLoc, err)
-		}
-	}
-
-	cluster := &clusterv1.Cluster{}
-	{
-		bytes, err := ioutil.ReadFile(clusterLoc)
-		if err != nil {
-			return nil, nil, fmt.Errorf("cluster manifest %q: %v", clusterLoc, err)
-		}
-
-		if err = yaml.Unmarshal(bytes, &cluster); err != nil {
-			return nil, nil, fmt.Errorf("cluster manifest %q: %v", clusterLoc, err)
-		}
-	}
-
-	return cluster, machine, nil
-}
-
-func createActuator(machine *clusterv1.Machine, logger *log.Entry) *machineactuator.Actuator {
-	fakeClient := fake.NewSimpleClientset(machine)
-	params := machineactuator.ActuatorParams{
-		ClusterClient: fakeClient,
-	}
-	actuator, _ := machineactuator.NewActuator(params)
-	return actuator
 }
 
 func checkFlags(cmd *cobra.Command) error {
