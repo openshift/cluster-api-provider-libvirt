@@ -127,6 +127,7 @@ type DomainDiskSource struct {
 	Network       *DomainDiskSourceNetwork `xml:"-"`
 	Volume        *DomainDiskSourceVolume  `xml:"-"`
 	StartupPolicy string                   `xml:"startupPolicy,attr,omitempty"`
+	Index         uint                     `xml:"index,attr,omitempty"`
 	Encryption    *DomainDiskEncryption    `xml:"encryption"`
 	Reservations  *DomainDiskReservations  `xml:"reservations"`
 }
@@ -146,13 +147,22 @@ type DomainDiskSourceDir struct {
 }
 
 type DomainDiskSourceNetwork struct {
-	Protocol string                           `xml:"protocol,attr,omitempty"`
-	Name     string                           `xml:"name,attr,omitempty"`
-	TLS      string                           `xml:"tls,attr,omitempty"`
-	Hosts    []DomainDiskSourceHost           `xml:"host"`
-	Snapshot *DomainDiskSourceNetworkSnapshot `xml:"snapshot"`
-	Config   *DomainDiskSourceNetworkConfig   `xml:"config"`
-	Auth     *DomainDiskAuth                  `xml:"auth"`
+	Protocol  string                            `xml:"protocol,attr,omitempty"`
+	Name      string                            `xml:"name,attr,omitempty"`
+	TLS       string                            `xml:"tls,attr,omitempty"`
+	Hosts     []DomainDiskSourceHost            `xml:"host"`
+	Initiator *DomainDiskSourceNetworkInitiator `xml:"initiator"`
+	Snapshot  *DomainDiskSourceNetworkSnapshot  `xml:"snapshot"`
+	Config    *DomainDiskSourceNetworkConfig    `xml:"config"`
+	Auth      *DomainDiskAuth                   `xml:"auth"`
+}
+
+type DomainDiskSourceNetworkInitiator struct {
+	IQN *DomainDiskSourceNetworkIQN `xml:"iqn"`
+}
+
+type DomainDiskSourceNetworkIQN struct {
+	Name string `xml:"name,attr,omitempty"`
 }
 
 type DomainDiskSourceNetworkSnapshot struct {
@@ -1828,15 +1838,18 @@ type DomainFeatureHyperVSpinlocks struct {
 
 type DomainFeatureHyperV struct {
 	DomainFeature
-	Relaxed   *DomainFeatureState           `xml:"relaxed"`
-	VAPIC     *DomainFeatureState           `xml:"vapic"`
-	Spinlocks *DomainFeatureHyperVSpinlocks `xml:"spinlocks"`
-	VPIndex   *DomainFeatureState           `xml:"vpindex"`
-	Runtime   *DomainFeatureState           `xml:"runtime"`
-	Synic     *DomainFeatureState           `xml:"synic"`
-	STimer    *DomainFeatureState           `xml:"stimer"`
-	Reset     *DomainFeatureState           `xml:"reset"`
-	VendorId  *DomainFeatureHyperVVendorId  `xml:"vendor_id"`
+	Relaxed         *DomainFeatureState           `xml:"relaxed"`
+	VAPIC           *DomainFeatureState           `xml:"vapic"`
+	Spinlocks       *DomainFeatureHyperVSpinlocks `xml:"spinlocks"`
+	VPIndex         *DomainFeatureState           `xml:"vpindex"`
+	Runtime         *DomainFeatureState           `xml:"runtime"`
+	Synic           *DomainFeatureState           `xml:"synic"`
+	STimer          *DomainFeatureState           `xml:"stimer"`
+	Reset           *DomainFeatureState           `xml:"reset"`
+	VendorId        *DomainFeatureHyperVVendorId  `xml:"vendor_id"`
+	Frequencies     *DomainFeatureState           `xml:"frequencies"`
+	ReEnlightenment *DomainFeatureState           `xml:"reenlightenment"`
+	TLBFlush        *DomainFeatureState           `xml:"tlbflush"`
 }
 
 type DomainFeatureKVM struct {
@@ -2000,6 +2013,16 @@ type DomainCPUCacheTuneCache struct {
 	Unit  string `xml:"unit,attr"`
 }
 
+type DomainCPUMemoryTune struct {
+	VCPUs string                    `xml:"vcpus,attr"`
+	Nodes []DomainCPUMemoryTuneNode `xml:"node"`
+}
+
+type DomainCPUMemoryTuneNode struct {
+	ID        uint `xml:"id,attr"`
+	Bandwidth uint `xml:"bandwidth,attr"`
+}
+
 type DomainCPUTune struct {
 	Shares         *DomainCPUTuneShares         `xml:"shares"`
 	Period         *DomainCPUTunePeriod         `xml:"period"`
@@ -2016,6 +2039,7 @@ type DomainCPUTune struct {
 	VCPUSched      []DomainCPUTuneVCPUSched     `xml:"vcpusched"`
 	IOThreadSched  []DomainCPUTuneIOThreadSched `xml:"iothreadsched"`
 	CacheTune      []DomainCPUCacheTune         `xml:"cachetune"`
+	MemoryTune     []DomainCPUMemoryTune        `xml:"memorytune"`
 }
 
 type DomainQEMUCommandlineArg struct {
