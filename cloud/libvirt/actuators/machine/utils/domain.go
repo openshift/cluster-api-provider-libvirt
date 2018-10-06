@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"math/rand"
 
@@ -25,6 +26,10 @@ const (
 
 // LibVirtConIsNil contains a nil connection error message
 var LibVirtConIsNil = "the libvirt connection was nil"
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 // Client libvirt
 type Client struct {
