@@ -21,7 +21,7 @@ cat <<EOF > /etc/default/kubelet
 KUBELET_KUBEADM_EXTRA_ARGS=--cgroup-driver=systemd
 EOF
 echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
-kubeadm init --apiserver-bind-port 8443 --token 2iqzqm.85bs0x6miyx1nm7l --pod-network-cidr=192.168.0.0/16 -v 6
+kubeadm init --apiserver-bind-port 8443 --token 2iqzqm.85bs0x6miyx1nm7l --apiserver-cert-extra-sans=127.0.0.1 --pod-network-cidr=192.168.0.0/16 -v 6
 # Enable networking by default.
 kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml --kubeconfig /etc/kubernetes/admin.conf
 mkdir -p /root/.kube
