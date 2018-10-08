@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/cluster-api/pkg/controller/config"
 	"sigs.k8s.io/cluster-api/pkg/controller/machine"
@@ -64,6 +65,11 @@ func main() {
 		glog.Fatalf("Could not create client for talking to the apiserver: %v", err)
 	}
 
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Could not create kubernetes client to talk to the apiserver: %v", err)
+	}
+
 	log.SetOutput(os.Stdout)
 	if lvl, err := log.ParseLevel(logLevel); err != nil {
 		log.Panic(err)
@@ -73,6 +79,7 @@ func main() {
 
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client,
+		KubeClient:    kubeClient,
 	}
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {

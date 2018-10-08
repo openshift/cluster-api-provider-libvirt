@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
-	actuator "github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+
+	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
+	actuator "github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 // Test cases
@@ -54,9 +55,10 @@ var rootCmd = &cobra.Command{
 
 		for _, test := range testCases {
 			// create machine to manually test
-			cluster, machine, err := actuator.ReadClusterResources(
+			cluster, machine, _, err := actuator.ReadClusterResources(
 				path.Join(manifestsDir, "cluster.yaml"),
 				path.Join(manifestsDir, test.machineFile),
+				"",
 			)
 			name := machine.Name
 			if err != nil {
@@ -64,7 +66,7 @@ var rootCmd = &cobra.Command{
 				return err
 			}
 
-			actuator := actuator.CreateActuator(machine, log.WithField("example", "create-machine"))
+			actuator := actuator.CreateActuator(machine, nil, log.WithField("example", "create-machine"))
 			err = actuator.Create(cluster, machine)
 			if err != nil {
 				return err

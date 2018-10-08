@@ -39,6 +39,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringP("machine", "m", "", "Machine manifest")
 	rootCmd.PersistentFlags().StringP("cluster", "c", "", "Cluster manifest")
+	rootCmd.PersistentFlags().StringP("userdata", "u", "", "User data manifest")
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "create",
@@ -47,20 +48,21 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := utils.ReadClusterResources(
+			cluster, machine, userData, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
 				cmd.Flag("machine").Value.String(),
+				cmd.Flag("userdata").Value.String(),
 			)
 			if err != nil {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
 			err = actuator.Create(cluster, machine)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Machine creation was successful!")
+			fmt.Printf("Machine creation was successful!\n")
 			return nil
 		},
 	})
@@ -72,15 +74,17 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := utils.ReadClusterResources(
+
+			cluster, machine, userData, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
 				cmd.Flag("machine").Value.String(),
+				cmd.Flag("userdata").Value.String(),
 			)
 			if err != nil {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
 			err = actuator.Delete(cluster, machine)
 			if err != nil {
 				return err
@@ -97,14 +101,17 @@ func init() {
 			if err := checkFlags(cmd); err != nil {
 				return err
 			}
-			cluster, machine, err := utils.ReadClusterResources(
+
+			cluster, machine, userData, err := utils.ReadClusterResources(
 				cmd.Flag("cluster").Value.String(),
-				cmd.Flag("machine").Value.String())
+				cmd.Flag("machine").Value.String(),
+				cmd.Flag("userdata").Value.String(),
+			)
 			if err != nil {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
 			exists, err := actuator.Exists(cluster, machine)
 			if err != nil {
 				return err

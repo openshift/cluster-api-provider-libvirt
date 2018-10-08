@@ -10,11 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"math/rand"
 
 	"github.com/davecgh/go-spew/spew"
 	libvirt "github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
 )
 
@@ -447,7 +450,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	return nil
 }
 
-func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress string, autostart bool, memory, vcpu, offset int, client *Client) error {
+func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -470,8 +473,12 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		if err := setCoreOSIgnition(&domainDef, ignKey); err != nil {
 			return err
 		}
+	} else if cloudInit != nil {
+		if err := setCloudInit(&domainDef, cloudInit, kubeClient, machineNamespace); err != nil {
+			return err
+		}
 	} else {
-		return fmt.Errorf("machine does not has a IgnKey value")
+		return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
 	}
 
 	log.Printf("[INFO] setDisks")

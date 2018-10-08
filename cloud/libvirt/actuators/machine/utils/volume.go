@@ -3,12 +3,13 @@ package libvirt
 import (
 	"encoding/xml"
 	"fmt"
-	libvirt "github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	libvirt "github.com/libvirt/libvirt-go"
+	"github.com/libvirt/libvirt-go-xml"
 )
 
 const (
