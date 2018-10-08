@@ -12,10 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+VERSION     ?= $(shell git describe --always --abbrev=7)
+MUTABLE_TAG ?= latest
+IMAGE        = origin-libvirt-machine-controllers
+
 .PHONY: all
 all: build images check
 
-INSTALL_DEPS ?= 0
+NO_DOCKER ?= 0
+ifeq ($(NO_DOCKER), 1)
+  DOCKER_CMD =
+  IMAGE_BUILD_CMD = imagebuilder
+  CGO_ENABLED = 1
+else
+  DOCKER_CMD := docker run --rm -e CGO_ENABLED=1 -v "$(PWD)":/go/src/github.com/openshift/cluster-api-provider-libvirt:Z -w /go/src/github.com/openshift/cluster-api-provider-libvirt openshift/origin-release:golang-1.10
+  IMAGE_BUILD_CMD = docker build
+endif
 
 .PHONY: depend
 depend:
@@ -26,31 +38,29 @@ depend:
 depend-update:
 	dep ensure -update
 
-.PHONY: deps-cgo
-deps-cgo:
-	@if [ $(INSTALL_DEPS) == 1 ]; then yum install -y libvirt-devel; fi
-
-build: deps-cgo ## build binary
-	CGO_ENABLED=1 go build -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
+build: ## build binary
+	mkdir -p bin
+	$(DOCKER_CMD) go build -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
 
 .PHONY: images
 images: ## Create images
-	$(MAKE) -C cmd/machine-controller image
+	$(IMAGE_BUILD_CMD) -t "$(IMAGE):$(VERSION)" -t "$(IMAGE):$(MUTABLE_TAG)" ./
 
 .PHONY: push
 push:
-	$(MAKE) -C cmd/machine-controller push
+	docker push "$(IMAGE):$(VERSION)"
+	docker push "$(IMAGE):$(MUTABLE_TAG)"
 
 .PHONY: check
 check: fmt vet lint test ## Check your code
 
 .PHONY: test
 test: # Run unit test
-	go test -race -cover ./cmd/... ./cloud/...
+	$(DOCKER_CMD) go test -race -cover ./cmd/... ./cloud/...
 
 .PHONY: integration
 integration: deps-cgo ## Run integration test
-	go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
+	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
 .PHONY: e2e
 e2e: deps-cgo ## Run end-to-end test
