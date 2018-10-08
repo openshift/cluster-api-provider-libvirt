@@ -5,9 +5,9 @@ import (
 	"fmt"
 	libvirt "github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
-	"io"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -56,13 +56,6 @@ func newDefVolume() libvirtxml.StorageVolume {
 	}
 }
 
-// network transparent image
-type image interface {
-	Size() (uint64, error)
-	Import(func(io.Reader) error, libvirtxml.StorageVolume) error
-	String() string
-}
-
 func newDefBackingStoreFromLibvirt(baseVolume *libvirt.StorageVol) (libvirtxml.StorageVolumeBackingStore, error) {
 	baseVolumeDef, err := newDefVolumeFromLibvirt(baseVolume)
 	if err != nil {
@@ -107,37 +100,8 @@ func newDefVolumeFromXML(s string) (libvirtxml.StorageVolume, error) {
 	return volumeDef, nil
 }
 
-func createVolume(machineName string, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig) error {
-	var poolName string
-	var baseVolumeID string
-	var volumeName string
-	var volumeFormat = "qcow2"
+func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat string, client *Client) error {
 	var volume *libvirt.StorageVol
-
-	if machineProviderConfig.Volume.PoolName != "" {
-		poolName = machineProviderConfig.Volume.PoolName
-	} else {
-		return fmt.Errorf("machine does not has a Volume.PoolName value")
-	}
-
-	if machineProviderConfig.Volume.BaseVolumeID != "" {
-		baseVolumeID = machineProviderConfig.Volume.BaseVolumeID
-	} else {
-		return fmt.Errorf("machine does not has a Volume.BaseVolumeID value")
-	}
-
-	if machineProviderConfig.Volume.VolumeName != "" {
-		volumeName = machineProviderConfig.Volume.VolumeName
-	} else if machineName != "" {
-		volumeName = machineName
-	} else {
-		return fmt.Errorf("machine does not has a Volume.VolumeName value")
-	}
-
-	client, err := buildClient(machineProviderConfig.URI)
-	if err != nil {
-		return fmt.Errorf("Failed to build libvirt client: %s", err)
-	}
 
 	log.Printf("[DEBUG] Create a libvirt volume with name %s for pool %s from the base volume %s", volumeName, poolName, baseVolumeID)
 	virConn := client.libvirt
@@ -167,8 +131,26 @@ func createVolume(machineName string, machineProviderConfig *providerconfigv1.Li
 	volumeDef := newDefVolume()
 	volumeDef.Name = volumeName
 	volumeDef.Target.Format.Type = volumeFormat
+	var img image
+	// an source image was given, this mean we can't choose size
+	if source != "" {
+		if baseVolumeID != "" {
+			return fmt.Errorf("'base_volume_id' can't be specified when also 'source' is given")
+		}
 
-	if baseVolumeID != "" {
+		if img, err = newImage(source); err != nil {
+			return err
+		}
+
+		// update the image in the description, even if the file has not changed
+		size, err := img.Size()
+		if err != nil {
+			return err
+		}
+		log.Printf("Image %s image is: %d bytes", img, size)
+		volumeDef.Capacity.Unit = "B"
+		volumeDef.Capacity.Value = size
+	} else if baseVolumeID != "" {
 		volume = nil
 		volumeDef.Capacity.Value = uint64(size)
 		baseVolume, err := client.libvirt.LookupStorageVolByKey(baseVolumeID)
@@ -203,21 +185,19 @@ func createVolume(machineName string, machineProviderConfig *providerconfigv1.Li
 		return fmt.Errorf("Error retrieving volume key: %s", err)
 	}
 
+	if source != "" {
+		err = img.Import(newCopier(client.libvirt, volume, volumeDef.Capacity.Value), volumeDef)
+		if err != nil {
+			return fmt.Errorf("Error while uploading source %s: %s", img.String(), err)
+		}
+	}
+
 	log.Printf("[INFO] Volume ID: %s", key)
 	return nil
 }
 
-func deleteVolume(volumeName string, URI string) error {
-	client, err := buildClient(URI)
-	if err != nil {
-		return fmt.Errorf("Failed to build libvirt client: %s", err)
-	}
-
-	return removeVolume(client, volumeName)
-}
-
-// removeVolume removes the volume identified by `key` from libvirt
-func removeVolume(client *Client, name string) error {
+// DeleteVolume removes the volume identified by `key` from libvirt
+func DeleteVolume(name string, client *Client) error {
 	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
 	volume, err := client.libvirt.LookupStorageVolByPath(volumePath)
 	if err != nil {
@@ -259,4 +239,16 @@ func removeVolume(client *Client, name string) error {
 	}
 
 	return nil
+}
+
+func timeFromEpoch(str string) time.Time {
+	var s, ns int
+
+	ts := strings.Split(str, ".")
+	if len(ts) == 2 {
+		ns, _ = strconv.Atoi(ts[1])
+	}
+	s, _ = strconv.Atoi(ts[0])
+
+	return time.Unix(int64(s), int64(ns))
 }
