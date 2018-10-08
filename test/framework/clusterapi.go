@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/log"
 
-	"sigs.k8s.io/cluster-api-provider-libvirt/test/utils"
+	"github.com/openshift/cluster-api-provider-libvirt/test/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
