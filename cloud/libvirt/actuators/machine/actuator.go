@@ -115,7 +115,7 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int) error {
 	}
 
 	// Create domain
-	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client); err != nil {
+	if err = libvirtutils.CreateDomain(name, ignKey, pool, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client); err != nil {
 		return fmt.Errorf("error creating domain: %v", err)
 	}
 	return nil
@@ -125,7 +125,6 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int) error {
 func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
 	// decode config
 	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
-	name := machine.Name
 	if err != nil {
 		return fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
@@ -137,12 +136,12 @@ func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
 	}
 
 	// delete domain
-	if err := libvirtutils.DeleteDomain(name, client); err != nil {
+	if err := libvirtutils.DeleteDomain(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
 	// delete volume
-	if err := libvirtutils.DeleteVolume(name, client); err != nil {
+	if err := libvirtutils.DeleteVolume(machine.Name, machineProviderConfig.Volume.PoolName, client); err != nil {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 	return nil

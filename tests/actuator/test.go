@@ -36,7 +36,7 @@ var rootCmd = &cobra.Command{
 			expectedReachableIP string
 		}{
 			{
-				machineFile:         "machine-with-full-paths.yaml",
+				machineFile:         "machine-with-vol-names.yaml",
 				expectedReachableIP: "192.168.124.51", // currently the actuator starts with an offset of 50
 			},
 		}
@@ -46,11 +46,11 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("Failed to build libvirt client: %s", err)
 		}
 
-		if err := createActuatorInfraAssumtions(client); err != nil {
-			log.Errorf("failed creating actuator infra assumtions %v", err)
-			//return err
-		}
 		defer destroyActuatorInfraAssumtions(client)
+		if err := createActuatorInfraAssumtions(client); err != nil {
+			log.Errorf("failed creating actuator infra assumptions %v", err)
+			return err
+		}
 
 		for _, test := range testCases {
 			// create machine to manually test
@@ -148,18 +148,18 @@ func createActuatorInfraAssumtions(client *libvirtutils.Client) error {
 
 func destroyActuatorInfraAssumtions(client *libvirtutils.Client) {
 	// Delete base volume
-	if err := libvirtutils.DeleteVolume("baseVolume", client); err != nil {
+	if err := libvirtutils.DeleteVolume("baseVolume", "default", client); err != nil {
 		log.Errorf("failed deleting base volume %v", err)
 	}
 
 	// Delete ign volume
-	if err := libvirtutils.DeleteVolume("worker.ign", client); err != nil {
-		log.Errorf("failed creating ignition %v", err)
+	if err := libvirtutils.DeleteVolume("worker.ign", "default", client); err != nil {
+		log.Errorf("failed deleting ignition %v", err)
 	}
 
 	// Delete networkInterfaceName
 	if err := libvirtutils.DeleteNetwork("actuatorTestNetwork", client); err != nil {
-		log.Errorf("failed creating network %v", err)
+		log.Errorf("failed deleting network %v", err)
 	}
 }
 

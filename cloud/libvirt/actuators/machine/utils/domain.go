@@ -18,10 +18,6 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
 )
 
-const (
-	baseVolumePath = "/var/lib/libvirt/images/"
-)
-
 // LibVirtConIsNil contains a nil connection error message
 var LibVirtConIsNil = "the libvirt connection was nil"
 
@@ -266,14 +262,8 @@ func randomWWN(strlen int) string {
 	return oui + string(result)
 }
 
-func setDisks(domainDef *libvirtxml.Domain, virConn *libvirt.Connect, volumeKey string) error {
+func setDisks(domainDef *libvirtxml.Domain, diskVolume libvirt.StorageVol) error {
 	disk := newDefDisk(0)
-	log.Printf("[INFO] LookupStorageVolByKey")
-	diskVolume, err := virConn.LookupStorageVolByKey(volumeKey)
-	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", volumeKey)
-	}
-	log.Printf("[INFO] diskVolume")
 	diskVolumeFile, err := diskVolume.GetPath()
 	if err != nil {
 		return fmt.Errorf("Error retrieving volume file: %s", err)
@@ -447,7 +437,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	return nil
 }
 
-func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress string, autostart bool, memory, vcpu, offset int, client *Client) error {
+func CreateDomain(name, ignKey, poolName string, volumeName, hostName, networkInterfaceName, networkInterfaceAddress string, autostart bool, memory, vcpu, offset int, client *Client) error {
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -467,7 +457,15 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 
 	log.Printf("[INFO] setCoreOSIgnition")
 	if ignKey != "" {
-		if err := setCoreOSIgnition(&domainDef, ignKey); err != nil {
+		ignVolume, err := getVolumeFromPool(ignKey, poolName, virConn)
+		if err != nil {
+			return fmt.Errorf("error getting ignition volume: %v", err)
+		}
+		ignVolumePath, err := ignVolume.GetPath()
+		if err != nil {
+			return fmt.Errorf("error getting ignition volume path: %v", err)
+		}
+		if err := setCoreOSIgnition(&domainDef, ignVolumePath); err != nil {
 			return err
 		}
 	} else {
@@ -475,11 +473,12 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	}
 
 	log.Printf("[INFO] setDisks")
-	VolumeKey := baseVolumePath + volumeName
-	if volumeName == "" {
-		volumeName = name
+	diskVolume, err := getVolumeFromPool(volumeName, poolName, virConn)
+	if err != nil {
+		return fmt.Errorf("can't retrieve volume %s for pool %s: %v", volumeName, poolName, err)
 	}
-	if err := setDisks(&domainDef, virConn, VolumeKey); err != nil {
+	log.Printf("[INFO] diskVolume")
+	if err := setDisks(&domainDef, *diskVolume); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
