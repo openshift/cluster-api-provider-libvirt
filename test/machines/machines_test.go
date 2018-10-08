@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/openshift/cluster-api-provider-libvirt/test/framework"
+	"github.com/openshift/cluster-api-provider-libvirt/test/utils"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +67,6 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 	// are defined through CRD, we can relax the restriction.
 	Context("libvirt actuator", func() {
 		It("can create domain", func() {
-
 			clusterID := framework.ClusterID
 			if clusterID == "" {
 				clusterID = "cluster-" + string(uuid.NewUUID())
@@ -91,8 +91,18 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			}
 
 			f.CreateClusterAndWait(cluster)
+
+			// Create/delete a single machine, test instance is provisioned/terminated
+			testMachine := utils.TestingMachine(cluster.Name, cluster.Namespace)
+			libvirtClient, err := NewLibvirtClient("qemu:///system")
+			Expect(err).NotTo(HaveOccurred())
+
+			f.CreateMachineAndWait(testMachine, libvirtClient)
+			machinesToDelete.AddMachine(testMachine, f, libvirtClient)
+
+			// TODO: Run some tests here!!! E.g. check for properly set security groups, iam role, tags
+
+			f.DeleteMachineAndWait(testMachine, libvirtClient)
 		})
-
 	})
-
 })

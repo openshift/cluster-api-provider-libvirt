@@ -3,17 +3,20 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"text/template"
 
+	clusterapiaproviderlibvirtv1alpha1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/cert/triple"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 func ClusterAPIServerAPIServiceObjects(clusterAPINamespace string) (*apiv1.Secret, *apiregistrationv1beta1.APIService, error) {
@@ -578,111 +581,53 @@ func ClusterAPIEtcdService(clusterAPINamespace string) *apiv1.Service {
 	}
 }
 
-const masterUserDataBlob = `#!/bin/bash
-
-cat <<HEREDOC > /root/user-data.sh
-#!/bin/bash
-
-cat <<EOF > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kube*
-EOF
-setenforce 0
-yum install -y kubelet-1.11.3 kubeadm-1.11.3 kubectl-1.11.3 --disableexcludes=kubernetes
-
-cat <<EOF > /etc/default/kubelet
-KUBELET_KUBEADM_EXTRA_ARGS=--cgroup-driver=systemd
-EOF
-
-echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
-
-kubeadm init --apiserver-bind-port 8443 --token 2iqzqm.85bs0x6miyx1nm7l --apiserver-cert-extra-sans=\$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) --apiserver-cert-extra-sans=\$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4) --pod-network-cidr=192.168.0.0/16 -v 6
-
-# Enable networking by default.
-kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml --kubeconfig /etc/kubernetes/admin.conf
-
-mkdir -p /root/.kube
-cp -i /etc/kubernetes/admin.conf /root/.kube/config
-chown $(id -u):$(id -g) /root/.kube/config
-HEREDOC
-
-bash /root/user-data.sh > /root/user-data.logs
-`
-
-func MasterMachineUserDataSecret(secretName, namespace string) *apiv1.Secret {
-	return &apiv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
+// TODO
+func TestingMachine(clusterID, namespace string) *clusterv1alpha1.Machine {
+	machinePc := &clusterapiaproviderlibvirtv1alpha1.LibvirtMachineProviderConfig{
+		DomainMemory: 2048,
+		DomainVcpu:   1,
+		IgnKey:       "/var/lib/libvirt/images/worker.ign",
+		Volume: &clusterapiaproviderlibvirtv1alpha1.Volume{
+			PoolName:     "default",
+			BaseVolumeID: "/var/lib/libvirt/images/coreos_base",
 		},
-		Data: map[string][]byte{
-			"userData": []byte(masterUserDataBlob),
-		},
+		NetworkInterfaceName:    "tectonic",
+		NetworkInterfaceAddress: "192.168.124.12",
+		Autostart:               false,
+		URI:                     "qemu:///system",
 	}
-}
 
-const workerUserDataBlob = `#!/bin/bash
-
-cat <<HEREDOC > /root/user-data.sh
-#!/bin/bash
-
-cat <<EOF > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kube*
-EOF
-setenforce 0
-yum install -y kubelet-1.11.3 kubeadm-1.11.3 --disableexcludes=kubernetes
-
-cat <<EOF > /etc/default/kubelet
-KUBELET_KUBEADM_EXTRA_ARGS=--cgroup-driver=systemd
-EOF
-
-echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
-
-kubeadm join {{ .MasterIP }}:8443 --token 2iqzqm.85bs0x6miyx1nm7l --discovery-token-unsafe-skip-ca-verification
-
-HEREDOC
-
-bash /root/user-data.sh > /root/user-data.logs
-`
-
-type userDataParams struct {
-	MasterIP string
-}
-
-func WorkerMachineUserDataSecret(secretName, namespace, masterIP string) (*apiv1.Secret, error) {
-	params := userDataParams{
-		MasterIP: masterIP,
-	}
-	t, err := template.New("workeruserdata").Parse(workerUserDataBlob)
-	if err != nil {
-		return nil, err
-	}
 	var buf bytes.Buffer
-	err = t.Execute(&buf, params)
-	if err != nil {
-		return nil, err
+	if err := clusterapiaproviderlibvirtv1alpha1.Encoder.Encode(machinePc, &buf); err != nil {
+		panic(fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err))
 	}
 
-	return &apiv1.Secret{
+	randomUUID := string(uuid.NewUUID())
+
+	machine := &clusterv1alpha1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
+			Name:         clusterID + "-machine-" + randomUUID[:6],
+			Namespace:    namespace,
+			GenerateName: "vs-master-",
+			Labels: map[string]string{
+				"sigs.k8s.io/cluster-api-cluster": clusterID,
+			},
 		},
-		Data: map[string][]byte{
-			"userData": []byte(buf.String()),
+		Spec: clusterv1alpha1.MachineSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"node-role.kubernetes.io/compute": "",
+				},
+			},
+			ProviderConfig: clusterv1alpha1.ProviderConfig{
+				Value: &runtime.RawExtension{Raw: buf.Bytes()},
+			},
+			Versions: clusterv1alpha1.MachineVersionInfo{
+				Kubelet:      "1.10.1",
+				ControlPlane: "1.10.1",
+			},
 		},
-	}, nil
+	}
+
+	return machine
 }
