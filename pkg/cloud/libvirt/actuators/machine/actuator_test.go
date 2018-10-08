@@ -180,7 +180,7 @@ func TestMachineEvents(t *testing.T) {
 			params := ActuatorParams{
 				ClusterClient: fakeclusterclientset.NewSimpleClientset(tc.machine),
 				KubeClient:    kubernetesfake.NewSimpleClientset(),
-				ClientBuilder: func(uri string) (libvirtclient.Client, error) {
+				ClientBuilder: func(uri string, pool string) (libvirtclient.Client, error) {
 					if tc.error == libvirtClientError {
 						return nil, fmt.Errorf(libvirtClientError)
 					}

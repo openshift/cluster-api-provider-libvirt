@@ -19,10 +19,6 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
 )
 
-const (
-	baseVolumePath = "/var/lib/libvirt/images/"
-)
-
 // ErrLibVirtConIsNil is returned when the libvirt connection is nil.
 var ErrLibVirtConIsNil = errors.New("the libvirt connection was nil")
 
@@ -265,13 +261,8 @@ func randomWWN(strlen int) string {
 	return oui + string(result)
 }
 
-func setDisks(domainDef *libvirtxml.Domain, virConn *libvirt.Connect, volumeKey string) error {
+func setDisks(domainDef *libvirtxml.Domain, diskVolume *libvirt.StorageVol) error {
 	disk := newDefDisk(0)
-	glog.Info("Looking up storage volume by key")
-	diskVolume, err := virConn.LookupStorageVolByKey(volumeKey)
-	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", volumeKey)
-	}
 	glog.Info("Getting disk volume")
 	diskVolumeFile, err := diskVolume.GetPath()
 	if err != nil {

@@ -36,9 +36,6 @@ type CreateDomainInput struct {
 	// IgnitionVolumeName of ignition volume to be added to domain definition
 	IgnitionVolumeName string
 
-	// VolumePoolName of pool where VolumeName volume is located
-	VolumePoolName string
-
 	// NetworkInterfaceName as name of network interface
 	NetworkInterfaceName string
 
@@ -72,11 +69,8 @@ type CreateVolumeInput struct {
 	// VolumeName to be created
 	VolumeName string
 
-	// PoolName where VolumeName volume is located
-	PoolName string
-
-	// BaseVolumeID as base volume ID
-	BaseVolumeID string
+	// BaseVolumeName as name of the base volume
+	BaseVolumeName string
 
 	// Source as location of base volume
 	Source string
@@ -86,7 +80,7 @@ type CreateVolumeInput struct {
 }
 
 // LibvirtClientBuilderFuncType is function type for building aws client
-type LibvirtClientBuilderFuncType func(URI string) (Client, error)
+type LibvirtClientBuilderFuncType func(URI string, poolName string) (Client, error)
 
 // Client is a wrapper object for actual libvirt library to allow for easier testing.
 type Client interface {
@@ -120,12 +114,17 @@ type Client interface {
 
 type libvirtClient struct {
 	connection *libvirt.Connect
+
+	// storage pool that holds all volumes
+	pool *libvirt.StoragePool
+	// cache pool's name so we don't have to call failable GetName() method on pool all the time.
+	poolName string
 }
 
 var _ Client = &libvirtClient{}
 
 // NewClient returns libvirt client for the specified URI
-func NewClient(URI string) (Client, error) {
+func NewClient(URI string, poolName string) (Client, error) {
 	connection, err := libvirt.NewConnect(URI)
 	if err != nil {
 		return nil, err
@@ -133,8 +132,15 @@ func NewClient(URI string) (Client, error) {
 
 	glog.Infof("Created libvirt connection: %p", connection)
 
+	pool, err := connection.LookupStoragePoolByName(poolName)
+	if err != nil {
+		return nil, fmt.Errorf("can't find storage pool %q: %v", poolName, err)
+	}
+
 	return &libvirtClient{
 		connection: connection,
+		pool:       pool,
+		poolName:   poolName,
 	}, nil
 }
 
@@ -170,15 +176,24 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 
 	glog.Info("Create ignition configuration")
 	if input.Ignition != nil {
-		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, input.VolumePoolName); err != nil {
+		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
 			return err
 		}
 	} else if input.IgnKey != "" {
-		if err := setCoreOSIgnition(&domainDef, input.IgnKey); err != nil {
+		ignVolume, err := client.getVolume(input.IgnKey)
+		if err != nil {
+			return fmt.Errorf("error getting ignition volume: %v", err)
+		}
+		ignVolumePath, err := ignVolume.GetPath()
+		if err != nil {
+			return fmt.Errorf("error getting ignition volume path: %v", err)
+		}
+
+		if err := setCoreOSIgnition(&domainDef, ignVolumePath); err != nil {
 			return err
 		}
 	} else if input.CloudInit != nil {
-		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.VolumePoolName, input.DomainName); err != nil {
+		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.DomainName); err != nil {
 			return err
 		}
 	} else {
@@ -186,8 +201,11 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	}
 
 	glog.Info("Create volume")
-	VolumeKey := baseVolumePath + input.VolumeName
-	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
+	diskVolume, err := client.getVolume(input.VolumeName)
+	if err != nil {
+		return fmt.Errorf("can't retrieve volume %s for pool %s: %v", input.VolumeName, client.poolName, err)
+	}
+	if err := setDisks(&domainDef, diskVolume); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
@@ -331,28 +349,14 @@ func (client *libvirtClient) DeleteDomain(name string) error {
 // CreateVolume creates volume based on CreateVolumeInput
 func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 	var volume *libvirt.StorageVol
-
-	glog.Infof("Create a libvirt volume with name %s for pool %s from the base volume %s", input.VolumeName, input.PoolName, input.BaseVolumeID)
+	glog.Infof("Create a libvirt volume with name %s for pool %s from the base volume %s", input.VolumeName, client.poolName, input.BaseVolumeName)
 
 	// TODO: lock pool
-	//client.poolMutexKV.Lock(input.PoolName)
-	//defer client.poolMutexKV.Unlock(input.PoolName)
+	//client.poolMutexKV.Lock(client.poolName)
+	//defer client.poolMutexKV.Unlock(client.poolName)
 
-	pool, err := client.connection.LookupStoragePoolByName(input.PoolName)
-	if err != nil {
-		return fmt.Errorf("can't find storage pool '%s'", input.PoolName)
-	}
-	defer pool.Free()
-
-	// Refresh the pool of the volume so that libvirt knows it is
-	// not longer in use.
-	waitForSuccess("error refreshing pool for volume", func() error {
-		return pool.Refresh(0)
-	})
-
-	// Check whether the storage volume already exists. Its name needs to be
-	// unique.
-	if _, err := pool.LookupStorageVolByName(input.VolumeName); err == nil {
+	volume, err := client.getVolume(input.VolumeName)
+	if err == nil {
 		return fmt.Errorf("storage volume '%s' already exists", input.VolumeName)
 	}
 
@@ -361,8 +365,8 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 	var img image
 	// an source image was given, this mean we can't choose size
 	if input.Source != "" {
-		if input.BaseVolumeID != "" {
-			return fmt.Errorf("'base_volume_id' can't be specified when also 'source' is given")
+		if input.BaseVolumeName != "" {
+			return fmt.Errorf("'base_volume_name' can't be specified when also 'source' is given")
 		}
 
 		if img, err = newImage(input.Source); err != nil {
@@ -377,17 +381,18 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		glog.Infof("Image %s image is: %d bytes", img, size)
 		volumeDef.Capacity.Unit = "B"
 		volumeDef.Capacity.Value = size
-	} else if input.BaseVolumeID != "" {
+	} else if input.BaseVolumeName != "" {
 		volume = nil
 
-		baseVolume, err := client.connection.LookupStorageVolByKey(input.BaseVolumeID)
+		baseVolume, err := client.getVolume(input.BaseVolumeName)
+
 		if err != nil {
-			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeID)
+			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeName)
 		}
 		var baseVolumeInfo *libvirt.StorageVolInfo
 		baseVolumeInfo, err = baseVolume.GetInfo()
 		if err != nil {
-			return fmt.Errorf("Can't retrieve volume info %s", input.BaseVolumeID)
+			return fmt.Errorf("Can't retrieve volume info %s", input.BaseVolumeName)
 		}
 		if baseVolumeInfo.Capacity > uint64(defaultSize) {
 			volumeDef.Capacity.Value = baseVolumeInfo.Capacity
@@ -396,7 +401,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		}
 		backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 		if err != nil {
-			return fmt.Errorf("Could not retrieve backing store %s", input.BaseVolumeID)
+			return fmt.Errorf("Could not retrieve backing store %s", input.BaseVolumeName)
 		}
 		volumeDef.BackingStore = &backingStoreDef
 	}
@@ -408,7 +413,16 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		}
 
 		// create the volume
-		v, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
+		// Refresh the pool of the volume so that libvirt knows it is
+		// not longer in use.
+		waitForSuccess("error refreshing pool for volume", func() error {
+			return client.pool.Refresh(0)
+		})
+		if err != nil {
+			return fmt.Errorf("can't find storage pool '%s'", client.poolName)
+		}
+
+		v, err := client.pool.StorageVolCreateXML(string(volumeDefXML), 0)
 		if err != nil {
 			return fmt.Errorf("Error creating libvirt volume: %s", err)
 		}
@@ -434,19 +448,32 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 }
 
 // VolumeExists checks if a volume exists
-func (client *libvirtClient) VolumeExists(volumeName string) (bool, error) {
-	glog.Infof("Check if %q volume exists", volumeName)
+func (client *libvirtClient) VolumeExists(name string) (bool, error) {
+	glog.Infof("Check if %q volume exists", name)
 	if client.connection == nil {
 		return false, ErrLibVirtConIsNil
 	}
 
-	volumePath := fmt.Sprintf(baseVolumePath+"%s", volumeName)
-	volume, err := client.connection.LookupStorageVolByPath(volumePath)
+	volume, err := client.getVolume(name)
 	if err != nil {
 		return false, nil
 	}
 	volume.Free()
 	return true, nil
+}
+
+func (client *libvirtClient) getVolume(volumeName string) (*libvirt.StorageVol, error) {
+	// Check whether the storage volume exists. Its name needs to be
+	// unique.
+	volume, err := client.pool.LookupStorageVolByName(volumeName)
+	if err != nil {
+		// Let's try by ID in case of older Installer
+		volume, err = client.connection.LookupStorageVolByKey(volumeName)
+		if err != nil {
+			return nil, fmt.Errorf("can't retrieve volume %q: %v", volumeName, err)
+		}
+	}
+	return volume, nil
 }
 
 // DeleteVolume deletes a domain based on its name
@@ -461,10 +488,9 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	}
 	glog.Infof("Deleting volume %s", name)
 
-	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
-	volume, err := client.connection.LookupStorageVolByPath(volumePath)
+	volume, err := client.getVolume(name)
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", volumePath)
+		return fmt.Errorf("Can't retrieve volume %s", name)
 	}
 	defer volume.Free()
 
@@ -477,12 +503,8 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	defer volPool.Free()
 
 	// TODO: add locking support
-	//poolName, err := volPool.GetName()
-	//if err != nil {
-	//	return fmt.Errorf("Error retrieving name of volume: %s", err)
-	//}
-	//client.poolMutexKV.Lock(poolName)
-	//defer client.poolMutexKV.Unlock(poolName)
+	//client.poolMutexKV.Lock(client.poolName)
+	//defer client.poolMutexKV.Unlock(client.poolName)
 
 	waitForSuccess("Error refreshing pool for volume", func() error {
 		return volPool.Refresh(0)
@@ -493,12 +515,12 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	// Does not solve the problem but it makes it happen less often.
 	_, err = volume.GetXMLDesc(0)
 	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s XML desc: %s", volumePath, err)
+		return fmt.Errorf("Can't retrieve volume %s XML desc: %s", name, err)
 	}
 
 	err = volume.Delete(0)
 	if err != nil {
-		return fmt.Errorf("Can't delete volume %s: %s", volumePath, err)
+		return fmt.Errorf("Can't delete volume %s: %s", name, err)
 	}
 
 	return nil

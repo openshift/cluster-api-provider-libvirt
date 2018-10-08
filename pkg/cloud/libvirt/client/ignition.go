@@ -15,7 +15,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
 
-func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
+func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string) error {
 	glog.Info("Creating ignition file")
 	ignitionDef := newIgnitionDef()
 
@@ -33,7 +33,7 @@ func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *
 	}
 
 	ignitionDef.Name = volumeName
-	ignitionDef.PoolName = poolName
+	ignitionDef.PoolName = client.poolName
 	ignitionDef.Content = string(userDataSecret)
 
 	glog.Infof("Ignition: %+v", ignitionDef)

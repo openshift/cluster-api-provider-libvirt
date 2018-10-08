@@ -25,7 +25,7 @@ func stubProviderConfig() *providerconfigv1.LibvirtMachineProviderConfig {
 		},
 		Volume: &providerconfigv1.Volume{
 			PoolName:     "default",
-			BaseVolumeID: "/var/lib/libvirt/images/fedora_base",
+			BaseVolumeID: "fedora_base",
 		},
 		NetworkInterfaceName:    "default",
 		NetworkInterfaceAddress: "192.168.124.12/24",

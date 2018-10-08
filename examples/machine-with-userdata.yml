@@ -21,7 +21,7 @@ spec:
         userDataSecret: libvirt-actuator-user-data-secret
       volume:
         poolName: default
-        baseVolumeID: /var/lib/libvirt/images/fedora_base
+        baseVolumeID: fedora_base
       networkInterfaceName: default
       networkInterfaceAddress: 192.168.122.0/24
       autostart: false

@@ -16,7 +16,7 @@ func TestingMachineProviderSpec(uri, clusterID string) (machinev1.ProviderSpec, 
 		},
 		Volume: &providerconfigv1.Volume{
 			PoolName:     "default",
-			BaseVolumeID: "/var/lib/libvirt/images/fedora_base",
+			BaseVolumeID: "fedora_base",
 		},
 		NetworkInterfaceName:    "default",
 		NetworkInterfaceAddress: "192.168.124.12/24",
@@ -45,7 +45,7 @@ func MasterMachineProviderSpec(masterUserDataSecret, libvirturi string) (machine
 		},
 		Volume: &providerconfigv1.Volume{
 			PoolName:     "default",
-			BaseVolumeID: "/var/lib/libvirt/images/fedora_base",
+			BaseVolumeID: "fedora_base",
 		},
 		NetworkInterfaceName:    "default",
 		NetworkInterfaceAddress: "192.168.122.0/24",
