@@ -105,13 +105,12 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 	var volume *libvirt.StorageVol
 
 	log.Printf("[DEBUG] Create a libvirt volume with name %s for pool %s from the base volume %s", volumeName, poolName, baseVolumeID)
-	virConn := client.libvirt
 
 	// TODO: lock pool
 	//client.poolMutexKV.Lock(poolName)
 	//defer client.poolMutexKV.Unlock(poolName)
 
-	pool, err := virConn.LookupStoragePoolByName(poolName)
+	pool, err := client.connection.LookupStoragePoolByName(poolName)
 	if err != nil {
 		return fmt.Errorf("can't find storage pool '%s'", poolName)
 	}
@@ -154,7 +153,7 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 	} else if baseVolumeID != "" {
 		volume = nil
 		volumeDef.Capacity.Value = uint64(size)
-		baseVolume, err := client.libvirt.LookupStorageVolByKey(baseVolumeID)
+		baseVolume, err := client.connection.LookupStorageVolByKey(baseVolumeID)
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume %s", baseVolumeID)
 		}
@@ -187,7 +186,7 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 	}
 
 	if source != "" {
-		err = img.Import(newCopier(client.libvirt, volume, volumeDef.Capacity.Value), volumeDef)
+		err = img.Import(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
 		if err != nil {
 			return fmt.Errorf("Error while uploading source %s: %s", img.String(), err)
 		}
@@ -200,7 +199,7 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 // DeleteVolume removes the volume identified by `key` from libvirt
 func DeleteVolume(name string, client *Client) error {
 	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
-	volume, err := client.libvirt.LookupStorageVolByPath(volumePath)
+	volume, err := client.connection.LookupStorageVolByPath(volumePath)
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", volumePath)
 	}

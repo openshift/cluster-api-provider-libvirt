@@ -144,8 +144,6 @@ func newNetworkDef() (libvirtxml.Network, error) {
 
 func CreateNetwork(name, domain, bridge, mode string, addresses []string, autostart bool, client *Client) error {
 	// see https://libvirt.org/formatnetwork.html
-	virConn := client.libvirt
-
 	networkDef, err := newNetworkDef()
 	if err != nil {
 		return fmt.Errorf("error creating network definition %v", err)
@@ -234,7 +232,7 @@ func CreateNetwork(name, domain, bridge, mode string, addresses []string, autost
 	}
 
 	// once we have the network defined, connect to libvirt and create it from the XML serialization
-	connectURI, err := virConn.GetURI()
+	connectURI, err := client.connection.GetURI()
 	if err != nil {
 		return fmt.Errorf("Error retrieving libvirt connection URI: %s", err)
 	}
@@ -246,7 +244,7 @@ func CreateNetwork(name, domain, bridge, mode string, addresses []string, autost
 	}
 
 	log.Printf("[DEBUG] Creating libvirt network at %s: %s", connectURI, data)
-	network, err := virConn.NetworkDefineXML(data)
+	network, err := client.connection.NetworkDefineXML(data)
 	if err != nil {
 		return fmt.Errorf("Error defining libvirt network: %s - %s", err, data)
 	}
@@ -287,9 +285,7 @@ func networkRange(network *net.IPNet) (net.IP, net.IP) {
 }
 
 func DeleteNetwork(name string, client *Client) error {
-	virConn := client.libvirt
-
-	network, err := virConn.LookupNetworkByName(name)
+	network, err := client.connection.LookupNetworkByName(name)
 	if err != nil {
 		return fmt.Errorf("When destroying libvirt network: error retrieving %s", err)
 	}
