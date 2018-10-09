@@ -30,4 +30,4 @@ RUN GOPATH=/go CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-st
 FROM openshift/origin-base
 RUN yum install -y ca-certificates libvirt-libs openssh-clients
 
-COPY --from=builder /go/bin/machine-controller /go/bin/controller-manager .
+COPY --from=builder /go/bin/machine-controller /go/bin/controller-manager /
