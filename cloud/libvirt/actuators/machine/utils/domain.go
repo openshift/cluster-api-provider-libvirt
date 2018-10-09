@@ -34,7 +34,7 @@ func init() {
 
 // Client libvirt
 type Client struct {
-	libvirt *libvirt.Connect
+	connection *libvirt.Connect
 }
 
 type pendingMapping struct {
@@ -412,7 +412,7 @@ func BuildClient(URI string) (*Client, error) {
 	log.Println("[INFO] Created libvirt client")
 
 	client := &Client{
-		libvirt: libvirtClient,
+		connection: libvirtClient,
 	}
 
 	return client, nil
@@ -455,10 +455,9 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
 	log.Printf("[DEBUG] Create resource libvirt_domain")
-	virConn := client.libvirt
 
 	// Get default values from Host
-	domainDef, err := newDomainDefForConnection(virConn)
+	domainDef, err := newDomainDefForConnection(client.connection)
 	if err != nil {
 		return fmt.Errorf("Failed to newDomainDefForConnection: %s", err)
 	}
@@ -486,7 +485,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	if volumeName == "" {
 		volumeName = name
 	}
-	if err := setDisks(&domainDef, virConn, VolumeKey); err != nil {
+	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
@@ -497,7 +496,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	}
 	// TODO: support more than 1 interface
 	partialNetIfaces := make(map[string]*pendingMapping, 1)
-	if err := setNetworkInterfaces(&domainDef, virConn, partialNetIfaces, &waitForLeases,
+	if err := setNetworkInterfaces(&domainDef, client.connection, partialNetIfaces, &waitForLeases,
 		hostName, networkInterfaceName,
 		networkInterfaceAddress, offset); err != nil {
 		return err
@@ -508,7 +507,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	//	return err
 	//}
 
-	connectURI, err := virConn.GetURI()
+	connectURI, err := client.connection.GetURI()
 	if err != nil {
 		return fmt.Errorf("error retrieving libvirt connection URI: %v", err)
 	}
@@ -520,7 +519,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	}
 
 	log.Printf("[DEBUG] Creating libvirt domain with XML:\n%s", data)
-	domain, err := virConn.DomainDefineXML(data)
+	domain, err := client.connection.DomainDefineXML(data)
 	if err != nil {
 		return fmt.Errorf("error defining libvirt domain: %v", err)
 	}
@@ -546,14 +545,13 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 
 func DeleteDomain(name string, client *Client) error {
 	log.Printf("[DEBUG] Delete a domain")
-	virConn := client.libvirt
-	if virConn == nil {
+	if client.connection == nil {
 		return fmt.Errorf(LibVirtConIsNil)
 	}
 
 	log.Printf("[DEBUG] Deleting domain %s", name)
 
-	domain, err := virConn.LookupDomainByName(name)
+	domain, err := client.connection.LookupDomainByName(name)
 	if err != nil {
 		return fmt.Errorf("Error retrieving libvirt domain: %s", err)
 	}
@@ -587,12 +585,11 @@ func DeleteDomain(name string, client *Client) error {
 // DomainExists verify a domain exists for given machine
 func DomainExists(name string, client *Client) (bool, error) {
 	log.Printf("[DEBUG] Check if a domain exists")
-	virConn := client.libvirt
-	if virConn == nil {
+	if client.connection == nil {
 		return false, fmt.Errorf(LibVirtConIsNil)
 	}
 
-	domain, err := virConn.LookupDomainByName(name)
+	domain, err := client.connection.LookupDomainByName(name)
 	if err != nil {
 		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
 			return false, nil

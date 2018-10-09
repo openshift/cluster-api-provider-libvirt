@@ -46,7 +46,7 @@ func newIgnitionDef() defIgnition {
 // uploads it to the libVirt pool
 // Returns a string holding terraform's internal ID of this resource
 func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
-	pool, err := client.libvirt.LookupStoragePoolByName(ign.PoolName)
+	pool, err := client.connection.LookupStoragePoolByName(ign.PoolName)
 	if err != nil {
 		return "", fmt.Errorf("can't find storage pool %q", ign.PoolName)
 	}
@@ -105,7 +105,7 @@ func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
 	defer volume.Free()
 
 	// upload ignition file
-	err = img.Import(newCopier(client.libvirt, volume, volumeDef.Capacity.Value), volumeDef)
+	err = img.Import(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
 	if err != nil {
 		return "", fmt.Errorf("Error while uploading ignition file %s: %s", img.String(), err)
 	}
