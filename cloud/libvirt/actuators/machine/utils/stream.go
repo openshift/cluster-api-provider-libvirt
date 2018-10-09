@@ -1,4 +1,4 @@
-package libvirt
+package utils
 
 import libvirt "github.com/libvirt/libvirt-go"
 

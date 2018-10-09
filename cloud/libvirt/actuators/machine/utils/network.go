@@ -1,13 +1,14 @@
-package libvirt
+package utils
 
 import (
 	"encoding/xml"
 	"fmt"
-	libvirt "github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
 	"log"
 	"math/rand"
 	"net"
+
+	libvirt "github.com/libvirt/libvirt-go"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 const (

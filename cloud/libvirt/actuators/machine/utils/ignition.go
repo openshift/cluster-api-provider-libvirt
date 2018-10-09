@@ -1,14 +1,15 @@
-package libvirt
+package utils
 
 import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	libvirt "github.com/libvirt/libvirt-go"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+
+	libvirt "github.com/libvirt/libvirt-go"
 )
 
 func CreateIgntion(pool, name, content string, client *Client) error {
