@@ -38,8 +38,11 @@ depend:
 depend-update:
 	dep ensure -update
 
-build: ## build binary
-	mkdir -p bin
+bin:
+	@mkdir $@
+
+.PHONY: build
+build: | bin ## build binary
 	$(DOCKER_CMD) go build -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
 
 .PHONY: images
