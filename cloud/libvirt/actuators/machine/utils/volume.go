@@ -1,4 +1,4 @@
-package libvirt
+package utils
 
 import (
 	"encoding/xml"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	libvirt "github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 const (

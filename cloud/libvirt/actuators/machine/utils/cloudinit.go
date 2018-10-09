@@ -1,4 +1,4 @@
-package libvirt
+package utils
 
 import (
 	"encoding/base64"
@@ -6,7 +6,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/libvirt/libvirt-go-xml"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

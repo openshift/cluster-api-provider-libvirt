@@ -1,8 +1,9 @@
-package libvirt
+package utils
 
 import (
-	"github.com/libvirt/libvirt-go-xml"
 	"testing"
+
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 func TestSetCoreOSIgnition(t *testing.T) {

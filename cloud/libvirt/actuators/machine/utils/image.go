@@ -1,8 +1,7 @@
-package libvirt
+package utils
 
 import (
 	"fmt"
-	"github.com/libvirt/libvirt-go-xml"
 	"io"
 	"log"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 type image interface {
