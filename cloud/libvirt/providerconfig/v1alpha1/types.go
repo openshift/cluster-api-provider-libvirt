@@ -24,16 +24,26 @@ import (
 type LibvirtMachineProviderConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	DomainMemory             int     `json:"domainMemory"`
-	DomainVcpu               int     `json:"domainVcpu"`
-	IgnKey                   string  `json:"ignKey"`
-	Volume                   *Volume `json:"volume"`
-	NetworkInterfaceName     string  `json:"networkInterfaceName"`
-	NetworkInterfaceHostname string  `json:"networkInterfaceHostname"`
-	NetworkInterfaceAddress  string  `json:"networkInterfaceAddress"`
-	NetworkUUID              string  `json:"networkUUID"`
-	Autostart                bool    `json:"autostart"`
-	URI                      string  `json:"uri"`
+	DomainMemory             int        `json:"domainMemory"`
+	DomainVcpu               int        `json:"domainVcpu"`
+	IgnKey                   string     `json:"ignKey"`
+	CloudInit                *CloudInit `json:"cloudInit"`
+	Volume                   *Volume    `json:"volume"`
+	NetworkInterfaceName     string     `json:"networkInterfaceName"`
+	NetworkInterfaceHostname string     `json:"networkInterfaceHostname"`
+	NetworkInterfaceAddress  string     `json:"networkInterfaceAddress"`
+	NetworkUUID              string     `json:"networkUUID"`
+	Autostart                bool       `json:"autostart"`
+	URI                      string     `json:"uri"`
+}
+
+// CloudInit contains location of user data to be run during bootstrapping
+// with ISO image with a cloud-init file running the user data
+type CloudInit struct {
+	// UserData requires ISOImagePath to be set
+	UserDataSecret string `json:"userDataSecret"`
+	// ISOImagePath is path to ISO image with cloud-init
+	ISOImagePath string `json:"isoImagePath"`
 }
 
 // Volume contains the info for the actuator to create a volume

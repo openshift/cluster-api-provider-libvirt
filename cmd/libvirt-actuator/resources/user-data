@@ -1,0 +1,31 @@
+#cloud-config
+
+# Hostname management
+preserve_hostname: False
+hostname: fedora
+fqdn: fedora.example.local
+
+runcmd:
+  # Maximal length of fw_cfg string passed down the pipe is 1024
+  # So we need to concatenate all config* files (the config files are generated
+  # in numerical order that can be sorted by running `sort -n`, e.g. config02
+  # in case there is at least 10 chunks).
+  # All user data (written in bash) are expected under /sys/firmware/qemu_fw_cfg/by_name/opt/actuator.libvirt.io.k8s.sigs/config/raw
+  - cd /sys/firmware/qemu_fw_cfg/by_name/opt/actuator.libvirt.io.k8s.sigs/ && paste -d'\0' $(ls config*/raw | sort -n) | base64 -d | bash
+  # Remove cloud-init when finished with it
+  - [ yum, -y, remove, cloud-init ]
+
+# Configure where output will go
+output:
+  all: ">> /var/log/cloud-init.log"
+
+# username: fedora, password: fedora
+# for debugging purposes
+password: fedora
+chpasswd: { expire: False }
+ssh_pwauth: True
+
+# configure interaction with ssh server
+ssh_svcname: ssh
+ssh_deletekeys: True
+ssh_genkeytypes: ['rsa', 'ecdsa']

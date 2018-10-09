@@ -93,6 +93,12 @@
   name = "github.com/golang/protobuf"
   version = "=1.1.0"
 
+# We need to specify fsnotify source to avoid dep panic
+# See https://github.com/kubernetes-sigs/kubebuilder/issues/316#issue-342173819 for more info
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [prune]
   go-tests = true
   unused-packages = true

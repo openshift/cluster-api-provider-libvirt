@@ -18,7 +18,11 @@ import (
 
 	"github.com/golang/glog"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
+
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
+
+	"k8s.io/client-go/kubernetes"
+
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	clusterclient "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
 )
@@ -27,11 +31,13 @@ import (
 type Actuator struct {
 	clusterClient clusterclient.Interface
 	cidrOffset    int
+	kubeClient    kubernetes.Interface
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
 	ClusterClient clusterclient.Interface
+	KubeClient    kubernetes.Interface
 }
 
 // NewActuator creates a new Actuator
@@ -39,6 +45,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 	return &Actuator{
 		clusterClient: params.ClusterClient,
 		cidrOffset:    50,
+		kubeClient:    params.KubeClient,
 	}, nil
 }
 
@@ -47,7 +54,8 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
 	a.cidrOffset++
-	if err := createVolumeAndDomain(machine, a.cidrOffset); err != nil {
+
+	if err := createVolumeAndDomain(machine, a.cidrOffset, a.kubeClient); err != nil {
 		glog.Errorf("Could not create libvirt machine: %v", err)
 		return fmt.Errorf("error creating machine %v", err)
 	}
@@ -85,7 +93,7 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 }
 
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one
-func createVolumeAndDomain(machine *clusterv1.Machine, offset int) error {
+func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface) error {
 	// decode config
 	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
 	if err != nil {
@@ -115,7 +123,7 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int) error {
 	}
 
 	// Create domain
-	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client); err != nil {
+	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
 		return fmt.Errorf("error creating domain: %v", err)
 	}
 	return nil

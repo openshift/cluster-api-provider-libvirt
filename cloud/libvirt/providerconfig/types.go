@@ -27,6 +27,7 @@ type LibvirtMachineProviderConfig struct {
 	DomainMemory             int
 	DomainVcpu               int
 	IgnKey                   string
+	CloudInit                *CloudInit
 	Volume                   *Volume
 	NetworkInterfaceName     string
 	NetworkInterfaceHostname string
@@ -34,6 +35,15 @@ type LibvirtMachineProviderConfig struct {
 	NetworkUUID              string
 	Autostart                bool
 	URI                      string
+}
+
+// CloudInit contains location of user data to be run during bootstrapping
+// with ISO image with a cloud-init file running the user data
+type CloudInit struct {
+	// UserData requires ISOImagePath to be set
+	UserData string
+	// ISOImagePath is path to ISO image with cloud-init
+	ISOImagePath string
 }
 
 // Volume contains the info for the actuator to create a volume
