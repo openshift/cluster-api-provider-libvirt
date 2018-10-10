@@ -31,6 +31,7 @@ case ${1} in
     terraform init -input=false
     terraform plan -input=false -out=tfplan.out
     terraform apply -input=false -auto-approve tfplan.out
+    terraform output ip > /tmp/packet_ip
     echo -e "\e[32m"
     echo -e "*** Your packet.net host is called ${TF_VAR_environment_id}"
     echo -e "*** You can also access it via SSH with key located in ${ssh_path}"
