@@ -66,7 +66,7 @@ integration: deps-cgo ## Run integration test
 	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
 .PHONY: e2e
-e2e: deps-cgo ## Run end-to-end test
+e2e: ## Run end-to-end test
 	hack/packet-provision.sh install
 	#TODO run tests
 	hack/packet-provision.sh destroy
