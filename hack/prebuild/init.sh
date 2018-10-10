@@ -22,3 +22,28 @@ EOF
 #iptables -I INPUT -p tcp --dport 16509 -j ACCEPT -m comment --comment "Allow insecure libvirt clients"
 
 systemctl start libvirtd
+
+# Install kubectl
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+yum -y install kubectl
+
+# Install minikube
+curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-linux-amd64
+chmod +x /tmp/minikube
+cp /tmp/minikube /usr/local/bin/
+
+# Install kvm2 driver
+curl -Lo /tmp/docker-machine-driver-kvm2 https://storage.googleapis.com/minikube/releases/latest/docker-machine-driver-kvm2 
+chmod +x /tmp/docker-machine-driver-kvm2
+cp /tmp/docker-machine-driver-kvm2 /usr/local/bin/
+
+# Start minikube
+/usr/local/bin/minikube start --vm-driver kvm2
