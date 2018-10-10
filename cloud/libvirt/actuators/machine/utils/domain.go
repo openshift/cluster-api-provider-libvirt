@@ -600,3 +600,8 @@ func DomainExists(name string, client *Client) (bool, error) {
 
 	return true, nil
 }
+
+func (c *Client) Close() error {
+	_, err := c.connection.Close()
+	return err
+}
