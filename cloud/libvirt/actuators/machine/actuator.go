@@ -89,6 +89,9 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	if err != nil {
 		return false, fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
+
+	defer client.Close()
+
 	return libvirtutils.DomainExists(machine.Name, client)
 }
 
@@ -105,6 +108,8 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient ku
 	if err != nil {
 		return fmt.Errorf("failed to build libvirt client: %v", err)
 	}
+
+	defer client.Close()
 
 	// TODO(alberto) create struct and function for converting machineconfig->libvirtConfig
 	name := machine.Name
@@ -143,6 +148,8 @@ func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
+
+	defer client.Close()
 
 	// delete domain
 	if err := libvirtutils.DeleteDomain(name, client); err != nil {
