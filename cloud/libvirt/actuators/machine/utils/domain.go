@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"math/rand"
@@ -25,8 +27,8 @@ const (
 	baseVolumePath = "/var/lib/libvirt/images/"
 )
 
-// LibVirtConIsNil contains a nil connection error message
-var LibVirtConIsNil = "the libvirt connection was nil"
+// ErrLibVirtConIsNil is returned when the libvirt connection is nil.
+var ErrLibVirtConIsNil = errors.New("the libvirt connection was nil")
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -35,6 +37,11 @@ func init() {
 // Client libvirt
 type Client struct {
 	connection *libvirt.Connect
+}
+
+// Close closes the client's libvirt connection.
+func (c *Client) Close() (int, error) {
+	return c.connection.Close()
 }
 
 type pendingMapping struct {
@@ -546,7 +553,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 func DeleteDomain(name string, client *Client) error {
 	log.Printf("[DEBUG] Delete a domain")
 	if client.connection == nil {
-		return fmt.Errorf(LibVirtConIsNil)
+		return ErrLibVirtConIsNil
 	}
 
 	log.Printf("[DEBUG] Deleting domain %s", name)
@@ -582,11 +589,27 @@ func DeleteDomain(name string, client *Client) error {
 	return nil
 }
 
+// LookupDomainByName looks up a domain by name and returns a pointer to it.
+// Note: The caller is responsible for freeing the returned domain.
+func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
+	log.Printf("[DEBUG] Lookup domain by name: %q", name)
+	if client.connection == nil {
+		return nil, ErrLibVirtConIsNil
+	}
+
+	domain, err := client.connection.LookupDomainByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return domain, nil
+}
+
 // DomainExists verify a domain exists for given machine
 func DomainExists(name string, client *Client) (bool, error) {
 	log.Printf("[DEBUG] Check if a domain exists")
 	if client.connection == nil {
-		return false, fmt.Errorf(LibVirtConIsNil)
+		return false, ErrLibVirtConIsNil
 	}
 
 	domain, err := client.connection.LookupDomainByName(name)
@@ -599,4 +622,57 @@ func DomainExists(name string, client *Client) (bool, error) {
 	defer domain.Free()
 
 	return true, nil
+}
+
+// NodeAddresses returns a slice of corev1.NodeAddress objects for a
+// given libvirt domain.
+func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
+	addrs := []corev1.NodeAddress{}
+
+	// If the domain is nil, return an empty address array.
+	if dom == nil {
+		return addrs, nil
+	}
+
+	ifaceSource := libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
+	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		for _, addr := range iface.Addrs {
+			addrs = append(addrs, corev1.NodeAddress{
+				Type:    corev1.NodeInternalIP,
+				Address: addr.Addr,
+			})
+		}
+	}
+
+	return addrs, nil
+}
+
+// DomainStateString returns a human-readable string for the given
+// libvirt domain state.
+func DomainStateString(state libvirt.DomainState) string {
+	switch state {
+	case libvirt.DOMAIN_NOSTATE:
+		return "None"
+	case libvirt.DOMAIN_RUNNING:
+		return "Running"
+	case libvirt.DOMAIN_BLOCKED:
+		return "Blocked"
+	case libvirt.DOMAIN_PAUSED:
+		return "Paused"
+	case libvirt.DOMAIN_SHUTDOWN:
+		return "Shutdown"
+	case libvirt.DOMAIN_CRASHED:
+		return "Crashed"
+	case libvirt.DOMAIN_PMSUSPENDED:
+		return "Suspended"
+	case libvirt.DOMAIN_SHUTOFF:
+		return "Shutoff"
+	default:
+		return "Unknown"
+	}
 }
