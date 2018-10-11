@@ -71,8 +71,7 @@ e2e: e2e-provision ## Run end-to-end test
 	hack/packet-provision.sh destroy
 
 .PHONY: e2e-provision
-e2e-provision: /tmp/packet_ip
-/tmp/packet_ip:
+e2e-provision:
 	hack/packet-provision.sh install
 
 .PHONY: lint
