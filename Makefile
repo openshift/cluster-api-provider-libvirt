@@ -66,10 +66,13 @@ integration: deps-cgo ## Run integration test
 	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
 .PHONY: e2e
-e2e: ## Run end-to-end test
-	hack/packet-provision.sh install
-	#TODO run tests
+e2e: e2e-provision ## Run end-to-end test
+	# TODO @ingvagabund @spangenberg add e2e test command here
 	hack/packet-provision.sh destroy
+
+.PHONY: e2e-provision
+e2e-provision:
+	hack/packet-provision.sh install
 
 .PHONY: lint
 lint: ## Go lint your code
@@ -85,4 +88,4 @@ vet: ## Apply go vet to all go files
 
 .PHONY: help
 help:
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z/0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
