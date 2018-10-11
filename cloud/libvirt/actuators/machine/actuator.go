@@ -184,6 +184,12 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient ku
 
 	// Create domain
 	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
+		// Clean up the created volume if domain creation fails,
+		// otherwise subsequent runs will fail.
+		if err := libvirtutils.DeleteVolume(name, client); err != nil {
+			glog.Errorf("error cleaning up volume: %v", err)
+		}
+
 		return nil, fmt.Errorf("error creating domain: %v", err)
 	}
 
