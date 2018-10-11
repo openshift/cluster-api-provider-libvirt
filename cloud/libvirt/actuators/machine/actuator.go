@@ -210,6 +210,7 @@ func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
 	if err != nil {
 		return fmt.Errorf("Failed to build libvirt client: %s", err)
 	}
+	defer client.Close()
 
 	// delete domain
 	if err := libvirtutils.DeleteDomain(name, client); err != nil {
