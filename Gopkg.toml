@@ -24,6 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/openshift/cluster-api-actuator-pkg"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"
@@ -74,12 +77,10 @@
   name = "k8s.io/apiserver"
 
 [[constraint]]
-  branch = "release-6.0"
-  name = "k8s.io/client-go"
-
-[[constraint]]
   name = "sigs.k8s.io/cluster-api"
-  branch = "master"
+  # branch = "master"
+  revision = "f31486484d5b33c785540eeaffd47fe57832aef5"
+
 
 [[override]]
   name = "github.com/prometheus/client_golang"
