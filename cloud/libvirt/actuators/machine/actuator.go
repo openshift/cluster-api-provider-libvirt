@@ -77,10 +77,17 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
+	client, err := clientForMachine(machine)
+	if err != nil {
+		return errWrapper.WithLog(err, "error creating libvirt client")
+	}
+
+	defer client.Close()
+
 	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
 	a.cidrOffset++
 
-	dom, err := createVolumeAndDomain(machine, a.cidrOffset, a.kubeClient)
+	dom, err := createVolumeAndDomain(machine, a.cidrOffset, a.kubeClient, client)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt machine")
 	}
@@ -97,7 +104,16 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
-	return deleteVolumeAndDomain(machine)
+	errWrapper := errorWrapper{cluster: cluster, machine: machine}
+
+	client, err := clientForMachine(machine)
+	if err != nil {
+		return errWrapper.WithLog(err, "error creating libvirt client")
+	}
+
+	defer client.Close()
+
+	return deleteVolumeAndDomain(machine, client)
 }
 
 // Update updates a machine and is invoked by the Machine Controller
@@ -105,14 +121,9 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	client, err := clientForMachine(machine)
 	if err != nil {
-		return errWrapper.WithLog(err, "error getting machineProviderConfig from spec")
-	}
-
-	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
-	if err != nil {
-		return errWrapper.WithLog(err, "failed to build libvirt client")
+		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
 
 	defer client.Close()
@@ -134,36 +145,26 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
+	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	// decode config
-	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	client, err := clientForMachine(machine)
 	if err != nil {
-		return false, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+		return false, errWrapper.WithLog(err, "error creating libvirt client")
 	}
 
-	// build libvirtd client
-	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
-	if err != nil {
-		return false, fmt.Errorf("Failed to build libvirt client: %s", err)
-	}
+	defer client.Close()
+
 	return libvirtutils.DomainExists(machine.Name, client)
 }
 
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface) (*libvirt.Domain, error) {
+func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client *libvirtutils.Client) (*libvirt.Domain, error) {
 	// decode config
 	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
-	}
-
-	// TODO: In the current scheme, the client should probably be a
-	// parameter so the caller can free the client connection.
-	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build libvirt client: %v", err)
 	}
 
 	// TODO(alberto) create struct and function for converting machineconfig->libvirtConfig
@@ -203,29 +204,15 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient ku
 }
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
-func deleteVolumeAndDomain(machine *clusterv1.Machine) error {
-	// decode config
-	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
-	name := machine.Name
-	if err != nil {
-		return fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
-	}
-
-	// build libvirtd client
-	client, err := libvirtutils.BuildClient(machineProviderConfig.URI)
-	if err != nil {
-		return fmt.Errorf("Failed to build libvirt client: %s", err)
-	}
-
-	// delete domain
-	if err := libvirtutils.DeleteDomain(name, client); err != nil {
+func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Client) error {
+	if err := libvirtutils.DeleteDomain(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
-	// delete volume
-	if err := libvirtutils.DeleteVolume(name, client); err != nil {
+	if err := libvirtutils.DeleteVolume(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
+
 	return nil
 }
 
@@ -378,4 +365,15 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 	status.InstanceState = &stateString
 
 	return nil
+}
+
+// clientForMachine returns a libvirt client for the URI in the given
+// machine's provider config.
+func clientForMachine(machine *clusterv1.Machine) (*libvirtutils.Client, error) {
+	machineProviderConfig, err := machineProviderConfigFromClusterAPIMachineSpec(&machine.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+	}
+
+	return libvirtutils.BuildClient(machineProviderConfig.URI)
 }
