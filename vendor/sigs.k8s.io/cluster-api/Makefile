@@ -12,23 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: genapi genconversion genclientset gendeepcopy
+# Image URL to use all building/pushing image targets
+IMG ?= gcr.io/k8s-cluster-api/cluster-api-controller:latest
 
-all: generate build images
+all: test manager clusterctl
 
-depend:
-	dep version || go get -u github.com/golang/dep/cmd/dep
-	dep ensure -v
+# Run tests
+test: generate fmt vet manifests verify
+	go test -v -tags=integration ./pkg/... ./cmd/...
+#	go test -v -tags=integration ./pkg/... ./cmd/... -coverprofile cover.out
 
-	# go libraries often ship BUILD and BUILD.bazel files, but they often don't work.
-	# We delete them and regenerate them
-	find vendor -name "BUILD" -delete
-	find vendor -name "BUILD.bazel" -delete
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager sigs.k8s.io/cluster-api/cmd/manager
 
-	bazel run //:gazelle
+# Build manager binary
+clusterctl: generate fmt vet
+	go build -o bin/clusterctl sigs.k8s.io/cluster-api/cmd/clusterctl
 
-generate: genapi genconversion genclientset gendeepcopy genopenapi
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet
+	go run ./cmd/manager/main.go
 
+<<<<<<< HEAD
 genapi: depend
 	go build -o $$GOPATH/bin/apiregister-gen sigs.k8s.io/cluster-api/vendor/github.com/kubernetes-incubator/apiserver-builder/cmd/apiregister-gen
 	$$GOPATH/bin/apiregister-gen -i ./pkg/apis,./pkg/apis/cluster,./pkg/apis/cluster/v1alpha1
@@ -53,14 +59,29 @@ gendeepcopy:
 	  -i ./pkg/apis/cluster/,./pkg/apis/cluster/v1alpha1/ \
 	  -O zz_generated.deepcopy \
 	  -h boilerplate.go.txt
+=======
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests
+	kustomize build config/default | kubectl apply -f -
 
-STATIC_API_DIRS = k8s.io/apimachinery/pkg/apis/meta/v1
-STATIC_API_DIRS += k8s.io/apimachinery/pkg/api/resource
-STATIC_API_DIRS += k8s.io/apimachinery/pkg/version
-STATIC_API_DIRS += k8s.io/apimachinery/pkg/runtime
-STATIC_API_DIRS += k8s.io/apimachinery/pkg/util/intstr
-STATIC_API_DIRS += k8s.io/api/core/v1
+# Generate manifests e.g. CRD, RBAC etc.
+manifests:
+	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
 
+# Run go fmt against code
+fmt:
+	go fmt ./pkg/... ./cmd/...
+
+# Run go vet against code
+vet:
+	go vet ./pkg/... ./cmd/...
+>>>>>>> Re-Vendoring
+
+# Generate code
+generate:
+	go generate ./pkg/... ./cmd/...
+
+<<<<<<< HEAD
 # Automatically extract vendored apis under vendor/k8s.io/api.
 VENDOR_API_DIRS := $(shell find vendor/k8s.io/api -type d | grep -E 'v[[:digit:]]+(alpha[[:digit:]]+|beta[[:digit:]]+)*' | sed -e 's/^vendor\///')
 
@@ -87,6 +108,17 @@ build: depend
 images: depend
 	$(MAKE) -C cmd/apiserver image
 	$(MAKE) -C cmd/controller-manager image
+=======
+# Build the docker image
+docker-build: generate fmt vet manifests
+	docker build . -t ${IMG}
+	@echo "updating kustomize image patch file for manager resource"
+	sed -i'' -e 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
+>>>>>>> Re-Vendoring
 
 verify:
 	./hack/verify_boilerplate.py
+
+# Push the docker image
+docker-push:
+	docker push ${IMG}
