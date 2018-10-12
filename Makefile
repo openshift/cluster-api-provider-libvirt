@@ -1,3 +1,4 @@
+#<<<<<<< HEAD
 # Copyright 2018 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,8 +46,8 @@ depend-update:
 
 .PHONY: build
 build: ## build binaries
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/machine-controller
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+	# $(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/machine-controller
 
 .PHONY: images
 images: ## Create images
@@ -62,11 +63,61 @@ check: fmt vet lint test ## Check your code
 
 .PHONY: test
 test: # Run unit test
-	$(DOCKER_CMD) go test -race -cover ./cmd/... ./cloud/...
+	$(DOCKER_CMD) go test -race -cover ./pkg/... ./cmd/...
 
 .PHONY: integration
 integration: deps-cgo ## Run integration test
 	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
+#=======
+
+# # Image URL to use all building/pushing image targets
+# IMG ?= controller:latest
+
+# all: test manager
+
+# # Run tests
+# test: generate fmt vet manifests
+# 	go test ./pkg/... ./cmd/... -coverprofile cover.out
+
+# # Build manager binary
+# manager: generate fmt vet
+# 	go build -o bin/manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+
+# # Run against the configured Kubernetes cluster in ~/.kube/config
+# run: generate fmt vet
+# 	go run ./cmd/manager/main.go
+
+# # Install CRDs into a cluster
+# install: manifests
+# 	kubectl apply -f config/crds
+
+# # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+# deploy: manifests
+# 	kubectl apply -f config/crds
+# 	kustomize build config/default | kubectl apply -f -
+
+# # Generate manifests e.g. CRD, RBAC etc.
+# manifests:
+# 	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
+
+# # Run go fmt against code
+# fmt:
+# 	go fmt ./pkg/... ./cmd/...
+
+# # Run go vet against code
+# vet:
+# 	go vet ./pkg/... ./cmd/...
+
+# # Generate code
+# generate:
+# 	go generate ./pkg/... ./cmd/...
+
+# # Build the docker image
+# docker-build: test
+# 	docker build . -t ${IMG}
+# 	@echo "updating kustomize image patch file for manager resource"
+# 	sed -i'' -e 's@image: .*@image: '"${IMG}"'@' ./config/default/manager_image_patch.yaml
+#>>>>>>> Making kubebuilder project
 
 .PHONY: e2e
 e2e: e2e-provision ## Run end-to-end test
@@ -92,3 +143,7 @@ vet: ## Apply go vet to all go files
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z/0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+# Push the docker image
+docker-push:
+	docker push ${IMAGE}

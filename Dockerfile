@@ -15,19 +15,19 @@
 # Reproducible builder image
 FROM openshift/origin-release:golang-1.10 as builder
 
-# Workaround a bug in imagebuilder (some versions) where this dir will not be auto-created.
-RUN mkdir -p /go/src/github.com/openshift/cluster-api-provider-libvirt
+# Copy in the go src
 WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
+COPY pkg/    pkg/
+COPY cmd/    cmd/
+COPY vendor/ vendor/
 
-# This expects that the context passed to the docker build command is
-# the cluster-api-provider-libvirt directory.
-# e.g. docker build -t <tag> -f <this_Dockerfile> <path_to_cluster-api-libvirt>
-COPY . .
-RUN GOPATH=/go CGO_ENABLED=1 go install ./cmd/machine-controller
-RUN GOPATH=/go CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/controller-manager
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+
+# Copy the controller-manager into a thin image
 
 # Final container
 FROM openshift/origin-base
-RUN yum install -y ca-certificates libvirt-libs openssh-clients
-
-COPY --from=builder /go/bin/machine-controller /go/bin/controller-manager /
+WORKDIR /root/
+COPY --from=builder /go/src/github.com/openshift/cluster-api-provider-libvirt/manager .
+ENTRYPOINT ["./manager"]
