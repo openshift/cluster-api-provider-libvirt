@@ -40,8 +40,15 @@ type Client struct {
 }
 
 // Close closes the client's libvirt connection.
-func (c *Client) Close() (int, error) {
-	return c.connection.Close()
+func (c *Client) Close() error {
+	log.Printf("[DEBUG] Closing libvirt connection: %p", c.connection)
+
+	_, err := c.connection.Close()
+	if err != nil {
+		log.Printf("Error closing libvirt connection: %v", err)
+	}
+
+	return err
 }
 
 type pendingMapping struct {
@@ -416,7 +423,8 @@ func BuildClient(URI string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("[INFO] Created libvirt client")
+
+	log.Printf("[DEBUG] Created libvirt connection: %p", libvirtClient)
 
 	client := &Client{
 		connection: libvirtClient,

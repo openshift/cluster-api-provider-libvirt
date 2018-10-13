@@ -39,7 +39,7 @@ case ${1} in
     ;;
   "destroy")
     terraform destroy -input=false -auto-approve
-    rm /tmp/packet_id_rsa* 2>/dev/null || :
+    rm -f /tmp/packet_id_rsa* /tmp/packet_ip
     ;;
   *)
     echo "Use '$0 install' or '$0 destroy'."
