@@ -6,6 +6,8 @@ hostname: fedora
 fqdn: fedora.example.local
 
 runcmd:
+  # Set the hostname to its IP address so every kubernetes node has unique name
+  - hostnamectl set-hostname $(ip route get 1 | cut -d' ' -f7)
   # Maximal length of fw_cfg string passed down the pipe is 1024
   # So we need to concatenate all config* files (the config files are generated
   # in numerical order that can be sorted by running `sort -n`, e.g. config02
@@ -29,3 +31,8 @@ ssh_pwauth: True
 ssh_svcname: ssh
 ssh_deletekeys: True
 ssh_genkeytypes: ['rsa', 'ecdsa']
+
+# Install public ssh key to the first user-defined user configured
+# in cloud.cfg in the template (which is fedpra for Fedora cloud images)
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCkvgGhhYwEjWjD+ACW8s+DIanHqYJIC7RbgBRrvAqJQuWE87jfTtREHuW+o0qU1eIPPJzebu58VPgy3SscnrN2fKuMT2PAkevmjj4ARQmdsR/BBrmzdibe/Wnd8WEMNX82L+YrkuHoVkgafFkreSZgf/j8glGNl7IQe5gi2XDG1e+BQ+e94dxAExeRlldhQsbFvQJ+qLmDhHE4zdf/d/CqY6PwoIHlrOVLux7/pBV5SGg5eKlGCPi80oEf23LbwHYjkUXzEreBqUrWSwsdp6jIQ9zzADRQJ0+C47K6uwxy1RIe3q6t7f1eJwjmOaYYS2Sc+U1cpPHrWY3OzZJkbIZ3Fva8qVdbqhMW2ASqJ7oGpdwiRp7FTvoKlEktcc6JUK19sZ6dft79PF9nRy8nfz4obKowCZn7aqVBOW41DhaoC5oB9pfBgSPnObGnpkXITWrx/oUQ1zwrPIH150X3XuDdYXfrmDk/k+cQS7hjG328pfJs8oBhqUmyikUxjnXvDX/LQzacwDF3XKCy6Xq98bemFp8lnAG7c3tW8tYpn3Non6M3XaS2W/ece9JRZKOOCaqC52U7sg6nL/Yv11Sg9WSfJtINzNN1cKxZsIaPvorPflwqNlLWH3dPCb4KQry/54HCBvsKm1+s/yud31zk9C/CI5bFV959bLq+6ra6hAMBTw== Libvirt guest key
