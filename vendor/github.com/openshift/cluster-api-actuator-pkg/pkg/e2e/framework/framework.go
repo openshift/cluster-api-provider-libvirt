@@ -24,9 +24,9 @@ import (
 
 const (
 	// Default timeout for pools
-	PoolTimeout = 20 * time.Second
+	PoolTimeout = 5 * time.Minute
 	// Default waiting interval for pools
-	PollInterval = 1 * time.Second
+	PollInterval = 5 * time.Second
 	// Node waiting internal
 	PollNodeInterval = 5 * time.Second
 	// Pool timeout for cluster API deployment
@@ -34,7 +34,7 @@ const (
 	PoolDeletionTimeout             = 1 * time.Minute
 	// Pool timeout for kubeconfig
 	PoolKubeConfigTimeout = 10 * time.Minute
-	PoolNodesReadyTimeout = 5 * time.Minute
+	PoolNodesReadyTimeout = 10 * time.Minute
 	// Instances are running timeout
 	TimeoutPoolMachineRunningInterval = 10 * time.Minute
 )
@@ -47,15 +47,34 @@ var ClusterID string
 // Path to private ssh to connect to instances (e.g. to download kubeconfig or copy docker images)
 var sshkey string
 
+// Default ssh user
+var sshuser string
+
 var actuatorImage string
+
+var libvirtURI string
+var libvirtPK string
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig file")
 	flag.StringVar(&ClusterID, "cluster-id", "", "cluster ID")
 	flag.StringVar(&sshkey, "ssh-key", "", "Path to private ssh to connect to instances (e.g. to download kubeconfig or copy docker images)")
+	flag.StringVar(&sshuser, "ssh-user", "ec2-user", "Ssh user to connect to instances")
 	flag.StringVar(&actuatorImage, "actuator-image", "gcr.io/k8s-cluster-api/machine-controller:0.0.1", "Actuator image to run")
+	// libvirt specific flags
+	flag.StringVar(&libvirtURI, "libvirt-uri", "", "Libvirt URI to connect to libvirt from within machine controller container")
+	flag.StringVar(&libvirtPK, "libvirt-pk", "", "Private key to connect to qemu+ssh libvirt uri")
 
 	flag.Parse()
+}
+
+type ErrNotExpectedFnc func(error)
+type ByFnc func(string)
+
+type SSHConfig struct {
+	Key  string
+	User string
+	Host string
 }
 
 // Framework supports common operations used by tests
@@ -65,71 +84,110 @@ type Framework struct {
 	APIRegistrationClient *apiregistrationclientset.Clientset
 	Kubeconfig            string
 	RestConfig            *rest.Config
-	SSHKey                string
-	ActuatorImage         string
+
+	SSH *SSHConfig
+
+	LibvirtURI string
+	LibvirtPK  string
+
+	ActuatorImage  string
+	ErrNotExpected ErrNotExpectedFnc
+	By             ByFnc
 }
 
 // NewFramework setups a new framework
-func NewFramework() *Framework {
+func NewFramework() (*Framework, error) {
 	if sshkey == "" {
-		panic("-sskey not set")
+		return nil, fmt.Errorf("-sshkey not set")
 	}
 	if kubeconfig == "" {
-		panic("-kubeconfig not set")
+		return nil, fmt.Errorf("-kubeconfig not set")
 	}
 	f := &Framework{
-		Kubeconfig:    kubeconfig,
-		SSHKey:        sshkey,
+		Kubeconfig: kubeconfig,
+		SSH: &SSHConfig{
+			Key:  sshkey,
+			User: sshuser,
+		},
+
+		LibvirtURI: libvirtURI,
+		LibvirtPK:  libvirtPK,
+
 		ActuatorImage: actuatorImage,
 	}
+
+	f.ErrNotExpected = f.DefaultErrNotExpected
+	f.By = f.DefaultBy
 
 	BeforeEach(f.BeforeEach)
-	return f
+	return f, nil
 }
 
-func NewFrameworkFromConfig(config *rest.Config) *Framework {
+func DefaultSSHConfig() (*SSHConfig, error) {
 	if sshkey == "" {
-		panic("-sskey not set")
+		return nil, fmt.Errorf("-sshkey not set")
 	}
 
+	return &SSHConfig{
+		Key:  sshkey,
+		User: sshuser,
+	}, nil
+}
+
+func NewFrameworkFromConfig(config *rest.Config, sshConfig *SSHConfig) (*Framework, error) {
 	f := &Framework{
 		RestConfig:    config,
-		SSHKey:        sshkey,
+		SSH:           sshConfig,
 		ActuatorImage: actuatorImage,
+		LibvirtURI:    libvirtURI,
+		LibvirtPK:     libvirtPK,
 	}
 
-	f.buildClientsets()
-	return f
+	f.ErrNotExpected = f.DefaultErrNotExpected
+	f.By = f.DefaultBy
+
+	err := f.buildClientsets()
+	return f, err
 }
 
-func (f *Framework) buildClientsets() {
+func (f *Framework) buildClientsets() error {
 	var err error
 
-	By("Creating a kubernetes client")
 	if f.RestConfig == nil {
 		f.RestConfig, err = controller.GetConfig(f.Kubeconfig)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return err
+		}
 	}
 
 	if f.KubeClient == nil {
 		f.KubeClient, err = kubernetes.NewForConfig(f.RestConfig)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return err
+		}
 	}
 
 	if f.CAPIClient == nil {
 		f.CAPIClient, err = clientset.NewForConfig(f.RestConfig)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return err
+		}
 	}
 
 	if f.APIRegistrationClient == nil {
 		f.APIRegistrationClient, err = apiregistrationclientset.NewForConfig(f.RestConfig)
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // BeforeEach to be run before each spec responsible for building various clientsets
 func (f *Framework) BeforeEach() {
-	f.buildClientsets()
+	err := f.buildClientsets()
+	f.ErrNotExpected(err)
 }
 
 func (f *Framework) ScaleSatefulSetDownToZero(statefulset *appsv1beta2.StatefulSet) error {
@@ -161,7 +219,7 @@ func (f *Framework) ScaleSatefulSetDownToZero(statefulset *appsv1beta2.StatefulS
 			}
 			return false, nil
 		}
-		fmt.Printf("result: %v\n", result.Status.CurrentReplicas)
+
 		if result.Status.CurrentReplicas == 0 {
 			return true, nil
 		}
@@ -198,7 +256,7 @@ func (f *Framework) ScaleDeploymentDownToZero(deployment *appsv1beta2.Deployment
 			}
 			return false, nil
 		}
-		fmt.Printf("result: %v\n", result.Status.AvailableReplicas)
+
 		if result.Status.AvailableReplicas == 0 {
 			return true, nil
 		}
@@ -230,14 +288,22 @@ func WaitUntilDeleted(delFnc func() error, getFnc func() error) error {
 	})
 }
 
+func (f *Framework) DefaultErrNotExpected(err error) {
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func (f *Framework) DefaultBy(msg string) {
+	By(msg)
+}
+
 // IgnoreNotFoundErr ignores not found errors in case resource
 // that does not exist is to be deleted
-func IgnoreNotFoundErr(err error) {
+func (f *Framework) IgnoreNotFoundErr(err error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return
 		}
-		Expect(err).NotTo(HaveOccurred())
+		f.ErrNotExpected(err)
 	}
 }
 
@@ -248,12 +314,14 @@ func SigKubeDescribe(text string, body func()) bool {
 
 func (f *Framework) UploadDockerImageToInstance(image, targetMachine string) error {
 	log.Infof("Uploading %q to the master machine under %q", image, targetMachine)
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(
-		"docker save %v | bzip2 | ssh -o StrictHostKeyChecking=no -i %v ec2-user@%v \"bunzip2 > /tmp/tempimage.bz2 && sudo docker load -i /tmp/tempimage.bz2\"",
+	cmdStr := fmt.Sprintf(
+		"docker save %v | bzip2 | ssh -o StrictHostKeyChecking=no -i %v %v@%v \"bunzip2 > /tmp/tempimage.bz2 && sudo docker load -i /tmp/tempimage.bz2\"",
 		image,
-		f.SSHKey,
+		f.SSH.Key,
+		f.SSH.User,
 		targetMachine,
-	))
+	)
+	cmd := exec.Command("bash", "-c", cmdStr)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Info(string(out))

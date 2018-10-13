@@ -1,25 +1,22 @@
 package framework
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/log"
 
 	"github.com/openshift/cluster-api-actuator-pkg/pkg/manifests"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (f *Framework) DeployClusterAPIStack(clusterAPINamespace, provider string) {
+func (f *Framework) DeployClusterAPIStack(clusterAPINamespace, actuatorImage, actuatorPrivateKey string) {
 
-	By("Deploy cluster API stack components")
+	f.By("Deploying cluster API stack components")
+	f.By("Deploying API server API service")
 	certsSecret, apiAPIService, err := manifests.ClusterAPIServerAPIServiceObjects(clusterAPINamespace)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 	_, err = f.KubeClient.CoreV1().Secrets(certsSecret.Namespace).Create(certsSecret)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	err = wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		if _, err := f.KubeClient.CoreV1().Secrets(certsSecret.Namespace).Get(certsSecret.Name, metav1.GetOptions{}); err != nil {
@@ -27,36 +24,42 @@ func (f *Framework) DeployClusterAPIStack(clusterAPINamespace, provider string) 
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
+	f.By("Deploying API service")
 	_, err = f.APIRegistrationClient.Apiregistration().APIServices().Create(apiAPIService)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	apiService := manifests.ClusterAPIService(clusterAPINamespace)
 	_, err = f.KubeClient.CoreV1().Services(apiService.Namespace).Create(apiService)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
+	f.By("Deploying apiserver")
 	clusterAPIDeployment := manifests.ClusterAPIDeployment(clusterAPINamespace)
 	_, err = f.KubeClient.AppsV1beta2().Deployments(clusterAPIDeployment.Namespace).Create(clusterAPIDeployment)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	clusterAPIControllersDeployment := manifests.ClusterAPIControllersDeployment(clusterAPINamespace, provider)
+	f.By("Deploying controllers ")
+	clusterAPIControllersDeployment := manifests.ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage, actuatorPrivateKey)
 	_, err = f.KubeClient.AppsV1beta2().Deployments(clusterAPIDeployment.Namespace).Create(clusterAPIControllersDeployment)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
+	f.By("Deploying role binding")
 	clusterAPIRoleBinding := manifests.ClusterAPIRoleBinding(clusterAPINamespace)
 	_, err = f.KubeClient.RbacV1().RoleBindings(clusterAPIRoleBinding.Namespace).Create(clusterAPIRoleBinding)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
+	f.By("Deploying etcd cluster")
 	clusterAPIEtcdCluster := manifests.ClusterAPIEtcdCluster(clusterAPINamespace)
 	_, err = f.KubeClient.AppsV1beta2().StatefulSets(clusterAPIEtcdCluster.Namespace).Create(clusterAPIEtcdCluster)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
+	f.By("Deploying etcd service")
 	etcdService := manifests.ClusterAPIEtcdService(clusterAPINamespace)
 	_, err = f.KubeClient.CoreV1().Services(etcdService.Namespace).Create(etcdService)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Waiting for cluster API stack to come up")
+	f.By("Waiting for cluster API stack to come up")
 	err = wait.Poll(PollInterval, PoolClusterAPIDeploymentTimeout, func() (bool, error) {
 		if deployment, err := f.KubeClient.AppsV1beta2().Deployments(clusterAPIDeployment.Namespace).Get(clusterAPIDeployment.Name, metav1.GetOptions{}); err == nil {
 			// Check all the pods are running
@@ -69,16 +72,27 @@ func (f *Framework) DeployClusterAPIStack(clusterAPINamespace, provider string) 
 
 		return false, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Cluster API stack deployed")
+	f.By("Waiting until cluster objects can be listed")
+	err = wait.Poll(PollInterval, PoolClusterAPIDeploymentTimeout, func() (bool, error) {
+		_, err := f.CAPIClient.ClusterV1alpha1().Clusters(clusterAPIDeployment.Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			log.Infof("unable to list clusters: %v", err)
+			return false, nil
+		}
+
+		return true, nil
+	})
+
+	f.By("Cluster API stack deployed")
 }
 
-func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string) {
+func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, actuatorImage, actuatorPrivateKey string) {
 	var orphanDeletepolicy metav1.DeletionPropagation = "Orphan"
 	var zero int64 = 0
 
-	By("Deleting etcd service")
+	f.By("Deleting etcd service")
 	etcdService := manifests.ClusterAPIEtcdService(clusterAPINamespace)
 	err := WaitUntilDeleted(func() error {
 		return f.KubeClient.CoreV1().Services(etcdService.Namespace).Delete(etcdService.Name, &metav1.DeleteOptions{})
@@ -86,25 +100,24 @@ func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string)
 		_, err := f.KubeClient.CoreV1().Services(etcdService.Namespace).Get(etcdService.Name, metav1.GetOptions{})
 		return err
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Scaling down etcd cluster")
+	f.By("Scaling down etcd cluster")
 	clusterAPIEtcdCluster := manifests.ClusterAPIEtcdCluster(clusterAPINamespace)
 	f.ScaleSatefulSetDownToZero(clusterAPIEtcdCluster)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Deleting etcd cluster")
+	f.By("Deleting etcd cluster")
 	WaitUntilDeleted(func() error {
 		return f.KubeClient.AppsV1beta2().StatefulSets(clusterAPIEtcdCluster.Namespace).Delete(clusterAPIEtcdCluster.Name, &metav1.DeleteOptions{PropagationPolicy: &orphanDeletepolicy, GracePeriodSeconds: &zero})
 	}, func() error {
-		obj, err := f.KubeClient.AppsV1beta2().StatefulSets(clusterAPIEtcdCluster.Namespace).Get(clusterAPIEtcdCluster.Name, metav1.GetOptions{})
-		fmt.Printf("obj: %#v\n", obj)
+		_, err := f.KubeClient.AppsV1beta2().StatefulSets(clusterAPIEtcdCluster.Namespace).Get(clusterAPIEtcdCluster.Name, metav1.GetOptions{})
 		return err
 	})
 	// Ignore the error, the deployment has 0 replicas.
 	// No longer affecting future deployments since it lives in a different namespace.
 
-	By("Deleting role binding")
+	f.By("Deleting role binding")
 	clusterAPIRoleBinding := manifests.ClusterAPIRoleBinding(clusterAPINamespace)
 	err = WaitUntilDeleted(func() error {
 		return f.KubeClient.RbacV1().RoleBindings(clusterAPIRoleBinding.Namespace).Delete(clusterAPIRoleBinding.Name, &metav1.DeleteOptions{})
@@ -112,14 +125,14 @@ func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string)
 		_, err := f.KubeClient.RbacV1().RoleBindings(clusterAPIRoleBinding.Namespace).Get(clusterAPIRoleBinding.Name, metav1.GetOptions{})
 		return err
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	clusterAPIControllersDeployment := manifests.ClusterAPIControllersDeployment(clusterAPINamespace, provider)
-	By("Scaling down controllers deployment")
+	clusterAPIControllersDeployment := manifests.ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage, actuatorPrivateKey)
+	f.By("Scaling down controllers deployment")
 	err = f.ScaleDeploymentDownToZero(clusterAPIControllersDeployment)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Deleting controllers deployment")
+	f.By("Deleting controllers deployment")
 	WaitUntilDeleted(func() error {
 		return f.KubeClient.AppsV1beta2().Deployments(clusterAPIControllersDeployment.Namespace).Delete(clusterAPIControllersDeployment.Name, &metav1.DeleteOptions{PropagationPolicy: &orphanDeletepolicy, GracePeriodSeconds: &zero})
 	}, func() error {
@@ -130,11 +143,11 @@ func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string)
 	// No longer affecting future deployments since it lives in a different namespace.
 
 	clusterAPIDeployment := manifests.ClusterAPIDeployment(clusterAPINamespace)
-	By("Scaling down apiserver deployment")
+	f.By("Scaling down apiserver deployment")
 	err = f.ScaleDeploymentDownToZero(clusterAPIDeployment)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Deleting apiserver deployment")
+	f.By("Deleting apiserver deployment")
 	WaitUntilDeleted(func() error {
 		return f.KubeClient.AppsV1beta2().Deployments(clusterAPIDeployment.Namespace).Delete(clusterAPIDeployment.Name, &metav1.DeleteOptions{PropagationPolicy: &orphanDeletepolicy, GracePeriodSeconds: &zero})
 	}, func() error {
@@ -144,7 +157,7 @@ func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string)
 	// Ignore the error, the deployment has 0 replicas.
 	// No longer affecting future deployments since it lives in a different namespace.
 
-	By("Deleting cluster api service")
+	f.By("Deleting cluster api service")
 	apiService := manifests.ClusterAPIService(clusterAPINamespace)
 	err = WaitUntilDeleted(func() error {
 		return f.KubeClient.CoreV1().Services(apiService.Namespace).Delete(apiService.Name, &metav1.DeleteOptions{})
@@ -152,27 +165,27 @@ func (f *Framework) DestroyClusterAPIStack(clusterAPINamespace, provider string)
 		_, err := f.KubeClient.CoreV1().Services(apiService.Namespace).Get(apiService.Name, metav1.GetOptions{})
 		return err
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	// Even though the certs are different, only the secret name(space) and apiservice name(space) are actually used
 	certsSecret, apiAPIService, err := manifests.ClusterAPIServerAPIServiceObjects(clusterAPINamespace)
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Deleting cluster api api service")
+	f.By("Deleting cluster api api service")
 	err = WaitUntilDeleted(func() error {
 		return f.APIRegistrationClient.Apiregistration().APIServices().Delete(apiAPIService.Name, &metav1.DeleteOptions{})
 	}, func() error {
 		_, err := f.APIRegistrationClient.Apiregistration().APIServices().Get(apiAPIService.Name, metav1.GetOptions{})
 		return err
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Deleting api server certs")
+	f.By("Deleting api server certs")
 	err = WaitUntilDeleted(func() error {
 		return f.KubeClient.CoreV1().Secrets(certsSecret.Namespace).Delete(certsSecret.Name, &metav1.DeleteOptions{})
 	}, func() error {
 		_, err := f.KubeClient.CoreV1().Secrets(certsSecret.Namespace).Get(certsSecret.Name, metav1.GetOptions{})
 		return err
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 }

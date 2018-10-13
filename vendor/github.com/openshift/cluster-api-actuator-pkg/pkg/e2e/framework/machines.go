@@ -3,12 +3,7 @@ package framework
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"net"
-	"os"
 	"strings"
-
-	"golang.org/x/crypto/ssh"
 
 	"github.com/prometheus/common/log"
 	apiv1 "k8s.io/api/core/v1"
@@ -18,9 +13,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 type CloudProviderClient interface {
@@ -33,12 +25,12 @@ type CloudProviderClient interface {
 }
 
 func (f *Framework) DeleteMachineAndWait(machine *clusterv1alpha1.Machine, client CloudProviderClient) {
-	By(fmt.Sprintf("Deleting %q machine", machine.Name))
+	f.By(fmt.Sprintf("Deleting %q machine", machine.Name))
 	err := f.CAPIClient.ClusterV1alpha1().Machines(machine.Namespace).Delete(machine.Name, &metav1.DeleteOptions{})
-	IgnoreNotFoundErr(err)
+	f.IgnoreNotFoundErr(err)
 
 	// Verify the testing machine has been destroyed
-	By("Verify instance is terminated")
+	f.By("Verify instance is terminated")
 	err = wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		_, err := f.CAPIClient.ClusterV1alpha1().Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{})
 		if err == nil {
@@ -50,7 +42,7 @@ func (f *Framework) DeleteMachineAndWait(machine *clusterv1alpha1.Machine, clien
 		}
 		return false, nil
 	})
-	IgnoreNotFoundErr(err)
+	f.IgnoreNotFoundErr(err)
 
 	if client != nil {
 		err = wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
@@ -66,12 +58,12 @@ func (f *Framework) DeleteMachineAndWait(machine *clusterv1alpha1.Machine, clien
 			}
 			return true, nil
 		})
-		Expect(err).NotTo(HaveOccurred())
+		f.ErrNotExpected(err)
 	}
 }
 
 func (f *Framework) waitForMachineToRun(machine *clusterv1alpha1.Machine, client CloudProviderClient) {
-	By(fmt.Sprintf("Waiting for %q machine", machine.Name))
+	f.By(fmt.Sprintf("Waiting for %q machine", machine.Name))
 	// Verify machine has been deployed
 	err := wait.Poll(PollInterval, TimeoutPoolMachineRunningInterval, func() (bool, error) {
 		if _, err := f.CAPIClient.ClusterV1alpha1().Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{}); err != nil {
@@ -80,14 +72,15 @@ func (f *Framework) waitForMachineToRun(machine *clusterv1alpha1.Machine, client
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Verify machine's underlying instance is running")
+	f.By("Verify machine's underlying instance is running")
 	err = wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		log.Info("Waiting for instance to come up")
 		runningInstances, err := client.GetRunningInstances(machine)
 		if err != nil {
-			return false, fmt.Errorf("unable to get running instances: %v", err)
+			log.Infof("unable to get running instances: %v", err)
+			return false, nil
 		}
 		runningInstancesLen := len(runningInstances)
 		if runningInstancesLen == 1 {
@@ -99,16 +92,17 @@ func (f *Framework) waitForMachineToRun(machine *clusterv1alpha1.Machine, client
 		}
 		return false, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 }
 
 func (f *Framework) waitForMachineToTerminate(machine *clusterv1alpha1.Machine, client CloudProviderClient) error {
-	By("Verify machine's underlying instance is not running")
+	f.By("Verify machine's underlying instance is not running")
 	err := wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		log.Info("Waiting for instance to terminate")
 		runningInstances, err := client.GetRunningInstances(machine)
 		if err != nil {
-			return false, fmt.Errorf("unable to get running instances from cloud provider: %v", err)
+			log.Infof("unable to get running instances from cloud provider: %v", err)
+			return false, nil
 		}
 		runningInstancesLen := len(runningInstances)
 		if runningInstancesLen > 1 {
@@ -122,7 +116,7 @@ func (f *Framework) waitForMachineToTerminate(machine *clusterv1alpha1.Machine, 
 		return err
 	}
 
-	By(fmt.Sprintf("Waiting for %q machine object to be deleted", machine.Name))
+	f.By(fmt.Sprintf("Waiting for %q machine object to be deleted", machine.Name))
 	// Verify machine has been deployed
 	err = wait.Poll(PollInterval, TimeoutPoolMachineRunningInterval, func() (bool, error) {
 		if _, err := f.CAPIClient.ClusterV1alpha1().Machines(machine.Namespace).Get(machine.Name, metav1.GetOptions{}); err != nil {
@@ -139,7 +133,7 @@ func (f *Framework) waitForMachineToTerminate(machine *clusterv1alpha1.Machine, 
 }
 
 func (f *Framework) CreateMachineAndWait(machine *clusterv1alpha1.Machine, client CloudProviderClient) {
-	By(fmt.Sprintf("Creating %q machine", machine.Name))
+	f.By(fmt.Sprintf("Creating %q machine", machine.Name))
 	err := wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		_, err := f.CAPIClient.ClusterV1alpha1().Machines(machine.Namespace).Create(machine)
 		if err != nil {
@@ -148,13 +142,13 @@ func (f *Framework) CreateMachineAndWait(machine *clusterv1alpha1.Machine, clien
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	f.waitForMachineToRun(machine, client)
 }
 
 func (f *Framework) CreateMachineSetAndWait(machineset *clusterv1alpha1.MachineSet, client CloudProviderClient) {
-	By(fmt.Sprintf("Creating %q machineset", machineset.Name))
+	f.By(fmt.Sprintf("Creating %q machineset", machineset.Name))
 	err := wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		_, err := f.CAPIClient.ClusterV1alpha1().MachineSets(machineset.Namespace).Create(machineset)
 		if err != nil {
@@ -163,7 +157,7 @@ func (f *Framework) CreateMachineSetAndWait(machineset *clusterv1alpha1.MachineS
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	// Verify machineset has been deployed
 	err = wait.Poll(PollInterval, TimeoutPoolMachineRunningInterval, func() (bool, error) {
@@ -173,13 +167,13 @@ func (f *Framework) CreateMachineSetAndWait(machineset *clusterv1alpha1.MachineS
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
-	By("Verify machineset's underlying instances is running")
+	f.By("Verify machineset's underlying instances is running")
 	machines, err := f.CAPIClient.ClusterV1alpha1().Machines(machineset.Namespace).List(metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(machineset.Spec.Selector.MatchLabels).String(),
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	for _, machine := range machines.Items {
 		f.waitForMachineToRun(&machine, client)
@@ -187,7 +181,7 @@ func (f *Framework) CreateMachineSetAndWait(machineset *clusterv1alpha1.MachineS
 }
 
 func (f *Framework) DeleteMachineSetAndWait(machineset *clusterv1alpha1.MachineSet, client CloudProviderClient) error {
-	By("Get all machineset's machines")
+	f.By(fmt.Sprintf("Get all %q machineset's machines", machineset.Name))
 	machines, err := f.CAPIClient.ClusterV1alpha1().Machines(machineset.Namespace).List(metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(machineset.Spec.Selector.MatchLabels).String(),
 	})
@@ -195,13 +189,13 @@ func (f *Framework) DeleteMachineSetAndWait(machineset *clusterv1alpha1.MachineS
 		return err
 	}
 
-	By(fmt.Sprintf("Deleting %q machineset", machineset.Name))
+	f.By(fmt.Sprintf("Deleting %q machineset", machineset.Name))
 	err = f.CAPIClient.ClusterV1alpha1().MachineSets(machineset.Namespace).Delete(machineset.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
-	By("Waiting for all machines to be deleted")
+	f.By("Waiting for all machines to be deleted")
 	for _, machine := range machines.Items {
 		f.waitForMachineToTerminate(&machine, client)
 		// TODO(jchaloup): run it one more time depending on the error returned
@@ -220,14 +214,15 @@ func (f *Framework) DeleteMachineSetAndWait(machineset *clusterv1alpha1.MachineS
 	return err
 }
 
-func (f *Framework) WaitForNodesToGetReady() {
-	err := wait.Poll(PollNodeInterval, PoolNodesReadyTimeout, func() (bool, error) {
+func (f *Framework) WaitForNodesToGetReady(count int) error {
+	return wait.Poll(PollNodeInterval, PoolNodesReadyTimeout, func() (bool, error) {
 		items, err := f.KubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
 		if err != nil {
-			return false, fmt.Errorf("unable to list nodes: %v", err)
+			log.Infof("unable to list nodes: %v", err)
+			return false, nil
 		}
-		if len(items.Items) < 2 {
-			log.Infof("Waiting for both nodes to come up, have %v", len(items.Items))
+		if len(items.Items) < count {
+			log.Infof("Waiting for %v nodes to come up, have %v", count, len(items.Items))
 			return false, nil
 		}
 		allNodesReady := true
@@ -252,39 +247,12 @@ func (f *Framework) WaitForNodesToGetReady() {
 
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
 }
 
-func ReadKubeconfigFromServer(sshuser, sshhost, prkey string) (string, error) {
-	fp, err := os.Open(prkey)
+func ReadKubeconfigFromServer(sshConfig *SSHConfig) (string, error) {
+	client, err := createSSHClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf("unable to open id_rsa file: %v", err)
-	}
-	defer fp.Close()
-
-	buf, err := ioutil.ReadAll(fp)
-	if err != nil {
-		return "", fmt.Errorf("unable to read id_rsa file: %v", err)
-	}
-
-	key, err := ssh.ParsePrivateKey(buf)
-	if err != nil {
-		return "", fmt.Errorf("unable to parse private key: %v", err)
-	}
-
-	config := &ssh.ClientConfig{
-		User: sshuser,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(key),
-		},
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			return nil
-		},
-	}
-
-	client, err := ssh.Dial("tcp", sshhost+":22", config)
-	if err != nil {
-		return "", fmt.Errorf("failed to dial: " + err.Error())
+		return "", err
 	}
 
 	session, err := client.NewSession()
@@ -323,7 +291,11 @@ func (f *Framework) GetMasterMachineRestConfig(masterMachine *clusterv1alpha1.Ma
 	err = wait.Poll(PollInterval, PoolKubeConfigTimeout, func() (bool, error) {
 		log.Infof("Pulling kubeconfig from %v:8443", masterPublicDNSName)
 		var err error
-		masterKubeconfig, err = ReadKubeconfigFromServer("ec2-user", masterPublicDNSName, f.SSHKey)
+		masterKubeconfig, err = ReadKubeconfigFromServer(&SSHConfig{
+			User: f.SSH.User,
+			Host: masterPublicDNSName,
+			Key:  f.SSH.Key,
+		})
 		if err != nil {
 			log.Infof("Unable to pull kubeconfig: %v", err)
 			return false, nil
@@ -331,6 +303,9 @@ func (f *Framework) GetMasterMachineRestConfig(masterMachine *clusterv1alpha1.Ma
 
 		return true, nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	log.Infof("Master running on https://" + masterPublicDNSName + ":8443")
 
@@ -338,6 +313,7 @@ func (f *Framework) GetMasterMachineRestConfig(masterMachine *clusterv1alpha1.Ma
 	if err != nil {
 		return nil, err
 	}
+
 	config.Clusters["kubernetes"].Server = "https://" + masterPublicDNSName + ":8443"
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
@@ -367,19 +343,23 @@ func InitMachinesToDelete() *MachinesToDelete {
 }
 
 func (m *MachinesToDelete) AddMachine(machine *clusterv1alpha1.Machine, framework *Framework, client CloudProviderClient) {
-	m.machines = append(m.machines, machineToDelete{machine: machine, framework: framework, client: client})
+	m.machines = append([]machineToDelete{machineToDelete{machine: machine, framework: framework, client: client}}, m.machines...)
 }
 
 func (m *MachinesToDelete) AddMachineSet(machineset *clusterv1alpha1.MachineSet, framework *Framework, client CloudProviderClient) {
-	m.machinesets = append(m.machinesets, machinesetToDelete{machineset: machineset, framework: framework, client: client})
+	m.machinesets = append([]machinesetToDelete{machinesetToDelete{machineset: machineset, framework: framework, client: client}}, m.machinesets...)
 }
 
 func (m *MachinesToDelete) Delete() {
+	for _, item := range m.machinesets {
+		item.framework.DeleteMachineSetAndWait(item.machineset, item.client)
+	}
+
+	m.machinesets = make([]machinesetToDelete, 0)
+
 	for _, item := range m.machines {
 		item.framework.DeleteMachineAndWait(item.machine, item.client)
 	}
 
-	for _, item := range m.machinesets {
-		item.framework.DeleteMachineSetAndWait(item.machineset, item.client)
-	}
+	m.machines = make([]machineToDelete, 0)
 }
