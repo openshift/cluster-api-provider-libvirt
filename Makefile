@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+DBG         ?= 0
 VERSION     ?= $(shell git describe --always --abbrev=7)
 MUTABLE_TAG ?= latest
 IMAGE        = origin-libvirt-machine-controllers
+
+ifeq ($(DBG),1)
+GOGCFLAGS ?= -gcflags=all="-N -l"
+endif
 
 .PHONY: all
 all: build images check
@@ -43,7 +48,7 @@ bin:
 
 .PHONY: build
 build: | bin ## build binary
-	$(DOCKER_CMD) go build -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
 
 .PHONY: images
 images: ## Create images
