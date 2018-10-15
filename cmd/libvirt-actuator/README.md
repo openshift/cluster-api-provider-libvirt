@@ -62,7 +62,7 @@ By default, available user data (under [user-data.sh](resources/user-data.sh) fi
 contains a shell script that deploys kubernetes master node.
 Feel free to modify the file to your needs.
 
-The libvirt actuator expectes the user data to be provided by a kubernetes secret
+The libvirt actuator expects the user data to be provided by a kubernetes secret
 by setting `spec.providerConfig.value.cloudInit.userDataSecret` field.
 See [userdata.yml](resources/userdata.yml) for example.
 
