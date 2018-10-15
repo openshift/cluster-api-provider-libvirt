@@ -78,7 +78,6 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 
 		testNamespace = &apiv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				// Name: "namespace-3e23d56b-cf1e-11e8-948b-0cc47ae5476c",
 				Name: "namespace-" + string(uuid.NewUUID()),
 			},
 		}
