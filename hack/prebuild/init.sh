@@ -61,7 +61,7 @@ yum -y install kubectl
 
 # Install minikube
 # Install 0.28.0 instead of the latest due to https://github.com/kubernetes/minikube/issues/3076
-curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/v0.28.2/minikube-linux-amd64
+curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/v0.28.0/minikube-linux-amd64
 chmod +x /tmp/minikube
 cp /tmp/minikube /usr/local/bin/
 
