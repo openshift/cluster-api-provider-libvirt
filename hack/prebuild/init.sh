@@ -23,6 +23,30 @@ EOF
 
 systemctl start libvirtd
 
+# Update the qemu-kvm to a version that has -fw_cfg flag (2.4 at least)
+cat <<EOF > /etc/yum.repos.d/centos.repo
+[centos]
+name=centos
+baseurl=http://mirror.centos.org/centos/7/virt/x86_64/kvm-common/
+gpgcheck=0
+enabled=1
+EOF
+
+yum update qemu-kvm -y
+
+# Create default storage volume
+virsh pool-define /dev/stdin <<EOF
+<pool type='dir'>
+  <name>default</name>
+  <target>
+    <path>/var/lib/libvirt/images</path>
+  </target>
+</pool>
+EOF
+
+virsh pool-start default
+virsh pool-autostart default
+
 # Install kubectl
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
@@ -36,12 +60,13 @@ EOF
 yum -y install kubectl
 
 # Install minikube
-curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-linux-amd64
+# Install 0.28.0 instead of the latest due to https://github.com/kubernetes/minikube/issues/3076
+curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/v0.28.2/minikube-linux-amd64
 chmod +x /tmp/minikube
 cp /tmp/minikube /usr/local/bin/
 
 # Install kvm2 driver
-curl -Lo /tmp/docker-machine-driver-kvm2 https://storage.googleapis.com/minikube/releases/latest/docker-machine-driver-kvm2 
+curl -Lo /tmp/docker-machine-driver-kvm2 https://storage.googleapis.com/minikube/releases/latest/docker-machine-driver-kvm2
 chmod +x /tmp/docker-machine-driver-kvm2
 cp /tmp/docker-machine-driver-kvm2 /usr/local/bin/
 

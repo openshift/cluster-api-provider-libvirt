@@ -2,6 +2,7 @@ package machines
 
 import (
 	"fmt"
+	"strings"
 
 	libvirt "github.com/libvirt/libvirt-go"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
@@ -27,7 +28,9 @@ func (client *libvirtClient) GetRunningInstances(machine *clusterv1alpha1.Machin
 	if err != nil {
 		return nil, err
 	}
-
+	if domain == nil {
+		return nil, nil
+	}
 	return []interface{}{domain}, nil
 }
 
@@ -39,6 +42,10 @@ func (client *libvirtClient) GetPrivateIP(machine *clusterv1alpha1.Machine) (str
 	domain, err := client.getRunningDomain(machine.Name)
 	if err != nil {
 		return "", err
+	}
+
+	if domain == nil {
+		return "", fmt.Errorf("no domain with matching name %q found", machine.Name)
 	}
 
 	domainInterfaces, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
@@ -61,6 +68,9 @@ func (client *libvirtClient) GetPrivateIP(machine *clusterv1alpha1.Machine) (str
 func (client *libvirtClient) getRunningDomain(name string) (*libvirt.Domain, error) {
 	domain, err := client.conn.LookupDomainByName(name)
 	if err != nil {
+		if strings.Contains(err.Error(), "no domain with matching name") {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error retrieving libvirt domain: %q", err)
 	}
 

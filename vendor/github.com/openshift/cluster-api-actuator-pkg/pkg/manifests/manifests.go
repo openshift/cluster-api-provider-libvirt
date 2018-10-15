@@ -227,9 +227,9 @@ func ClusterAPIDeployment(clusterAPINamespace string) *appsv1beta2.Deployment {
 	}
 }
 
-func ClusterAPIControllersDeployment(clusterAPINamespace, provider string) *appsv1beta2.Deployment {
+func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, ActuatorPrivateKey string) *appsv1beta2.Deployment {
 	var replicas int32 = 1
-	return &appsv1beta2.Deployment{
+	deployment := &appsv1beta2.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "clusterapi-controllers",
 			Namespace: clusterAPINamespace,
@@ -277,7 +277,7 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, provider string) *apps
 					Containers: []apiv1.Container{
 						{
 							Name:  "controller-manager",
-							Image: fmt.Sprintf("gcr.io/k8s-cluster-api/%s-machine-controller:0.0.1", provider),
+							Image: actuatorImage,
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      "config",
@@ -302,8 +302,8 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, provider string) *apps
 							},
 						},
 						{
-							Name:  fmt.Sprintf("%s-machine-controller", provider),
-							Image: fmt.Sprintf("gcr.io/k8s-cluster-api/%s-machine-controller:0.0.1", provider),
+							Name:  fmt.Sprintf("machine-controller"),
+							Image: actuatorImage,
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      "config",
@@ -402,6 +402,26 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, provider string) *apps
 			},
 		},
 	}
+
+	if ActuatorPrivateKey != "" {
+		var defaultMode int32 = 384
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, apiv1.Volume{
+			Name: ActuatorPrivateKey,
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{
+					SecretName:  ActuatorPrivateKey,
+					DefaultMode: &defaultMode,
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[1].VolumeMounts, apiv1.VolumeMount{
+			Name:      ActuatorPrivateKey,
+			MountPath: "/root/.ssh/actuator.pem",
+			ReadOnly:  true,
+		})
+	}
+
+	return deployment
 }
 
 func ClusterAPIRoleBinding(clusterAPINamespace string) *rbacv1.RoleBinding {
@@ -631,16 +651,29 @@ func MasterMachine(clusterID, namespace string, providerConfig clusterv1alpha1.P
 	return machine
 }
 
-func MasterMachineUserDataSecret(secretName, namespace string) *apiv1.Secret {
+func MasterMachineUserDataSecret(secretName, namespace string, apiserverCertExtraSans []string) (*apiv1.Secret, error) {
+	params := userDataParams{
+		ApiserverCertExtraSans: apiserverCertExtraSans,
+	}
+	t, err := template.New("masteruserdata").Parse(masterUserDataBlob)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	err = t.Execute(&buf, params)
+	if err != nil {
+		return nil, err
+	}
+
 	return &apiv1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"userData": []byte(masterUserDataBlob),
+			"userData": []byte(buf.String()),
 		},
-	}
+	}, nil
 }
 
 func WorkerMachineUserDataSecret(secretName, namespace, masterIP string) (*apiv1.Secret, error) {

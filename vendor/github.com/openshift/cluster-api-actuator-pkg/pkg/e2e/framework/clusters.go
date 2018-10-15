@@ -7,13 +7,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/log"
 )
 
 func (f *Framework) CreateClusterAndWait(cluster *clusterv1alpha1.Cluster) {
-	By(fmt.Sprintf("Creating %q cluster", cluster.Name))
+	f.By(fmt.Sprintf("Creating %q cluster", cluster.Name))
 	err := wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		_, err := f.CAPIClient.ClusterV1alpha1().Clusters(cluster.Namespace).Create(cluster)
 		if err != nil {
@@ -22,7 +20,7 @@ func (f *Framework) CreateClusterAndWait(cluster *clusterv1alpha1.Cluster) {
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 
 	err = wait.Poll(PollInterval, PoolTimeout, func() (bool, error) {
 		_, err := f.CAPIClient.ClusterV1alpha1().Clusters(cluster.Namespace).Get(cluster.Name, metav1.GetOptions{})
@@ -31,5 +29,5 @@ func (f *Framework) CreateClusterAndWait(cluster *clusterv1alpha1.Cluster) {
 		}
 		return true, nil
 	})
-	Expect(err).NotTo(HaveOccurred())
+	f.ErrNotExpected(err)
 }
