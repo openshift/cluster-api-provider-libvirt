@@ -5,7 +5,7 @@ resource "packet_ssh_key" "key" {
 
 resource "packet_device" "libvirt" {
   hostname         = "libvirt-${var.id}"
-  plan             = "baremetal_0"
+  plan             = "baremetal_1"
   facility         = "ewr1"
   operating_system = "centos_7"
   billing_cycle    = "hourly"
