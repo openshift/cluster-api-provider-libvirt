@@ -43,12 +43,10 @@ depend:
 depend-update:
 	dep ensure -update
 
-bin:
-	@mkdir $@
-
 .PHONY: build
-build: | bin ## build binary
+build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/machine-controller
 
 .PHONY: images
 images: ## Create images
