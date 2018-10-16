@@ -10,7 +10,7 @@ scp ${script_dir}/guest.pem libvirtactuator:/root/.ssh/id_rsa
 ssh libvirtactuator 'chmod 600 /root/.ssh/id_rsa'
 
 # Use ipv4 since ipv6 timeouts
-ssh libvirtactuator 'wget --inet4-only https://download.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2'
+#ssh libvirtactuator 'wget --inet4-only https://download.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2'
 # Took from https://askubuntu.com/a/299578
-ssh libvirtactuator 'virsh vol-create-as default fedora_base $(stat -Lc%s Fedora-Cloud-Base-28-1.1.x86_64.qcow2) --format raw'
-ssh libvirtactuator 'virsh vol-upload --pool default fedora_base Fedora-Cloud-Base-28-1.1.x86_64.qcow2'
+ssh libvirtactuator 'virsh vol-create-as default fedora_base $(stat -Lc%s /Fedora-Cloud-Base-28-1.1.x86_64.qcow2) --format raw'
+ssh libvirtactuator 'virsh vol-upload --pool default fedora_base /Fedora-Cloud-Base-28-1.1.x86_64.qcow2'
