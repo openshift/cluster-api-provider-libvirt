@@ -121,8 +121,15 @@ func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	}
 
 	defer client.Close()
-
-	return deleteVolumeAndDomain(machine, client)
+	exists, err := libvirtutils.DomainExists(machine.Name, client)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return deleteVolumeAndDomain(machine, client)
+	}
+	glog.Infof("Domain %s does not exist. Skipping deletion...", machine.Name)
+	return nil
 }
 
 // Update updates a machine and is invoked by the Machine Controller
