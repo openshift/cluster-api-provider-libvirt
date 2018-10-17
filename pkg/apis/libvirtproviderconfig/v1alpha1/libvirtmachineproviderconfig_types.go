@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,18 +58,68 @@ type Volume struct {
 	VolumeName   string
 }
 
+// LibvirtMachineProviderStatus is the type that will be embedded in a Machine.Status.ProviderStatus field.
+// It contains Libvirt-specific status information.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type LibvirtMachineProviderStatus struct {
+	metav1.TypeMeta `json:",inline"`
 
-// LibvirtMachineProviderConfigList contains a list of LibvirtMachineProviderConfig
+	// InstanceID is the instance ID of the machine created in Libvirt
+	InstanceID *string `json:"instanceID"`
+
+	// InstanceState is the state of the Libvirt instance for this machine
+	InstanceState *string `json:"instanceState"`
+
+	// Conditions is a set of conditions associated with the Machine to indicate
+	// errors or other status
+	Conditions []LibvirtMachineProviderCondition `json:"conditions"`
+}
+
+// LibvirtMachineProviderConditionType is a valid value for LibvirtMachineProviderCondition.Type
+type LibvirtMachineProviderConditionType string
+
+// Valid conditions for an Libvirt machine instance
+const (
+	// MachineCreated indicates whether the machine has been created or not. If not,
+	// it should include a reason and message for the failure.
+	MachineCreated LibvirtMachineProviderConditionType = "MachineCreated"
+)
+
+// LibvirtMachineProviderCondition is a condition in a LibvirtMachineProviderStatus
+type LibvirtMachineProviderCondition struct {
+	// Type is the type of the condition.
+	Type LibvirtMachineProviderConditionType `json:"type"`
+	// Status is the status of the condition.
+	Status corev1.ConditionStatus `json:"status"`
+	// LastProbeTime is the last time we probed the condition.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime"`
+	// LastTransitionTime is the last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	// Reason is a unique, one-word, CamelCase reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason"`
+	// Message is a human-readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message"`
+}
+
+// LibvirtClusterProviderStatus is the type that will be embedded in a Cluster.Status.ProviderStatus field.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type LibvirtClusterProviderStatus struct {
+	metav1.TypeMeta `json:",inline"`
+}
+
+// LibvirtMachineProviderConfigList contains a list of AWSMachineProviderConfig
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type LibvirtMachineProviderConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []LibvirtMachineProviderConfig `json:"items"`
 }
 
-// TBD
-type LibvirtMachineProviderStatus struct{}
-
 func init() {
-	SchemeBuilder.Register(&LibvirtMachineProviderConfig{}, &LibvirtMachineProviderConfigList{})
+	//SchemeBuilder.Register(&LibvirtMachineProviderConfigList{}, &LibvirtMachineProviderConfig{}, &LibvirtMachineProviderStatus{})
+	SchemeBuilder.Register(&LibvirtMachineProviderConfigList{}, &LibvirtMachineProviderConfig{})
 }

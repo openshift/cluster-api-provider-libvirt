@@ -14,7 +14,6 @@
 package machine
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -22,6 +21,7 @@ import (
 
 	// 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
 	// 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +29,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	// =======
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
@@ -42,6 +41,12 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	clusterclient "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
 )
+
+type codec interface {
+	DecodeFromProviderConfig(clusterv1.ProviderConfig, runtime.Object) error
+	DecodeProviderStatus(*runtime.RawExtension, runtime.Object) error
+	EncodeProviderStatus(runtime.Object) (*runtime.RawExtension, error)
+}
 
 type errorWrapper struct {
 	cluster *clusterv1.Cluster
@@ -63,12 +68,14 @@ type Actuator struct {
 	clusterClient clusterclient.Interface
 	cidrOffset    int
 	kubeClient    kubernetes.Interface
+	Codec         codec
 }
 
 // ActuatorParams holds parameter information for Actuator
 type ActuatorParams struct {
 	ClusterClient clusterclient.Interface
 	KubeClient    kubernetes.Interface
+	Codec         codec
 }
 
 // NewActuator creates a new Actuator
@@ -77,6 +84,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 		clusterClient: params.ClusterClient,
 		cidrOffset:    50,
 		kubeClient:    params.KubeClient,
+		Codec:         params.Codec,
 	}, nil
 }
 
@@ -238,7 +246,7 @@ func machineProviderConfigFromClusterAPIMachineSpec(ms *clusterv1.MachineSpec) (
 func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain) error {
 	glog.Infof("Updating status for %s", machine.Name)
 
-	status, err := ProviderStatusFromMachine(machine)
+	status, err := ProviderStatusFromMachine(a.Codec, machine)
 	if err != nil {
 		return err
 	}
@@ -266,7 +274,7 @@ func (a *Actuator) applyMachineStatus(
 	addrs []corev1.NodeAddress,
 ) error {
 	// Encode the new status as a raw extension.
-	rawStatus, err := EncodeLibvirtMachineProviderStatus(status)
+	rawStatus, err := a.Codec.EncodeProviderStatus(status)
 	if err != nil {
 		return err
 	}
@@ -283,88 +291,47 @@ func (a *Actuator) applyMachineStatus(
 		return nil
 	}
 
-	glog.Infof("Machine %s status has changed, updating", machine.Name)
+	glog.Infof("Machine %s (ns %s) status has changed, updating", machine.Name, machine.Namespace)
 	t := metav1.Now()
 	machineCopy.Status.LastUpdated = &t
 	_, err = a.clusterClient.ClusterV1alpha1().
-		Machines(machineCopy.Namespace).UpdateStatus(machineCopy)
+		Machines(machineCopy.Namespace).Update(machineCopy)
 
 	return err
 }
 
-// EncodeLibvirtMachineProviderStatus encodes a libvirt provider
-// status as a runtime.RawExtension for inclusion in a MachineStatus
-// object.
-func EncodeLibvirtMachineProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus) (*runtime.RawExtension, error) {
-	// serializer := jsonserializer.NewSerializer(jsonserializer.DefaultMetaFactory,
-	// 	providerconfigv1.Scheme, providerconfigv1.Scheme, false)
-
-	var buffer bytes.Buffer
-	// if err := serializer.Encode(status, &buffer); err != nil {
-	// 	return nil, err
-	// }
-
-	rawStatus := &runtime.RawExtension{
-		Raw: bytes.TrimSpace(buffer.Bytes()),
-	}
-
-	return rawStatus, nil
-}
-
 // ProviderStatusFromMachine deserializes a libvirt provider status
 // from a machine object.
-func ProviderStatusFromMachine(machine *clusterv1.Machine) (*providerconfigv1.LibvirtMachineProviderStatus, error) {
-	// if machine.Status.ProviderStatus == nil {
-	// 	// Return a provider status empty apart from version and kind.
-	// 	emptyStatus := &providerconfigv1.LibvirtMachineProviderStatus{
-	// 		TypeMeta: metav1.TypeMeta{
-	// 			APIVersion: providerconfigv1.SchemeGroupVersion.String(),
-	// 			Kind:       "LibvirtMachineProviderStatus",
-	// 		},
-	// 	}
-
-	// 	return emptyStatus, nil
-	// }
-
-	// decoder := providerconfigv1.Codecs.UniversalDecoder(providerconfigv1.SchemeGroupVersion)
-	// obj, gvk, err := decoder.Decode([]byte(machine.Status.ProviderStatus.Raw), nil, nil)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// status, ok := obj.(*providerconfigv1.LibvirtMachineProviderStatus)
-	// if !ok {
-	// 	return nil, fmt.Errorf("unexpected object: %#v", gvk)
-	// }
-
-	//return status, nil
-	return &providerconfigv1.LibvirtMachineProviderStatus{}, nil
+func ProviderStatusFromMachine(codec codec, machine *clusterv1.Machine) (*providerconfigv1.LibvirtMachineProviderStatus, error) {
+	status := &providerconfigv1.LibvirtMachineProviderStatus{}
+	err := codec.DecodeProviderStatus(machine.Status.ProviderStatus, status)
+	return status, err
 }
 
 // UpdateProviderStatus updates the provider status in-place with info
 // from the given libvirt domain.
 func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus, dom *libvirt.Domain) error {
-	// if dom == nil {
-	// 	status.InstanceID = nil
-	// 	status.InstanceState = nil
+	if dom == nil {
+		status.InstanceID = nil
+		status.InstanceState = nil
 
-	// 	return nil
-	// }
+		return nil
+	}
 
-	// uuid, err := dom.GetUUIDString()
-	// if err != nil {
-	// 	return err
-	// }
+	uuid, err := dom.GetUUIDString()
+	if err != nil {
+		return err
+	}
 
-	// state, _, err := dom.GetState()
-	// if err != nil {
-	// 	return err
-	// }
+	state, _, err := dom.GetState()
+	if err != nil {
+		return err
+	}
 
-	// stateString := libvirtutils.DomainStateString(state)
+	stateString := libvirtutils.DomainStateString(state)
 
-	// status.InstanceID = &uuid
-	// status.InstanceState = &stateString
+	status.InstanceID = &uuid
+	status.InstanceState = &stateString
 
 	return nil
 }

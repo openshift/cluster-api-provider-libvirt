@@ -15,6 +15,7 @@ package controller
 
 import (
 	"github.com/golang/glog"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -45,10 +46,15 @@ func init() {
 		} else {
 			log.SetLevel(lvl)
 		}
+		codec, err := providerconfigv1.NewCodec()
+		if err != nil {
+			glog.Fatal(err)
+		}
 
 		params := machineactuator.ActuatorParams{
 			ClusterClient: client,
 			KubeClient:    kubeClient,
+			Codec:         codec,
 		}
 
 		actuator, err := machineactuator.NewActuator(params)
