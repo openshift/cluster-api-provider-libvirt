@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
-	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine/utils"
 	actuator "github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
+	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

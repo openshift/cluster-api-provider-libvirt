@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
@@ -25,15 +23,17 @@ func TestingMachineProviderConfig(uri, clusterID string) (clusterv1alpha1.Provid
 		Autostart:               false,
 		URI:                     uri,
 	}
-
-	var buf bytes.Buffer
-	if err := providerconfigv1.Encoder.Encode(machinePc, &buf); err != nil {
+	codec, err := providerconfigv1.NewCodec()
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
+	}
+	//var buf bytes.Buffer
+	var pc *clusterv1alpha1.ProviderConfig
+	if pc, err = codec.EncodeToProviderConfig(machinePc); err != nil {
 		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
 	}
 
-	return clusterv1alpha1.ProviderConfig{
-		Value: &runtime.RawExtension{Raw: buf.Bytes()},
-	}, nil
+	return *pc, nil
 }
 
 func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderConfig, error) {
@@ -54,14 +54,17 @@ func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clust
 		URI:                     libvirturi,
 	}
 
-	var buf bytes.Buffer
-	if err := providerconfigv1.Encoder.Encode(machinePc, &buf); err != nil {
+	codec, err := providerconfigv1.NewCodec()
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
+	}
+	//var buf bytes.Buffer
+	var pc *clusterv1alpha1.ProviderConfig
+	if pc, err = codec.EncodeToProviderConfig(machinePc); err != nil {
 		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
 	}
 
-	return clusterv1alpha1.ProviderConfig{
-		Value: &runtime.RawExtension{Raw: buf.Bytes()},
-	}, nil
+	return *pc, nil
 }
 
 func WorkerMachineProviderConfig(workerUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderConfig, error) {
