@@ -12,3 +12,8 @@ variable "packet_project_id" {
   type    = "string"
   default = ""
 }
+
+variable "tag" {
+  type    = "string"
+  default = "usermachine"
+}

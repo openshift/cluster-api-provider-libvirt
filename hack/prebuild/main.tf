@@ -10,6 +10,7 @@ resource "packet_device" "libvirt" {
   operating_system = "centos_7"
   billing_cycle    = "hourly"
   project_id       = "${var.packet_project_id}"
+  tags             = "${list("${var.tag}")}"
   user_data        = "#cloud-config\n#image_repo=https://github.com/paulfantom/packet-image.git\n#image_tag=3a3f1eb378f660b335a68b79f3af303380462652\nssh_pwauth: True"
 
   provisioner "remote-exec" {
