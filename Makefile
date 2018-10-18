@@ -46,7 +46,7 @@ depend-update:
 
 .PHONY: build
 build: ## build binaries
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+	$(DOCKER_CMD) yum install libvirt-devel -y; go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
 	# $(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/machine-controller
 
 .PHONY: images

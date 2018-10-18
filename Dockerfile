@@ -17,17 +17,14 @@ FROM openshift/origin-release:golang-1.10 as builder
 
 # Copy in the go src
 WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
-COPY pkg/    pkg/
-COPY cmd/    cmd/
-COPY vendor/ vendor/
+COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
 
 # Copy the controller-manager into a thin image
 
 # Final container
 FROM openshift/origin-base
 WORKDIR /root/
-COPY --from=builder /go/src/github.com/openshift/cluster-api-provider-libvirt/manager .
-ENTRYPOINT ["./manager"]
+COPY --from=builder /go/src/github.com/openshift/cluster-api-provider-libvirt/machine-controller .
