@@ -20,7 +20,7 @@ WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -o machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
 
 # Copy the controller-manager into a thin image
 
