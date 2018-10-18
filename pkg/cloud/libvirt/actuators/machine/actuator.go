@@ -17,7 +17,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 
 	libvirt "github.com/libvirt/libvirt-go"
 
@@ -46,7 +46,7 @@ func (e *errorWrapper) Error(err error, message string) error {
 
 func (e *errorWrapper) WithLog(err error, message string) error {
 	wrapped := e.Error(err, message)
-	glog.Error(wrapped)
+	log.Error(wrapped)
 	return wrapped
 }
 
@@ -74,7 +74,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 
 // Create creates a machine and is invoked by the Machine Controller
 func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
+	log.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
 	client, err := clientForMachine(machine)
@@ -103,7 +103,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
+	log.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
 	client, err := clientForMachine(machine)
@@ -118,7 +118,7 @@ func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 // Update updates a machine and is invoked by the Machine Controller
 func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
-	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
+	log.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
 	client, err := clientForMachine(machine)
@@ -144,7 +144,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
-	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
+	log.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
 	client, err := clientForMachine(machine)
@@ -188,7 +188,7 @@ func createVolumeAndDomain(machine *clusterv1.Machine, offset int, kubeClient ku
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
 		if err := libvirtutils.DeleteVolume(name, client); err != nil {
-			glog.Errorf("error cleaning up volume: %v", err)
+			log.Errorf("error cleaning up volume: %v", err)
 		}
 
 		return nil, fmt.Errorf("error creating domain: %v", err)
@@ -235,7 +235,7 @@ func machineProviderConfigFromClusterAPIMachineSpec(ms *clusterv1.MachineSpec) (
 
 // updateStatus updates a machine object's status.
 func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain) error {
-	glog.Infof("Updating status for %s", machine.Name)
+	log.Infof("Updating status for %s", machine.Name)
 
 	status, err := ProviderStatusFromMachine(machine)
 	if err != nil {
@@ -278,11 +278,11 @@ func (a *Actuator) applyMachineStatus(
 	}
 
 	if equality.Semantic.DeepEqual(machine.Status, machineCopy.Status) {
-		glog.V(4).Infof("Machine %s status is unchanged", machine.Name)
+		log.Infof("Machine %s status is unchanged", machine.Name)
 		return nil
 	}
 
-	glog.Infof("Machine %s status has changed, updating", machine.Name)
+	log.Infof("Machine %s status has changed, updating", machine.Name)
 
 	machineCopy.Status.LastUpdated = metav1.Now()
 	_, err = a.clusterClient.ClusterV1alpha1().

@@ -20,7 +20,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/apiserver-builder/pkg/controller"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	log "github.com/sirupsen/logrus"
@@ -55,26 +54,26 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	config, err := controller.GetConfig(config.ControllerConfig.Kubeconfig)
-	if err != nil {
-		glog.Fatalf("Could not create Config for talking to the apiserver: %v", err)
-	}
-
-	client, err := clientset.NewForConfig(config)
-	if err != nil {
-		glog.Fatalf("Could not create client for talking to the apiserver: %v", err)
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		glog.Fatalf("Could not create kubernetes client to talk to the apiserver: %v", err)
-	}
-
 	log.SetOutput(os.Stdout)
 	if lvl, err := log.ParseLevel(logLevel); err != nil {
 		log.Panic(err)
 	} else {
 		log.SetLevel(lvl)
+	}
+
+	config, err := controller.GetConfig(config.ControllerConfig.Kubeconfig)
+	if err != nil {
+		log.Fatalf("Could not create Config for talking to the apiserver: %v", err)
+	}
+
+	client, err := clientset.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Could not create client for talking to the apiserver: %v", err)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Could not create kubernetes client to talk to the apiserver: %v", err)
 	}
 
 	params := machineactuator.ActuatorParams{
@@ -83,7 +82,7 @@ func main() {
 	}
 	actuator, err := machineactuator.NewActuator(params)
 	if err != nil {
-		glog.Fatalf("Could not create libvirt machine actuator: %v", err)
+		log.Fatalf("Could not create libvirt machine actuator: %v", err)
 	}
 
 	shutdown := make(chan struct{})

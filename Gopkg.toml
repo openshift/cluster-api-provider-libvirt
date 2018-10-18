@@ -37,10 +37,6 @@
   version = "1.0.0"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/golang/glog"
-
-[[constraint]]
   name = "github.com/kubernetes-incubator/apiserver-builder"
   version = "1.9.0-alpha.4"
 

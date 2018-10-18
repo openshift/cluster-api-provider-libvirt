@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/labels"
@@ -17,6 +16,7 @@ import (
 	"github.com/openshift/cluster-api-actuator-pkg/pkg/manifests"
 	"github.com/openshift/cluster-api-provider-libvirt/test/utils"
 
+	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
@@ -89,7 +89,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 		if f.LibvirtPK != "" {
 			libvirtPKSecret, err := BuildPKSecret("libvirt-private-key", testNamespace.Name, f.LibvirtPK)
 			Expect(err).NotTo(HaveOccurred())
-			glog.V(2).Infof("Creating %q secret", libvirtPKSecret.Name)
+			log.Infof("Creating %q secret", libvirtPKSecret.Name)
 			_, err = f.KubeClient.CoreV1().Secrets(libvirtPKSecret.Namespace).Create(libvirtPKSecret)
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -103,7 +103,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 
 		if testNamespace != nil {
 			f.DestroyClusterAPIStack(testNamespace.Name, f.ActuatorImage, "libvirt-private-key")
-			glog.V(2).Infof(testNamespace.Name+": %#v", testNamespace)
+			log.Infof(testNamespace.Name+": %#v", testNamespace)
 			By(fmt.Sprintf("Destroying %q namespace", testNamespace.Name))
 			f.KubeClient.CoreV1().Namespaces().Delete(testNamespace.Name, &metav1.DeleteOptions{})
 			// Ignore namespaces that are not deleted so other specs can be run.
@@ -235,7 +235,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			return true, nil
 		})
 
-		glog.V(2).Infof("Master machine running at %v", masterMachinePrivateIP)
+		log.Infof("Master machine running at %v", masterMachinePrivateIP)
 
 		By("Collecting master kubeconfig")
 		restConfig, err := f.GetMasterMachineRestConfig(masterMachine, lcw)
@@ -258,7 +258,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 		if f.LibvirtPK != "" {
 			libvirtPKSecret, err := BuildPKSecret("libvirt-private-key", testNamespace.Name, f.LibvirtPK)
 			Expect(err).NotTo(HaveOccurred())
-			glog.V(2).Infof("Creating %q secret", libvirtPKSecret.Name)
+			log.Infof("Creating %q secret", libvirtPKSecret.Name)
 			_, err = clusterFramework.KubeClient.CoreV1().Secrets(libvirtPKSecret.Namespace).Create(libvirtPKSecret)
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -302,7 +302,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 				nonMasterNodes = append(nonMasterNodes, node)
 			}
 
-			glog.V(2).Infof("Non-master nodes to check: %#v", nonMasterNodes)
+			log.Infof("Non-master nodes to check: %#v", nonMasterNodes)
 			machines, err := clusterFramework.CAPIClient.ClusterV1alpha1().Machines(workerMachineSet.Namespace).List(metav1.ListOptions{
 				LabelSelector: labels.SelectorFromSet(workerMachineSet.Spec.Selector.MatchLabels).String(),
 			})
@@ -315,16 +315,16 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 				}
 			}
 
-			glog.V(2).Infof("Machine-node matches: %#v\n", matches)
+			log.Infof("Machine-node matches: %#v\n", matches)
 			// non-master node, the workerset deploys only compute nodes
 			for _, node := range nonMasterNodes {
 				// check role
 				_, isCompute := node.Labels["node-role.kubernetes.io/compute"]
 				if !isCompute {
-					glog.V(2).Infof("node %q does not have the compute role assigned", node.Name)
+					log.Infof("node %q does not have the compute role assigned", node.Name)
 					return false, nil
 				}
-				glog.V(2).Infof("node %q role set to 'node-role.kubernetes.io/compute'", node.Name)
+				log.Infof("node %q role set to 'node-role.kubernetes.io/compute'", node.Name)
 				// check node linking
 
 				// If there is the same number of machines are compute nodes,
@@ -332,10 +332,10 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 				// So it's enough to check each node has its machine linked.
 				matchingMachine, found := matches[node.Name]
 				if !found {
-					glog.V(2).Infof("node %q is not linked with a machine", node.Name)
+					log.Infof("node %q is not linked with a machine", node.Name)
 					return false, nil
 				}
-				glog.V(2).Infof("node %q is linked with %q machine", node.Name, matchingMachine)
+				log.Infof("node %q is linked with %q machine", node.Name, matchingMachine)
 			}
 
 			return true, nil
