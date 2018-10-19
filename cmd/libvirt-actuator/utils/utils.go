@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/ghodss/yaml"
-	machineactuator "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine"
+	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	log "github.com/sirupsen/logrus"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
