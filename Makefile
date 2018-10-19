@@ -43,6 +43,17 @@ depend:
 depend-update:
 	dep ensure -update
 
+.PHONY: generate
+generate: gendeepcopy
+
+.PHONY: gendeepcopy
+gendeepcopy:
+	go build -o $$GOPATH/bin/deepcopy-gen github.com/openshift/cluster-api-provider-libvirt/vendor/k8s.io/code-generator/cmd/deepcopy-gen
+	deepcopy-gen \
+          -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1alpha1 \
+          -O zz_generated.deepcopy \
+          -h hack/boilerplate.go.txt
+
 .PHONY: build
 build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
