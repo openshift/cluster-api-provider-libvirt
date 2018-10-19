@@ -19,8 +19,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/providerconfig/v1alpha1"
 )
 
 const (

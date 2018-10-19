@@ -7,7 +7,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/providerconfig/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

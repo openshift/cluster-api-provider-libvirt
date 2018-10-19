@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 
-	"github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig"
+	"github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/providerconfig"
 )
 
 // LibvirtProviderConfigCodec contains encoder/decoder to convert this types from/to serialize data
