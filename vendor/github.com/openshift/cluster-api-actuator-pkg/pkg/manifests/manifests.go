@@ -1034,7 +1034,7 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, 
 				},
 			},
 		})
-		deployment.Spec.Template.Spec.Containers[1].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[1].VolumeMounts, apiv1.VolumeMount{
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, apiv1.VolumeMount{
 			Name:      ActuatorPrivateKey,
 			MountPath: "/root/.ssh/actuator.pem",
 			ReadOnly:  true,
