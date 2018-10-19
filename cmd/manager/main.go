@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
+	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
 	"k8s.io/client-go/kubernetes"
@@ -104,9 +105,15 @@ func initActuator(m manager.Manager) {
 		log.SetLevel(lvl)
 	}
 
+	codec, err := v1alpha1.NewCodec()
+	if err != nil {
+		glog.Fatal(err)
+	}
+
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client,
 		KubeClient:    kubeClient,
+		Codec:         codec,
 	}
 
 	machineactuator.MachineActuator, err = machineactuator.NewActuator(params)
