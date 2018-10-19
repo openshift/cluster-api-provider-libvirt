@@ -284,7 +284,8 @@ func (a *Actuator) applyMachineStatus(
 
 	glog.Infof("Machine %s status has changed, updating", machine.Name)
 
-	machineCopy.Status.LastUpdated = metav1.Now()
+	now := metav1.Now()
+	machineCopy.Status.LastUpdated = &now
 	_, err = a.clusterClient.ClusterV1alpha1().
 		Machines(machineCopy.Namespace).UpdateStatus(machineCopy)
 
