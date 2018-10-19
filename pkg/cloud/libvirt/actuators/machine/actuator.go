@@ -50,6 +50,8 @@ func (e *errorWrapper) WithLog(err error, message string) error {
 	return wrapped
 }
 
+var MachineActuator *Actuator
+
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
 	clusterClient clusterclient.Interface
