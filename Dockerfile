@@ -22,12 +22,16 @@ WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 # This expects that the context passed to the docker build command is
 # the cluster-api-provider-libvirt directory.
 # e.g. docker build -t <tag> -f <this_Dockerfile> <path_to_cluster-api-libvirt>
-COPY . .
-RUN GOPATH=/go CGO_ENABLED=1 go install ./cmd/machine-controller
-RUN GOPATH=/go CGO_ENABLED=0 GOOS=linux go install -a -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/controller-manager
+COPY pkg/    pkg/
+COPY cmd/    cmd/
+COPY vendor/ vendor/
+COPY lib/ lib/
+
+RUN GOPATH="/go" CGO_ENABLED=1 GOOS=linux go build -o /go/bin/machine-controller-manager github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+RUN GOPATH="/go" CGO_ENABLED=0 GOOS=linux go build -o /go/bin/manager -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/manager
 
 # Final container
 FROM openshift/origin-base
 RUN yum install -y ca-certificates libvirt-libs openssh-clients
 
-COPY --from=builder /go/bin/machine-controller /go/bin/controller-manager /
+COPY --from=builder /go/bin/manager /go/bin/machine-controller-manager /
