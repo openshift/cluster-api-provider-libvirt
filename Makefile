@@ -43,10 +43,33 @@ depend:
 depend-update:
 	dep ensure -update
 
+.PHONY: vendor
+vendor:
+	dep version || go get -u github.com/golang/dep/cmd/dep
+	dep ensure -v -update
+	patch -p1 < 0001-Delete-annotated-machines-first-when-scaling-down.patch
+	patch -p1 < 0002-Sort-machines-before-syncing.patch
+	patch -p1 < 0001-use-Update-instead-of-Status.Update-as-CustomResourc.patch
+
+.PHONY: generate
+generate: gendeepcopy
+
+.PHONY: gendeepcopy
+gendeepcopy:
+	go build -o $$GOPATH/bin/deepcopy-gen github.com/openshift/cluster-api-provider-libvirt/vendor/k8s.io/code-generator/cmd/deepcopy-gen
+	deepcopy-gen \
+          -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1alpha1 \
+          -O zz_generated.deepcopy \
+          -h hack/boilerplate.go.txt
+
 .PHONY: build
 build: ## build binaries
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
+
+.PHONY: libvirt-actuator
+libvirt-actuator:
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/machine-controller
 
 .PHONY: images
 images: ## Create images

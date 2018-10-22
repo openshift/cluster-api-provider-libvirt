@@ -8,11 +8,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/ghodss/yaml"
-	machineactuator "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/actuators/machine"
+	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	log "github.com/sirupsen/logrus"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-	"sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/fake"
+	//"sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/fake"
 )
 
 func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*clusterv1.Cluster, *clusterv1.Machine, *apiv1.Secret, error) {
@@ -63,10 +63,10 @@ func CreateActuator(machine *clusterv1.Machine, userData *apiv1.Secret, logger *
 	}
 	fakeKubeClient := kubernetesfake.NewSimpleClientset(objList...)
 
-	fakeClient := fake.NewSimpleClientset(machine)
+	// fakeClient := fake.NewSimpleClientset(machine)
 	params := machineactuator.ActuatorParams{
-		ClusterClient: fakeClient,
-		KubeClient:    fakeKubeClient,
+		// ClusterClient: fakeClient,
+		KubeClient: fakeKubeClient,
 	}
 	actuator, _ := machineactuator.NewActuator(params)
 	return actuator

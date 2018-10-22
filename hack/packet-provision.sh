@@ -17,6 +17,7 @@ if [ "$TF_VAR_packet_project_id" == "" ]; then
 fi
 
 export TF_VAR_id=${ID:-$(uuidgen | cut -c1-8)}
+export TF_VAR_tag=${NODE_NAME:-$(whoami)}
 
 pushd $script_dir/prebuild
 

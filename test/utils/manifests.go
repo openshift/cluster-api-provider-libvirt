@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/cloud/libvirt/providerconfig/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
@@ -26,14 +24,15 @@ func TestingMachineProviderConfig(uri, clusterID string) (clusterv1alpha1.Provid
 		URI:                     uri,
 	}
 
-	var buf bytes.Buffer
-	if err := providerconfigv1.Encoder.Encode(machinePc, &buf); err != nil {
-		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
+	codec, err := providerconfigv1.NewCodec()
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("failed creating codec: %v", err)
 	}
-
-	return clusterv1alpha1.ProviderConfig{
-		Value: &runtime.RawExtension{Raw: buf.Bytes()},
-	}, nil
+	config, err := codec.EncodeToProviderConfig(machinePc)
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("EncodeToProviderConfig failed: %v", err)
+	}
+	return *config, nil
 }
 
 func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderConfig, error) {
@@ -54,14 +53,15 @@ func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clust
 		URI:                     libvirturi,
 	}
 
-	var buf bytes.Buffer
-	if err := providerconfigv1.Encoder.Encode(machinePc, &buf); err != nil {
-		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("LibvirtMachineProviderConfig encoding failed: %v", err)
+	codec, err := providerconfigv1.NewCodec()
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("failed creating codec: %v", err)
 	}
-
-	return clusterv1alpha1.ProviderConfig{
-		Value: &runtime.RawExtension{Raw: buf.Bytes()},
-	}, nil
+	config, err := codec.EncodeToProviderConfig(machinePc)
+	if err != nil {
+		return clusterv1alpha1.ProviderConfig{}, fmt.Errorf("EncodeToProviderConfig failed: %v", err)
+	}
+	return *config, nil
 }
 
 func WorkerMachineProviderConfig(workerUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderConfig, error) {
