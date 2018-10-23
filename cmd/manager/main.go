@@ -118,6 +118,6 @@ func initActuator(m manager.Manager) {
 
 	machineactuator.MachineActuator, err = machineactuator.NewActuator(params)
 	if err != nil {
-		glog.Fatalf("Could not create AWS machine actuator: %v", err)
+		glog.Fatalf("Could not create Libvirt machine actuator: %v", err)
 	}
 }
