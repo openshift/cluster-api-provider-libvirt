@@ -20,7 +20,7 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/providerconfig/v1alpha1"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
 const (
