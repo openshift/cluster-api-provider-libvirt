@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
@@ -18,20 +16,7 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	log "github.com/sirupsen/logrus"
 )
-
-var (
-	logLevel string
-)
-
-const (
-	defaultLogLevel = "info"
-)
-
-func init() {
-	flag.CommandLine.StringVar(&logLevel, "log-level", defaultLogLevel, "Log level (debug,info,warn,error,fatal)")
-}
 
 func main() {
 	// the following line exists to make glog happy, for more information, see: https://github.com/kubernetes/kubernetes/issues/17162
@@ -41,36 +26,36 @@ func main() {
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
 
-	log.Printf("Registering Components.")
+	glog.Infof("Registering Components.")
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
 
 	if err := clusterapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
 
 	initActuator(mgr)
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
 
-	log.Printf("Starting the Cmd.")
+	glog.Infof("Starting the Cmd.")
 
 	// Start the Cmd
-	log.Fatal(mgr.Start(signals.SetupSignalHandler()))
+	glog.Fatal(mgr.Start(signals.SetupSignalHandler()))
 }
 
 func initActuator(m manager.Manager) {
@@ -83,13 +68,6 @@ func initActuator(m manager.Manager) {
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Fatalf("Could not create kubernetes client to talk to the apiserver: %v", err)
-	}
-
-	log.SetOutput(os.Stdout)
-	if lvl, err := log.ParseLevel(logLevel); err != nil {
-		log.Panic(err)
-	} else {
-		log.SetLevel(lvl)
 	}
 
 	codec, err := v1alpha1.NewCodec()

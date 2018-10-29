@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +40,7 @@ func init() {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData)
 			err = actuator.Create(cluster, machine)
 			if err != nil {
 				return err
@@ -68,7 +67,7 @@ func init() {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData)
 			err = actuator.Delete(cluster, machine)
 			if err != nil {
 				return err
@@ -95,7 +94,7 @@ func init() {
 				return err
 			}
 
-			actuator := utils.CreateActuator(machine, userData, log.WithField("example", "create-machine"))
+			actuator := utils.CreateActuator(machine, userData)
 			exists, err := actuator.Exists(cluster, machine)
 			if err != nil {
 				return err
@@ -121,9 +120,6 @@ func checkFlags(cmd *cobra.Command) error {
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
-
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error occurred: %v\n", err)
