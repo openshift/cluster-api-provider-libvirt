@@ -100,7 +100,7 @@ func newDomainDef() libvirtxml.Domain {
 				},
 			},
 			Consoles: []libvirtxml.DomainConsole{
-				libvirtxml.DomainConsole{
+				{
 					Source: &libvirtxml.DomainChardevSource{
 						Pty: &libvirtxml.DomainChardevSourcePty{},
 					},

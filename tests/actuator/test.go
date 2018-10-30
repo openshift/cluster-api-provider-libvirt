@@ -7,9 +7,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/golang/glog"
 	actuator "github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
