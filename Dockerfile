@@ -18,6 +18,6 @@ RUN GOPATH="/go" CGO_ENABLED=0 GOOS=linux go build -o /go/bin/manager -ldflags '
 
 # Final container
 FROM openshift/origin-base
-RUN yum install -y ca-certificates libvirt-libs openssh-clients
+RUN yum install -y ca-certificates libvirt-libs openssh-clients genisoimage
 
 COPY --from=builder /go/bin/manager /go/bin/machine-controller-manager /

@@ -196,8 +196,38 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 	return nil
 }
 
+func EnsureVolumeIsDeleted(volumeName string, client *Client) error {
+	exists, err := VolumeExists(volumeName, client)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		log.Printf("[DEBUG] Volume %s does not exists", volumeName)
+		return nil
+	}
+	return DeleteVolume(volumeName, client)
+}
+
+// VolumeExists checks if a volume exists
+func VolumeExists(volumeName string, client *Client) (bool, error) {
+	log.Printf("[DEBUG] Check if %q volume exists", volumeName)
+	if client.connection == nil {
+		return false, ErrLibVirtConIsNil
+	}
+
+	volumePath := fmt.Sprintf(baseVolumePath+"%s", volumeName)
+	volume, err := client.connection.LookupStorageVolByPath(volumePath)
+	if err != nil {
+		return false, nil
+	}
+	volume.Free()
+	return true, nil
+}
+
 // DeleteVolume removes the volume identified by `key` from libvirt
 func DeleteVolume(name string, client *Client) error {
+	log.Printf("[DEBUG] Deleting volume %s", name)
+
 	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
 	volume, err := client.connection.LookupStorageVolByPath(volumePath)
 	if err != nil {

@@ -28,33 +28,11 @@ For running the libvirt actuator with Fedora 28 Cloud images.
    Compression yes
    ```
 
-1. Run [init script](resources/init.sh) to:
-   - update qemu-kvm to at least 2.4
-   - create default volume storage
-   - create cloud init volume
-   - create `fedora_base` volume
+1. Run [init script](resources/init.sh) to upload private SSH key to access created guests:
 
    ```sh
    $ bash cmd/libvirt-actuator/resources/init.sh
    ```
-
-   In case the default [cloud-init](resources/user-data) is not sufficient,
-   you can generate new `cloud-init.iso` with the following steps:
-
-   1. Update content of [meta-data](resources/meta-data) file (the filename must be `meta-data`)
-   1. Update content of [user-data](resources/user-data) (the filename must be `user-data`)
-   1. Generate new iso with the cloud init by running:
-      ```sh
-      $ genisoimage -output cloud-init.iso -volid cidata -joliet -r user-data meta-data
-      ```
-   1. Upload the iso to the instance in case you already run the `init.sh` script:
-      ```
-      $ scp cloud-init.iso libvirtactuator:/var/lib/libvirt/images/cloud-init.iso
-      ```
-
-   *WARNING*: Please keep the `/sys/firmware/qemu_fw_cfg/by_name/opt/actuator.libvirt.io.k8s.sigs/config/raw` path
-   in the `user-data` file as it is. Otherwise, the user data (see below)
-   provided by kubernetes secret will get ignored.
 
 ## How to prepare machine resources
 
@@ -82,13 +60,16 @@ CGO_ENABLED=1 go build -o bin/libvirt-actuator -a github.com/openshift/cluster-a
 ### Create libvirt instance based on machine manifest
 
 ```sh
-$ ./bin/libvirt-actuator create -m examples/machine.yaml -c examples/cluster.yaml
+$ ./bin/libvirt-actuator create -m cmd/libvirt-actuator/resources/machine.yaml -c examples/cluster.yaml -u cmd/libvirt-actuator/resources/userdata.yaml
 ```
 
-Once the libvirt instance is created you can login inside (username: `fedora`, password: `fedora`):
+Once the libvirt instance is created you can ssh inside.
+First, run `domifaddr` to get the guest IP address:
 ```
-$ virsh -c qemu+ssh://root@147.75.96.139/system console
+$ virsh -c qemu+ssh://root@147.75.96.139/system domifaddr worker-example
 ```
+
+Then SSH inside using the [guest.pem](resources/guest.pem) (from withing the libvirt instance).
 
 Meantime you can check `/root/user-data.logs` to see the progress of deploying kubernetes master node:
 ```

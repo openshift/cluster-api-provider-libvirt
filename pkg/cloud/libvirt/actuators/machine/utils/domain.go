@@ -465,7 +465,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	return nil
 }
 
-func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
+func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress, poolName string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -488,7 +488,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 			return err
 		}
 	} else if cloudInit != nil {
-		if err := setCloudInit(&domainDef, cloudInit, kubeClient, machineNamespace); err != nil {
+		if err := setCloudInit(&domainDef, client, cloudInit, kubeClient, machineNamespace, volumeName, poolName); err != nil {
 			return err
 		}
 	} else {
@@ -559,7 +559,6 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 }
 
 func DeleteDomain(name string, client *Client) error {
-	log.Printf("[DEBUG] Delete a domain")
 	if client.connection == nil {
 		return ErrLibVirtConIsNil
 	}
@@ -597,6 +596,17 @@ func DeleteDomain(name string, client *Client) error {
 	return nil
 }
 
+func EnsureDomainIsDeleted(name string, client *Client) error {
+	exists, err := DomainExists(name, client)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	return DeleteDomain(name, client)
+}
+
 // LookupDomainByName looks up a domain by name and returns a pointer to it.
 // Note: The caller is responsible for freeing the returned domain.
 func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
@@ -615,7 +625,7 @@ func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
 
 // DomainExists verify a domain exists for given machine
 func DomainExists(name string, client *Client) (bool, error) {
-	log.Printf("[DEBUG] Check if a domain exists")
+	log.Printf("[DEBUG] Check if %q domain exists", name)
 	if client.connection == nil {
 		return false, ErrLibVirtConIsNil
 	}

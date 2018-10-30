@@ -27,10 +27,10 @@ type LibvirtMachineProviderConfig struct {
 // CloudInit contains location of user data to be run during bootstrapping
 // with ISO image with a cloud-init file running the user data
 type CloudInit struct {
-	// UserData requires ISOImagePath to be set
+	// Bash script to be run during bootstrapping
 	UserDataSecret string `json:"userDataSecret"`
-	// ISOImagePath is path to ISO image with cloud-init
-	ISOImagePath string `json:"isoImagePath"`
+	// Allow to ssh into instance
+	SSHAccess bool `json:"sshAccess"`
 }
 
 // Volume contains the info for the actuator to create a volume
