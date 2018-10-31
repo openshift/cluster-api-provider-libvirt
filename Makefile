@@ -77,6 +77,10 @@ test: # Run unit test
 integration: deps-cgo ## Run integration test
 	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
 
+.PHONY: build-e2e
+build-e2e:
+	$(DOCKER_CMD) go test -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
+
 .PHONY: e2e
 e2e: e2e-provision ## Run end-to-end test
 	# TODO @ingvagabund @spangenberg add e2e test command here
