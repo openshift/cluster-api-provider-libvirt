@@ -12,7 +12,7 @@ func TestingMachineProviderConfig(uri, clusterID string) (clusterv1alpha1.Provid
 		DomainMemory: 2048,
 		DomainVcpu:   1,
 		CloudInit: &providerconfigv1.CloudInit{
-			ISOImagePath: "/var/lib/libvirt/images/cloud-init.iso",
+			SSHAccess: true,
 		},
 		Volume: &providerconfigv1.Volume{
 			PoolName:     "default",
@@ -40,7 +40,7 @@ func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clust
 		DomainMemory: 2048,
 		DomainVcpu:   2,
 		CloudInit: &providerconfigv1.CloudInit{
-			ISOImagePath:   "/var/lib/libvirt/images/cloud-init.iso",
+			SSHAccess:      true,
 			UserDataSecret: masterUserDataSecret,
 		},
 		Volume: &providerconfigv1.Volume{

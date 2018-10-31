@@ -193,7 +193,7 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 	}
 
 	// Create domain
-	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
+	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, pool, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
 		if err := libvirtutils.DeleteVolume(name, client); err != nil {
@@ -214,11 +214,17 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
 func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Client) error {
-	if err := libvirtutils.DeleteDomain(machine.Name, client); err != nil {
+	if err := libvirtutils.EnsureDomainIsDeleted(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
-	if err := libvirtutils.DeleteVolume(machine.Name, client); err != nil {
+	// Delete machine volume
+	if err := libvirtutils.EnsureVolumeIsDeleted(machine.Name, client); err != nil {
+		return fmt.Errorf("error deleting volume: %v", err)
+	}
+
+	// Delete cloud init volume if exists
+	if err := libvirtutils.EnsureCloudInitVolumeIsDeleted(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 

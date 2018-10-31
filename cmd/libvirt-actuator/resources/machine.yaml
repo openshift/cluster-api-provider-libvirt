@@ -12,12 +12,12 @@ metadata:
 spec:
   providerConfig:
     value:
-      apiVersion: libvirtproviderconfig/v1alpha1
+      apiVersion: libvirtproviderconfig.k8s.io/v1alpha1
       kind: LibvirtMachineProviderConfig
       domainMemory: 2048
-      domainVcpu: 1
+      domainVcpu: 2
       cloudInit:
-        isoImagePath: /var/lib/libvirt/images/cloud-init.iso
+        sshAccess: true
         userDataSecret: libvirt-actuator-user-data-secret
       volume:
         poolName: default

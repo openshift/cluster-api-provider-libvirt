@@ -3,10 +3,11 @@ package utils
 import (
 	"encoding/xml"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
@@ -31,7 +32,7 @@ func waitForSuccess(errorMessage string, f func() error) error {
 		if err == nil {
 			return nil
 		}
-		log.Printf("[DEBUG] %s. Re-trying.\n", err)
+		glog.Infof("%s. Re-trying.\n", err)
 
 		time.Sleep(WaitSleepInterval)
 		if time.Since(start) > WaitTimeout {
@@ -104,7 +105,7 @@ func newDefVolumeFromXML(s string) (libvirtxml.StorageVolume, error) {
 func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat string, client *Client) error {
 	var volume *libvirt.StorageVol
 
-	log.Printf("[DEBUG] Create a libvirt volume with name %s for pool %s from the base volume %s", volumeName, poolName, baseVolumeID)
+	glog.Infof("Create a libvirt volume with name %s for pool %s from the base volume %s", volumeName, poolName, baseVolumeID)
 
 	// TODO: lock pool
 	//client.poolMutexKV.Lock(poolName)
@@ -147,7 +148,7 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 		if err != nil {
 			return err
 		}
-		log.Printf("Image %s image is: %d bytes", img, size)
+		glog.Infof("Image %s image is: %d bytes", img, size)
 		volumeDef.Capacity.Unit = "B"
 		volumeDef.Capacity.Value = size
 	} else if baseVolumeID != "" {
@@ -192,12 +193,42 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 		}
 	}
 
-	log.Printf("[INFO] Volume ID: %s", key)
+	glog.Infof("Volume ID: %s", key)
 	return nil
+}
+
+func EnsureVolumeIsDeleted(volumeName string, client *Client) error {
+	exists, err := VolumeExists(volumeName, client)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		glog.Infof("Volume %s does not exists", volumeName)
+		return nil
+	}
+	return DeleteVolume(volumeName, client)
+}
+
+// VolumeExists checks if a volume exists
+func VolumeExists(volumeName string, client *Client) (bool, error) {
+	glog.Infof("Check if %q volume exists", volumeName)
+	if client.connection == nil {
+		return false, ErrLibVirtConIsNil
+	}
+
+	volumePath := fmt.Sprintf(baseVolumePath+"%s", volumeName)
+	volume, err := client.connection.LookupStorageVolByPath(volumePath)
+	if err != nil {
+		return false, nil
+	}
+	volume.Free()
+	return true, nil
 }
 
 // DeleteVolume removes the volume identified by `key` from libvirt
 func DeleteVolume(name string, client *Client) error {
+	glog.Infof("Deleting volume %s", name)
+
 	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
 	volume, err := client.connection.LookupStorageVolByPath(volumePath)
 	if err != nil {

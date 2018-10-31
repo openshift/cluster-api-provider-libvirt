@@ -6,24 +6,24 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 
+	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
 )
 
 func CreateIgntion(pool, name, content string, client *Client) error {
-	log.Printf("[DEBUG] creating ignition file")
+	glog.Infof("creating ignition file")
 	ignition := newIgnitionDef()
 
 	ignition.Name = name
 	ignition.PoolName = pool
 	ignition.Content = content
 
-	log.Printf("[INFO] ignition: %+v", ignition)
+	glog.Infof("ignition: %+v", ignition)
 
 	key, err := ignition.CreateAndUpload(client)
-	log.Printf("[INFO] Ignition ID: %s", key)
+	glog.Infof("Ignition ID: %s", key)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
 	defer func() {
 		// Remove the tmp ignition file
 		if err = os.Remove(ignFile); err != nil {
-			log.Printf("Error while removing tmp Ignition file: %s", err)
+			glog.Infof("Error while removing tmp Ignition file: %s", err)
 		}
 	}()
 
@@ -114,13 +114,13 @@ func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Error retrieving volume key: %s", err)
 	}
-	log.Printf("[INFO] Ignition ID: %s", key)
+	glog.Infof("Ignition ID: %s", key)
 	return key, nil
 }
 
 // Dumps the Ignition object to a temporary ignition file
 func (ign *defIgnition) createFile() (string, error) {
-	log.Print("Creating Ignition temporary file")
+	glog.Info("Creating Ignition temporary file")
 	tempFile, err := ioutil.TempFile("", ign.Name)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create tmp file for Ignition: %s",
@@ -184,7 +184,7 @@ func newCopier(virConn *libvirt.Connect, volume *libvirt.StorageVol, size uint64
 		if err != nil {
 			return err
 		}
-		log.Printf("%d bytes uploaded\n", bytesCopied)
+		glog.Infof("%d bytes uploaded\n", bytesCopied)
 		return nil
 	}
 	return copier

@@ -3,9 +3,10 @@ package utils
 import (
 	"encoding/xml"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
+
+	"github.com/golang/glog"
 
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
@@ -61,7 +62,7 @@ func addHost(n *libvirt.Network, ip, mac, name string) error {
 	if err != nil {
 		return fmt.Errorf("error getting host xml desc: %v", err)
 	}
-	log.Printf("Adding host with XML:\n%s", xmlDesc)
+	glog.Infof("Adding host with XML:\n%s", xmlDesc)
 	return n.Update(libvirt.NETWORK_UPDATE_COMMAND_ADD_LAST, libvirt.NETWORK_SECTION_IP_DHCP_HOST, -1, xmlDesc, libvirt.NETWORK_UPDATE_AFFECT_CURRENT)
 }
 
@@ -88,7 +89,7 @@ func updateHost(n *libvirt.Network, ip, mac, name string) error {
 	if err != nil {
 		return fmt.Errorf("error getting host xml desc: %v", err)
 	}
-	log.Printf("Updating host with XML:\n%s", xmlDesc)
+	glog.Infof("Updating host with XML:\n%s", xmlDesc)
 	return n.Update(libvirt.NETWORK_UPDATE_COMMAND_MODIFY, libvirt.NETWORK_SECTION_IP_DHCP_HOST, -1, xmlDesc, libvirt.NETWORK_UPDATE_AFFECT_CURRENT)
 }
 
@@ -236,14 +237,14 @@ func CreateNetwork(name, domain, bridge, mode string, addresses []string, autost
 	if err != nil {
 		return fmt.Errorf("Error retrieving libvirt connection URI: %s", err)
 	}
-	log.Printf("[INFO] Creating libvirt network at %s", connectURI)
+	glog.Infof("Creating libvirt network at %s", connectURI)
 
 	data, err := xmlMarshallIndented(networkDef)
 	if err != nil {
 		return fmt.Errorf("Error serializing libvirt network: %s", err)
 	}
 
-	log.Printf("[DEBUG] Creating libvirt network at %s: %s", connectURI, data)
+	glog.Infof("Creating libvirt network at %s: %s", connectURI, data)
 	network, err := client.connection.NetworkDefineXML(data)
 	if err != nil {
 		return fmt.Errorf("Error defining libvirt network: %s - %s", err, data)
@@ -258,7 +259,7 @@ func CreateNetwork(name, domain, bridge, mode string, addresses []string, autost
 	if err != nil {
 		return fmt.Errorf("Error retrieving libvirt network id: %s", err)
 	}
-	log.Printf("[INFO] Created network %s [%s]", networkDef.Name, id)
+	glog.Infof("Created network %s [%s]", networkDef.Name, id)
 
 	if autostart {
 		err = network.SetAutostart(autostart)
@@ -315,6 +316,6 @@ func DeleteNetwork(name string, client *Client) error {
 		return fmt.Errorf("Error waiting for network to reach NOT-EXISTS state: %s", err)
 	}
 
-	log.Printf("deleted network %s", name)
+	glog.Infof("deleted network %s", name)
 	return nil
 }

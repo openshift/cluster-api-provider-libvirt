@@ -3,13 +3,13 @@ package utils
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/golang/glog"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
@@ -118,7 +118,7 @@ func (i *localImage) Import(copier func(io.Reader) error, vol libvirtxml.Storage
 	// we can skip the upload if the modification times are the same
 	if vol.Target.Timestamps != nil && vol.Target.Timestamps.Mtime != "" {
 		if fi.ModTime() == timeFromEpoch(vol.Target.Timestamps.Mtime) {
-			log.Printf("Modification time is the same: skipping image copy")
+			glog.Info("Modification time is the same: skipping image copy")
 			return nil
 		}
 	}
