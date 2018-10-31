@@ -8,24 +8,61 @@ import (
 	"io/ioutil"
 	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func CreateIgntion(pool, name, content string, client *Client) error {
+func getIgnitionVolumeName(volumeName string) string {
+	return fmt.Sprintf("%v.ignition", volumeName)
+}
+
+func EnsureIgnitionVolumeIsDeleted(name string, client *Client) error {
+	return EnsureVolumeIsDeleted(getIgnitionVolumeName(name), client)
+}
+
+func SetIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
 	glog.Infof("creating ignition file")
-	ignition := newIgnitionDef()
+	ignitionDef := newIgnitionDef()
 
-	ignition.Name = name
-	ignition.PoolName = pool
-	ignition.Content = content
+	if ignition.UserDataSecret == "" {
+		return fmt.Errorf("ignition.userDataSecret not set")
+	}
 
-	glog.Infof("ignition: %+v", ignition)
+	secret, err := kubeClient.CoreV1().Secrets(machineNamespace).Get(ignition.UserDataSecret, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("can not retrieve user data secret '%v/%v' when constructing cloud init volume: %v", machineNamespace, ignition.UserDataSecret, err)
+	}
+	userDataSecret, ok := secret.Data["userData"]
+	if !ok {
+		return fmt.Errorf("can not retrieve user data secret '%v/%v' when constructing cloud init volume: key 'userData' not found in the secret", machineNamespace, ignition.UserDataSecret)
+	}
 
-	key, err := ignition.CreateAndUpload(client)
-	glog.Infof("Ignition ID: %s", key)
+	ignitionDef.Name = getIgnitionVolumeName(volumeName)
+	ignitionDef.PoolName = poolName
+	ignitionDef.Content = string(userDataSecret)
+
+	glog.Infof("ignition: %+v", ignitionDef)
+
+	ignitionVolumeName, err := ignitionDef.CreateAndUpload(client)
 	if err != nil {
 		return err
+	}
+
+	domainDef.QEMUCommandline = &libvirtxml.DomainQEMUCommandline{
+		Args: []libvirtxml.DomainQEMUCommandlineArg{
+			{
+				// https://github.com/qemu/qemu/blob/master/docs/specs/fw_cfg.txt
+				Value: "-fw_cfg",
+			},
+			{
+				Value: fmt.Sprintf("name=opt/com.coreos/config,file=%s", ignitionVolumeName),
+			},
+		},
 	}
 	return nil
 }

@@ -8,9 +8,15 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	actuator "github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
 	"github.com/spf13/cobra"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 )
 
 // Test cases
@@ -126,7 +132,24 @@ func createActuatorInfraAssumtions(client *libvirtutils.Client) error {
 
 	// Create ign volume
 	content := `{"ignition":{"version":"2.2.0"},"networkd":{},"passwd":{"users":[{"name":"core","passwordHash": "$6$Jez3bVF7jG$ncmvBeJiYbzFKZSQKzTwg9gJ2qoF4N.JYyt8iv4qCThCdJmOtxnZz3l1W3btoh9.bXE8DcdXr6iXuV7ES4kww0"}]},"storage":{},"systemd":{}}`
-	if err := libvirtutils.CreateIgntion("default", "worker.ign", content, client); err != nil {
+
+	userData := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "user-data-secret-ignition",
+			Namespace: "machineNS",
+		},
+		Data: map[string][]byte{
+			"userData": []byte(content),
+		},
+	}
+
+	objList := []runtime.Object{}
+	if userData != nil {
+		objList = append(objList, userData)
+	}
+	fakeKubeClient := kubernetesfake.NewSimpleClientset(objList...)
+
+	if err := libvirtutils.SetIgnition(&libvirtxml.Domain{}, client, &providerconfigv1.Ignition{UserDataSecret: "user-data-secret-ignition"}, fakeKubeClient, "machineNS", "worker.ign", "default"); err != nil {
 		glog.Errorf("failed creating ignition %v", err)
 		return err
 	}

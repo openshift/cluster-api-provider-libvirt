@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: libvirt-actuator-ignition-secret
+  namespace: test
+type: Opaque
+data:
+  userData: |
+    ewogICJpZ25pdGlvbiI6IHsgInZlcnNpb24iOiAiMi4yLjAiIH0sCiAgInN5c3RlbWQiOiB7CiAg
+    ICAidW5pdHMiOiBbewogICAgICAibmFtZSI6ICJleGFtcGxlLnNlcnZpY2UiLAogICAgICAiZW5h
+    YmxlZCI6IHRydWUsCiAgICAgICJjb250ZW50cyI6ICJbU2VydmljZV1cblR5cGU9b25lc2hvdFxu
+    RXhlY1N0YXJ0PS91c3IvYmluL2VjaG8gSGVsbG8gV29ybGRcblxuW0luc3RhbGxdXG5XYW50ZWRC
+    eT1tdWx0aS11c2VyLnRhcmdldCIKICAgIH1dCiAgfQp9Cg==

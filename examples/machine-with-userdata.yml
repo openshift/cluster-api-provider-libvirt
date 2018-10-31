@@ -1,0 +1,33 @@
+---
+apiVersion: "cluster.k8s.io/v1alpha1"
+kind: Machine
+metadata:
+  name: worker-example
+  namespace: test
+  generateName: vs-worker-
+  labels:
+    sigs.k8s.io/cluster-api-cluster: tb-asg-35
+    sigs.k8s.io/cluster-api-machine-role: infra
+    sigs.k8s.io/cluster-api-machine-type: worker
+spec:
+  providerConfig:
+    value:
+      apiVersion: libvirtproviderconfig.k8s.io/v1alpha1
+      kind: LibvirtMachineProviderConfig
+      domainMemory: 2048
+      domainVcpu: 2
+      ignition:
+        userDataSecret: libvirt-actuator-ignition-secret
+      cloudInit:
+        sshAccess: true
+        userDataSecret: libvirt-actuator-user-data-secret
+      volume:
+        poolName: default
+        baseVolumeID: /var/lib/libvirt/images/fedora_base
+      networkInterfaceName: default
+      networkInterfaceAddress: 192.168.122.0/24
+      autostart: false
+      uri: qemu:///system
+  versions:
+    kubelet: ""
+    controlPlane: ""
