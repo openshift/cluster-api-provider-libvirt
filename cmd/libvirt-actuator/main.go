@@ -8,6 +8,9 @@ import (
 
 	"github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator/utils"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
+
+	goflag "flag"
 )
 
 func usage() {
@@ -107,6 +110,11 @@ func init() {
 			return nil
 		},
 	})
+
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+
+	// the following line exists to make glog happy, for more information, see: https://github.com/kubernetes/kubernetes/issues/17162
+	flag.CommandLine.Parse([]string{})
 }
 
 func checkFlags(cmd *cobra.Command) error {

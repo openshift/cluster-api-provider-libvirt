@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"math/rand"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
@@ -41,11 +41,11 @@ type Client struct {
 
 // Close closes the client's libvirt connection.
 func (c *Client) Close() error {
-	log.Printf("[DEBUG] Closing libvirt connection: %p", c.connection)
+	glog.Infof("Closing libvirt connection: %p", c.connection)
 
 	_, err := c.connection.Close()
 	if err != nil {
-		log.Printf("Error closing libvirt connection: %v", err)
+		glog.Infof("Error closing libvirt connection: %v", err)
 	}
 
 	return err
@@ -159,23 +159,23 @@ func getHostCapabilities(virConn *libvirt.Connect) (libvirtxml.Caps, error) {
 		return caps, err
 	}
 	xml.Unmarshal([]byte(capsXML), &caps)
-	log.Printf("[TRACE] Capabilities of host \n %+v", caps)
+	glog.Infof("Capabilities of host \n %+v", caps)
 	return caps, nil
 }
 
 func getGuestForArchType(caps libvirtxml.Caps, arch string, virttype string) (libvirtxml.CapsGuest, error) {
 	for _, guest := range caps.Guests {
-		log.Printf("[TRACE] Checking for %s/%s against %s/%s\n", arch, virttype, guest.Arch.Name, guest.OSType)
+		glog.Infof("Checking for %s/%s against %s/%s\n", arch, virttype, guest.Arch.Name, guest.OSType)
 		if guest.Arch.Name == arch && guest.OSType == virttype {
-			log.Printf("[DEBUG] Found %d machines in guest for %s/%s", len(guest.Arch.Machines), arch, virttype)
+			glog.Infof("Found %d machines in guest for %s/%s", len(guest.Arch.Machines), arch, virttype)
 			return guest, nil
 		}
 	}
-	return libvirtxml.CapsGuest{}, fmt.Errorf("[DEBUG] Could not find any guests for architecure type %s/%s", virttype, arch)
+	return libvirtxml.CapsGuest{}, fmt.Errorf("Could not find any guests for architecure type %s/%s", virttype, arch)
 }
 
 func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string, targetmachine string) (string, error) {
-	log.Printf("[INFO] getCanonicalMachineName")
+	glog.Infof("getCanonicalMachineName")
 	guest, err := getGuestForArchType(caps, arch, virttype)
 	if err != nil {
 		return "", err
@@ -189,7 +189,7 @@ func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string,
 			return machine.Name, nil
 		}
 	}
-	return "", fmt.Errorf("[WARN] Cannot find machine type %s for %s/%s in %v", targetmachine, virttype, arch, caps)
+	return "", fmt.Errorf("Cannot find machine type %s for %s/%s in %v", targetmachine, virttype, arch, caps)
 }
 
 func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, error) {
@@ -285,18 +285,18 @@ func randomWWN(strlen int) string {
 
 func setDisks(domainDef *libvirtxml.Domain, virConn *libvirt.Connect, volumeKey string) error {
 	disk := newDefDisk(0)
-	log.Printf("[INFO] LookupStorageVolByKey")
+	glog.Infof("LookupStorageVolByKey")
 	diskVolume, err := virConn.LookupStorageVolByKey(volumeKey)
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", volumeKey)
 	}
-	log.Printf("[INFO] diskVolume")
+	glog.Infof("diskVolume")
 	diskVolumeFile, err := diskVolume.GetPath()
 	if err != nil {
 		return fmt.Errorf("Error retrieving volume file: %s", err)
 	}
 
-	log.Printf("[INFO] DomainDiskSource")
+	glog.Infof("DomainDiskSource")
 	disk.Source = &libvirtxml.DomainDiskSource{
 		File: &libvirtxml.DomainDiskSourceFile{
 			File: diskVolumeFile,
@@ -362,7 +362,7 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 				if networkInterfaceHostname != "" {
 					hostname = networkInterfaceHostname
 				}
-				log.Printf("Networkaddress %v", networkInterfaceAddress)
+				glog.Infof("Networkaddress %v", networkInterfaceAddress)
 				if networkInterfaceAddress != "" {
 					_, networkCIDR, err := net.ParseCIDR(networkInterfaceAddress)
 					if err != nil {
@@ -373,7 +373,7 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 						return fmt.Errorf("failed to generate ip: %v", err)
 					}
 
-					log.Printf("[INFO] Adding IP/MAC/host=%s/%s/%s to %s", ip.String(), mac, hostname, networkName)
+					glog.Infof("Adding IP/MAC/host=%s/%s/%s to %s", ip.String(), mac, hostname, networkName)
 					if err := updateOrAddHost(network, ip.String(), mac, hostname); err != nil {
 						return err
 					}
@@ -392,7 +392,7 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 					// the resource specifies a hostname but not an IP, so we must wait until we
 					// have a valid lease and then read the IP we have been assigned, so we can
 					// do the mapping
-					log.Printf("[DEBUG] Do not have an IP for '%s' yet: will wait until DHCP provides one...", hostname)
+					glog.Infof("Do not have an IP for '%s' yet: will wait until DHCP provides one...", hostname)
 					partialNetIfaces[strings.ToUpper(mac)] = &pendingMapping{
 						mac:      strings.ToUpper(mac),
 						hostname: hostname,
@@ -424,7 +424,7 @@ func BuildClient(URI string) (*Client, error) {
 		return nil, err
 	}
 
-	log.Printf("[DEBUG] Created libvirt connection: %p", libvirtClient)
+	glog.Infof("Created libvirt connection: %p", libvirtClient)
 
 	client := &Client{
 		connection: libvirtClient,
@@ -469,7 +469,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
-	log.Printf("[DEBUG] Create resource libvirt_domain")
+	glog.Infof("Create resource libvirt_domain")
 
 	// Get default values from Host
 	domainDef, err := newDomainDefForConnection(client.connection)
@@ -482,7 +482,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
 	}
 
-	log.Printf("[INFO] setCoreOSIgnition")
+	glog.Infof("setCoreOSIgnition")
 	if ignKey != "" {
 		if err := setCoreOSIgnition(&domainDef, ignKey); err != nil {
 			return err
@@ -495,7 +495,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
 	}
 
-	log.Printf("[INFO] setDisks")
+	glog.Infof("setDisks")
 	VolumeKey := baseVolumePath + volumeName
 	if volumeName == "" {
 		volumeName = name
@@ -504,7 +504,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
-	log.Printf("[INFO] setNetworkInterfaces")
+	glog.Infof("setNetworkInterfaces")
 	var waitForLeases []*libvirtxml.DomainInterface
 	if hostName == "" {
 		hostName = name
@@ -526,14 +526,14 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	if err != nil {
 		return fmt.Errorf("error retrieving libvirt connection URI: %v", err)
 	}
-	log.Printf("[INFO] Creating libvirt domain at %s", connectURI)
+	glog.Infof("Creating libvirt domain at %s", connectURI)
 
 	data, err := xmlMarshallIndented(domainDef)
 	if err != nil {
 		return fmt.Errorf("error serializing libvirt domain: %v", err)
 	}
 
-	log.Printf("[DEBUG] Creating libvirt domain with XML:\n%s", data)
+	glog.Infof("Creating libvirt domain with XML:\n%s", data)
 	domain, err := client.connection.DomainDefineXML(data)
 	if err != nil {
 		return fmt.Errorf("error defining libvirt domain: %v", err)
@@ -554,7 +554,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 		return fmt.Errorf("error retrieving libvirt domain id: %v", err)
 	}
 
-	log.Printf("[INFO] Domain ID: %s", id)
+	glog.Infof("Domain ID: %s", id)
 	return nil
 }
 
@@ -563,7 +563,7 @@ func DeleteDomain(name string, client *Client) error {
 		return ErrLibVirtConIsNil
 	}
 
-	log.Printf("[DEBUG] Deleting domain %s", name)
+	glog.Infof("Deleting domain %s", name)
 
 	domain, err := client.connection.LookupDomainByName(name)
 	if err != nil {
@@ -584,7 +584,7 @@ func DeleteDomain(name string, client *Client) error {
 
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
 		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
-			log.Printf("libvirt does not support undefine flags: will try again without flags")
+			glog.Infof("libvirt does not support undefine flags: will try again without flags")
 			if err := domain.Undefine(); err != nil {
 				return fmt.Errorf("Couldn't undefine libvirt domain: %s", err)
 			}
@@ -610,7 +610,7 @@ func EnsureDomainIsDeleted(name string, client *Client) error {
 // LookupDomainByName looks up a domain by name and returns a pointer to it.
 // Note: The caller is responsible for freeing the returned domain.
 func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
-	log.Printf("[DEBUG] Lookup domain by name: %q", name)
+	glog.Infof("Lookup domain by name: %q", name)
 	if client.connection == nil {
 		return nil, ErrLibVirtConIsNil
 	}
@@ -625,7 +625,7 @@ func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
 
 // DomainExists verify a domain exists for given machine
 func DomainExists(name string, client *Client) (bool, error) {
-	log.Printf("[DEBUG] Check if %q domain exists", name)
+	glog.Infof("Check if %q domain exists", name)
 	if client.connection == nil {
 		return false, ErrLibVirtConIsNil
 	}

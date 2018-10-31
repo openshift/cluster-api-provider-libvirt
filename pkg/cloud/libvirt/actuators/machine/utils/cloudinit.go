@@ -6,18 +6,18 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"text/template"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/golang/glog"
 
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func getCloudInitVolumeName(volumeName string) string {
@@ -67,7 +67,7 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 	cloudInitDef.Name = cloudInitISOName
 	cloudInitDef.PoolName = poolName
 
-	log.Printf("[INFO] cloudInitDef: %+v", cloudInitDef)
+	glog.Infof("cloudInitDef: %+v", cloudInitDef)
 
 	iso, err := cloudInitDef.CreateIso()
 	if err != nil {
@@ -75,7 +75,7 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 	}
 
 	key, err := cloudInitDef.UploadIso(client, iso)
-	log.Printf("[INFO] key: %+v", key)
+	glog.Infof("key: %+v", key)
 
 	domainDef.Devices.Disks = append(domainDef.Devices.Disks, libvirtxml.DomainDisk{
 		Device: "cdrom",
@@ -127,7 +127,7 @@ func (ci *defCloudInit) CreateIso() (string, error) {
 // Create the ISO holding all the cloud-init data
 // Returns a string with the full path to the ISO file
 func (ci *defCloudInit) createISO() (string, error) {
-	log.Print("Creating new ISO")
+	glog.Infof("Creating new ISO")
 	tmpDir, err := ci.createFiles()
 	if err != nil {
 		return "", err
@@ -146,11 +146,11 @@ func (ci *defCloudInit) createISO() (string, error) {
 		filepath.Join(tmpDir, metaDataFileName),
 		filepath.Join(tmpDir, networkConfigFileName))
 
-	log.Printf("About to execute cmd: %+v", cmd)
+	glog.Infof("About to execute cmd: %+v", cmd)
 	if err = cmd.Run(); err != nil {
 		return "", fmt.Errorf("Error while starting the creation of CloudInit's ISO image: %s", err)
 	}
-	log.Printf("ISO created at %s", isoDestination)
+	glog.Infof("ISO created at %s", isoDestination)
 
 	return isoDestination, nil
 }
@@ -159,7 +159,7 @@ func (ci *defCloudInit) createISO() (string, error) {
 // Returns a string containing the name of the temporary directory and an error
 // object
 func (ci *defCloudInit) createFiles() (string, error) {
-	log.Print("Creating ISO contents")
+	glog.Infof("Creating ISO contents")
 	tmpDir, err := ioutil.TempDir("", "cloudinit")
 	if err != nil {
 		return "", fmt.Errorf("Cannot create tmp directory for cloudinit ISO generation: %s",
@@ -178,7 +178,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 		return "", fmt.Errorf("Error while writing network-config to file: %s", err)
 	}
 
-	log.Print("ISO contents created")
+	glog.Infof("ISO contents created")
 
 	return tmpDir, nil
 }
@@ -249,7 +249,7 @@ func (ci *defCloudInit) UploadIso(client *Client, iso string) (string, error) {
 func removeTmpIsoDirectory(iso string) {
 	err := os.RemoveAll(filepath.Dir(iso))
 	if err != nil {
-		log.Printf("Error while removing tmp directory holding the ISO file: %s", err)
+		glog.Infof("Error while removing tmp directory holding the ISO file: %s", err)
 	}
 }
 

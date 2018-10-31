@@ -60,7 +60,7 @@ CGO_ENABLED=1 go build -o bin/libvirt-actuator -a github.com/openshift/cluster-a
 ### Create libvirt instance based on machine manifest
 
 ```sh
-$ ./bin/libvirt-actuator create -m cmd/libvirt-actuator/resources/machine.yaml -c examples/cluster.yaml -u cmd/libvirt-actuator/resources/userdata.yaml
+$ ./bin/libvirt-actuator --logtostderr create -m cmd/libvirt-actuator/resources/machine.yaml -c examples/cluster.yaml -u cmd/libvirt-actuator/resources/userdata.yaml
 ```
 
 Once the libvirt instance is created you can ssh inside.
@@ -87,11 +87,11 @@ fedora.example.local   Ready     master    17m       v1.11.3
 ### Test if libvirt instance exists based on machine manifest
 
 ```sh
-$ ./bin/libvirt-actuator exists -m examples/machine.yaml -c examples/cluster.yaml
+$ ./bin/libvirt-actuator --logtostderr exists -m examples/machine.yaml -c examples/cluster.yaml
 ```
 
 ### Delete libvirt instance based on machine manifest
 
 ```sh
-$ ./bin/libvirt-actuator delete -m examples/machine.yaml -c examples/cluster.yaml
+$ ./bin/libvirt-actuator --logtostderr delete -m examples/machine.yaml -c examples/cluster.yaml
 ```
