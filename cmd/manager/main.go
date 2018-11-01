@@ -18,18 +18,6 @@ import (
 	"github.com/golang/glog"
 )
 
-var (
-	logLevel string
-)
-
-const (
-	defaultLogLevel = "info"
-)
-
-func init() {
-	flag.CommandLine.StringVar(&logLevel, "log-level", defaultLogLevel, "Log level (debug,info,warn,error,fatal)")
-}
-
 func main() {
 	// the following line exists to make glog happy, for more information, see: https://github.com/kubernetes/kubernetes/issues/17162
 	//flag.CommandLine.Parse([]string{})
