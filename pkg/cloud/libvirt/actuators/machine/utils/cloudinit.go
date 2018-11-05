@@ -75,6 +75,9 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 	}
 
 	key, err := cloudInitDef.UploadIso(client, iso)
+	if err != nil {
+		return fmt.Errorf("unable to upload ISO: %v", err)
+	}
 	glog.Infof("key: %+v", key)
 
 	domainDef.Devices.Disks = append(domainDef.Devices.Disks, libvirtxml.DomainDisk{

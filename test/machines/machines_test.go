@@ -234,6 +234,9 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			masterMachinePrivateIP = privateIP
 			return true, nil
 		})
+		if err != nil {
+			glog.Errorf("Unable to get instance ip address: %v", err)
+		}
 
 		glog.V(2).Infof("Master machine running at %v", masterMachinePrivateIP)
 
