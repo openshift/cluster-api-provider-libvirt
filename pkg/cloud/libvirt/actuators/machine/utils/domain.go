@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -496,7 +497,7 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	}
 
 	glog.Infof("setDisks")
-	VolumeKey := baseVolumePath + volumeName
+	VolumeKey := path.Join(baseVolumePath, volumeName)
 	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
