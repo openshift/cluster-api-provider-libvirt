@@ -11,7 +11,7 @@ resource "packet_device" "libvirt" {
   billing_cycle    = "hourly"
   project_id       = "${var.packet_project_id}"
   tags             = "${list("${var.tag}")}"
-  user_data        = "#cloud-config\n#image_repo=https://github.com/paulfantom/packet-image.git\n#image_tag=3a3f1eb378f660b335a68b79f3af303380462652\nssh_pwauth: True"
+  user_data        = "#cloud-config\n#image_repo=https://github.com/paulfantom/packet-image.git\n#image_tag=2f1397f638e5a3c1bb6def10642ac218788c9364\nssh_pwauth: True"
 
   provisioner "remote-exec" {
     script = "init.sh"
