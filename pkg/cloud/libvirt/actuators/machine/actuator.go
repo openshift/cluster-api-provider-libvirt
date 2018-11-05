@@ -259,20 +259,24 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
 	if err != nil {
+		glog.Error("Unable to get provider status from machine: %v", err)
 		return err
 	}
 
 	// Update the libvirt provider status in-place.
 	if err := UpdateProviderStatus(status, dom); err != nil {
+		glog.Error("Unable to update provider status: %v", err)
 		return err
 	}
 
 	addrs, err := libvirtutils.NodeAddresses(dom)
 	if err != nil {
+		glog.Error("Unable to get node addresses: %v", err)
 		return err
 	}
 
 	if err := a.applyMachineStatus(machine, status, addrs); err != nil {
+		glog.Error("Unable to apply machine status: %v", err)
 		return err
 	}
 
