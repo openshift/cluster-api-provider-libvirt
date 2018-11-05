@@ -47,6 +47,10 @@ required = [
   version = "4.6.0"
 
 [[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.0.6"
+
+[[constraint]]
   name = "github.com/spf13/cobra"
   version = "0.0.3"
 

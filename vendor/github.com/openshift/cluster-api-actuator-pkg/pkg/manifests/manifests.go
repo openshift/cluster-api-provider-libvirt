@@ -36,19 +36,16 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 				Kind:   "Cluster",
 			},
 			Scope: "Namespaced",
-			Subresources: &v1beta1.CustomResourceSubresources{
-				Status: &v1beta1.CustomResourceSubresourceStatus{},
-			},
 			Validation: &v1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 					Properties: map[string]v1beta1.JSONSchemaProps{
-						"spec": {
+						"spec": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Required: []string{
 								"clusterNetwork",
 							},
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"clusterNetwork": {
+								"clusterNetwork": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Required: []string{
 										"services",
@@ -56,13 +53,13 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 										"serviceDomain",
 									},
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"pods": {
+										"pods": v1beta1.JSONSchemaProps{
 											Type: "object",
 											Required: []string{
 												"cidrBlocks",
 											},
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"cidrBlocks": {
+												"cidrBlocks": v1beta1.JSONSchemaProps{
 													Type: "array",
 													Items: &v1beta1.JSONSchemaPropsOrArray{
 														Schema: &v1beta1.JSONSchemaProps{
@@ -72,16 +69,16 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 												},
 											},
 										},
-										"serviceDomain": {
+										"serviceDomain": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
-										"services": {
+										"services": v1beta1.JSONSchemaProps{
 											Type: "object",
 											Required: []string{
 												"cidrBlocks",
 											},
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"cidrBlocks": {
+												"cidrBlocks": v1beta1.JSONSchemaProps{
 													Type: "array",
 													Items: &v1beta1.JSONSchemaPropsOrArray{
 														Schema: &v1beta1.JSONSchemaProps{
@@ -93,26 +90,26 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 										},
 									},
 								},
-								"providerConfig": {
+								"providerConfig": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"value": {
+										"value": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
-										"valueFrom": {
+										"valueFrom": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
 									},
 								},
 							},
 						},
-						"status": {
+						"status": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"providerStatus": {
+								"providerStatus": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"apiEndpoints": {
+								"apiEndpoints": v1beta1.JSONSchemaProps{
 									Type: "array",
 									Items: &v1beta1.JSONSchemaPropsOrArray{
 										Schema: &v1beta1.JSONSchemaProps{
@@ -122,10 +119,10 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 												"port",
 											},
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"host": {
+												"host": v1beta1.JSONSchemaProps{
 													Type: "string",
 												},
-												"port": {
+												"port": v1beta1.JSONSchemaProps{
 													Type:   "integer",
 													Format: "int64",
 												},
@@ -133,21 +130,21 @@ func ClusterCRDManifest() *v1beta1.CustomResourceDefinition {
 										},
 									},
 								},
-								"errorMessage": {
+								"errorMessage": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
-								"errorReason": {
+								"errorReason": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
 							},
 						},
-						"apiVersion": {
+						"apiVersion": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"kind": {
+						"kind": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"metadata": {
+						"metadata": v1beta1.JSONSchemaProps{
 							Type: "object",
 						},
 					},
@@ -177,59 +174,56 @@ func MachineCRDManifest() *v1beta1.CustomResourceDefinition {
 				Kind:   "Machine",
 			},
 			Scope: "Namespaced",
-			Subresources: &v1beta1.CustomResourceSubresources{
-				Status: &v1beta1.CustomResourceSubresourceStatus{},
-			},
 			Validation: &v1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 					Properties: map[string]v1beta1.JSONSchemaProps{
-						"apiVersion": {
+						"apiVersion": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"kind": {
+						"kind": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"metadata": {
+						"metadata": v1beta1.JSONSchemaProps{
 							Type: "object",
 						},
-						"spec": {
+						"spec": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Required: []string{
 								"providerConfig",
 							},
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"versions": {
+								"versions": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Required: []string{
 										"kubelet",
 									},
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"controlPlane": {
+										"controlPlane": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
-										"kubelet": {
+										"kubelet": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
 									},
 								},
-								"configSource": {
+								"configSource": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"metadata": {
+								"metadata": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"providerConfig": {
+								"providerConfig": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"value": {
+										"value": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
-										"valueFrom": {
+										"valueFrom": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
 									},
 								},
-								"taints": {
+								"taints": v1beta1.JSONSchemaProps{
 									Type: "array",
 									Items: &v1beta1.JSONSchemaPropsOrArray{
 										Schema: &v1beta1.JSONSchemaProps{
@@ -239,27 +233,27 @@ func MachineCRDManifest() *v1beta1.CustomResourceDefinition {
 								},
 							},
 						},
-						"status": {
+						"status": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"providerStatus": {
+								"providerStatus": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"versions": {
+								"versions": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Required: []string{
 										"kubelet",
 									},
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"controlPlane": {
+										"controlPlane": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
-										"kubelet": {
+										"kubelet": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
 									},
 								},
-								"addresses": {
+								"addresses": v1beta1.JSONSchemaProps{
 									Type: "array",
 									Items: &v1beta1.JSONSchemaPropsOrArray{
 										Schema: &v1beta1.JSONSchemaProps{
@@ -267,7 +261,7 @@ func MachineCRDManifest() *v1beta1.CustomResourceDefinition {
 										},
 									},
 								},
-								"conditions": {
+								"conditions": v1beta1.JSONSchemaProps{
 									Type: "array",
 									Items: &v1beta1.JSONSchemaPropsOrArray{
 										Schema: &v1beta1.JSONSchemaProps{
@@ -275,17 +269,17 @@ func MachineCRDManifest() *v1beta1.CustomResourceDefinition {
 										},
 									},
 								},
-								"errorMessage": {
+								"errorMessage": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
-								"errorReason": {
+								"errorReason": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
-								"lastUpdated": {
+								"lastUpdated": v1beta1.JSONSchemaProps{
 									Type:   "string",
 									Format: "date-time",
 								},
-								"nodeRef": {
+								"nodeRef": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
 							},
@@ -317,102 +311,99 @@ func MachineSetCRDManifest() *v1beta1.CustomResourceDefinition {
 				Kind:   "MachineSet",
 			},
 			Scope: v1beta1.ResourceScope("Namespaced"),
-			Subresources: &v1beta1.CustomResourceSubresources{
-				Status: &v1beta1.CustomResourceSubresourceStatus{},
-			},
 			Validation: &v1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 					Properties: map[string]v1beta1.JSONSchemaProps{
-						"status": {
+						"status": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Required: []string{
 								"replicas",
 							},
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"errorMessage": {
+								"errorMessage": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
-								"errorReason": {
+								"errorReason": v1beta1.JSONSchemaProps{
 									Type: "string",
 								},
-								"fullyLabeledReplicas": {
+								"fullyLabeledReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"observedGeneration": {
+								"observedGeneration": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int64",
 								},
-								"readyReplicas": {
+								"readyReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"replicas": {
+								"replicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"availableReplicas": {
+								"availableReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
 							},
 						},
-						"apiVersion": {
+						"apiVersion": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"kind": {
+						"kind": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"metadata": {
+						"metadata": v1beta1.JSONSchemaProps{
 							Type: "object",
 						},
-						"spec": {
+						"spec": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Required: []string{
 								"selector",
 							},
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"minReadySeconds": {
+								"minReadySeconds": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"replicas": {
+								"replicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"selector": {
+								"selector": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"template": {
+								"template": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"metadata": {
+										"metadata": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
-										"spec": {
+										"spec": v1beta1.JSONSchemaProps{
 											Type: "object",
 											Required: []string{
 												"providerConfig",
 											},
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"configSource": {
+												"configSource": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
-												"metadata": {
+												"metadata": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
-												"providerConfig": {
+												"providerConfig": v1beta1.JSONSchemaProps{
 													Type: "object",
 													Properties: map[string]v1beta1.JSONSchemaProps{
-														"value": {
+														"value": v1beta1.JSONSchemaProps{
 															Type: "object",
 														},
-														"valueFrom": {
+														"valueFrom": v1beta1.JSONSchemaProps{
 															Type: "object",
 														},
 													},
 												},
-												"taints": {
+												"taints": v1beta1.JSONSchemaProps{
 													Type: "array",
 													Items: &v1beta1.JSONSchemaPropsOrArray{
 														Schema: &v1beta1.JSONSchemaProps{
@@ -420,16 +411,16 @@ func MachineSetCRDManifest() *v1beta1.CustomResourceDefinition {
 														},
 													},
 												},
-												"versions": {
+												"versions": v1beta1.JSONSchemaProps{
 													Type: "object",
 													Required: []string{
 														"kubelet",
 													},
 													Properties: map[string]v1beta1.JSONSchemaProps{
-														"controlPlane": {
+														"controlPlane": v1beta1.JSONSchemaProps{
 															Type: "string",
 														},
-														"kubelet": {
+														"kubelet": v1beta1.JSONSchemaProps{
 															Type: "string",
 														},
 													},
@@ -467,109 +458,106 @@ func MachineDeploymentCRDManifest() *v1beta1.CustomResourceDefinition {
 				Kind:   "MachineDeployment",
 			},
 			Scope: "Namespaced",
-			Subresources: &v1beta1.CustomResourceSubresources{
-				Status: &v1beta1.CustomResourceSubresourceStatus{},
-			},
 			Validation: &v1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 					Properties: map[string]v1beta1.JSONSchemaProps{
-						"apiVersion": {
+						"apiVersion": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"kind": {
+						"kind": v1beta1.JSONSchemaProps{
 							Type: "string",
 						},
-						"metadata": {
+						"metadata": v1beta1.JSONSchemaProps{
 							Type: "object",
 						},
-						"spec": {
+						"spec": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Required: []string{
 								"selector",
 								"template",
 							},
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"paused": {
+								"paused": v1beta1.JSONSchemaProps{
 									Type: "boolean",
 								},
-								"progressDeadlineSeconds": {
+								"progressDeadlineSeconds": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"replicas": {
+								"replicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"revisionHistoryLimit": {
+								"revisionHistoryLimit": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"selector": {
+								"selector": v1beta1.JSONSchemaProps{
 									Type: "object",
 								},
-								"strategy": {
+								"strategy": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"rollingUpdate": {
+										"rollingUpdate": v1beta1.JSONSchemaProps{
 											Type: "object",
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"maxSurge": {
+												"maxSurge": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
-												"maxUnavailable": {
+												"maxUnavailable": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
 											},
 										},
-										"type": {
+										"type": v1beta1.JSONSchemaProps{
 											Type: "string",
 										},
 									},
 								},
-								"template": {
+								"template": v1beta1.JSONSchemaProps{
 									Type: "object",
 									Properties: map[string]v1beta1.JSONSchemaProps{
-										"metadata": {
+										"metadata": v1beta1.JSONSchemaProps{
 											Type: "object",
 										},
-										"spec": {
+										"spec": v1beta1.JSONSchemaProps{
 											Type: "object",
 											Required: []string{
 												"providerConfig",
 											},
 											Properties: map[string]v1beta1.JSONSchemaProps{
-												"versions": {
+												"versions": v1beta1.JSONSchemaProps{
 													Type: "object",
 													Required: []string{
 														"kubelet",
 													},
 													Properties: map[string]v1beta1.JSONSchemaProps{
-														"controlPlane": {
+														"controlPlane": v1beta1.JSONSchemaProps{
 															Type: "string",
 														},
-														"kubelet": {
+														"kubelet": v1beta1.JSONSchemaProps{
 															Type: "string",
 														},
 													},
 												},
-												"configSource": {
+												"configSource": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
-												"metadata": {
+												"metadata": v1beta1.JSONSchemaProps{
 													Type: "object",
 												},
-												"providerConfig": {
+												"providerConfig": v1beta1.JSONSchemaProps{
 													Type: "object",
 													Properties: map[string]v1beta1.JSONSchemaProps{
-														"valueFrom": {
+														"valueFrom": v1beta1.JSONSchemaProps{
 															Type: "object",
 														},
-														"value": {
+														"value": v1beta1.JSONSchemaProps{
 															Type: "object",
 														},
 													},
 												},
-												"taints": {
+												"taints": v1beta1.JSONSchemaProps{
 													Type: "array",
 													Items: &v1beta1.JSONSchemaPropsOrArray{
 														Schema: &v1beta1.JSONSchemaProps{
@@ -581,36 +569,36 @@ func MachineDeploymentCRDManifest() *v1beta1.CustomResourceDefinition {
 										},
 									},
 								},
-								"minReadySeconds": {
+								"minReadySeconds": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
 							},
 						},
-						"status": {
+						"status": v1beta1.JSONSchemaProps{
 							Type: "object",
 							Properties: map[string]v1beta1.JSONSchemaProps{
-								"readyReplicas": {
+								"readyReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"replicas": {
+								"replicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"unavailableReplicas": {
+								"unavailableReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"updatedReplicas": {
+								"updatedReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"availableReplicas": {
+								"availableReplicas": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int32",
 								},
-								"observedGeneration": {
+								"observedGeneration": v1beta1.JSONSchemaProps{
 									Type:   "integer",
 									Format: "int64",
 								},
@@ -633,7 +621,7 @@ func ClusterRoleManifest() *rbacv1.ClusterRole {
 			Name: "manager-role",
 		},
 		Rules: []rbacv1.PolicyRule{
-			{
+			rbacv1.PolicyRule{
 				Verbs: []string{
 					"get",
 					"list",
@@ -648,16 +636,77 @@ func ClusterRoleManifest() *rbacv1.ClusterRole {
 				},
 				Resources: []string{
 					"clusters",
-					"clusters/status",
-					"machines",
-					"machines/status",
-					"machinesets",
-					"machinesets/status",
-					"machinedeployments",
-					"machinedeployments/status",
 				},
 			},
-			{
+			rbacv1.PolicyRule{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+					"create",
+					"update",
+					"patch",
+					"delete",
+				},
+				APIGroups: []string{
+					"cluster.k8s.io",
+				},
+				Resources: []string{
+					"machines",
+				},
+			},
+			rbacv1.PolicyRule{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+					"create",
+					"update",
+					"patch",
+					"delete",
+				},
+				APIGroups: []string{
+					"cluster.k8s.io",
+				},
+				Resources: []string{
+					"machinedeployments",
+				},
+			},
+			rbacv1.PolicyRule{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+					"create",
+					"update",
+					"patch",
+					"delete",
+				},
+				APIGroups: []string{
+					"cluster.k8s.io",
+				},
+				Resources: []string{
+					"machinesets",
+				},
+			},
+			rbacv1.PolicyRule{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+					"create",
+					"update",
+					"patch",
+					"delete",
+				},
+				APIGroups: []string{
+					"cluster.k8s.io",
+				},
+				Resources: []string{
+					"machines",
+				},
+			},
+			rbacv1.PolicyRule{
 				Verbs: []string{
 					"get",
 					"list",
@@ -674,6 +723,23 @@ func ClusterRoleManifest() *rbacv1.ClusterRole {
 					"nodes",
 				},
 			},
+			rbacv1.PolicyRule{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+					"create",
+					"update",
+					"patch",
+					"delete",
+				},
+				APIGroups: []string{
+					"cluster.k8s.io",
+				},
+				Resources: []string{
+					"machines",
+				},
+			},
 		},
 	}
 }
@@ -688,7 +754,7 @@ func ClusterRoleBinding(clusterAPINamespace string) *rbacv1.ClusterRoleBinding {
 			Name: "manager-rolebinding",
 		},
 		Subjects: []rbacv1.Subject{
-			{
+			rbacv1.Subject{
 				Kind:      "ServiceAccount",
 				Name:      "default",
 				Namespace: clusterAPINamespace,
@@ -733,7 +799,7 @@ func ManagerManifest(clusterAPINamespace, managerImage string) *appsv1.StatefulS
 				},
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
-						{
+						apiv1.Container{
 							Name:  "manager",
 							Image: managerImage,
 							Command: []string{
@@ -753,20 +819,20 @@ func ManagerManifest(clusterAPINamespace, managerImage string) *appsv1.StatefulS
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					Tolerations: []apiv1.Toleration{
-						{
+						apiv1.Toleration{
 							Key:    "node-role.kubernetes.io/master",
 							Effect: "NoSchedule",
 						},
-						{
+						apiv1.Toleration{
 							Key:      "CriticalAddonsOnly",
 							Operator: "Exists",
 						},
-						{
+						apiv1.Toleration{
 							Key:      "node.alpha.kubernetes.io/notReady",
 							Operator: "Exists",
 							Effect:   "NoExecute",
 						},
-						{
+						apiv1.Toleration{
 							Key:      "node.alpha.kubernetes.io/unreachable",
 							Operator: "Exists",
 							Effect:   "NoExecute",
@@ -795,7 +861,7 @@ func ManagerService(clusterAPINamespace string) *apiv1.Service {
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{
-				{
+				apiv1.ServicePort{
 					Port: 443,
 				},
 			},
@@ -884,8 +950,7 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, 
 							},
 							Command: []string{"./machine-controller-manager"},
 							Args: []string{
-								"--logtostderr=true",
-								"--v=3",
+								"--log-level=debug",
 								"--kubeconfig=/etc/kubernetes/admin.conf",
 							},
 							Resources: apiv1.ResourceRequirements{
