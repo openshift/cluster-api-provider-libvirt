@@ -171,7 +171,7 @@ func getGuestForArchType(caps libvirtxml.Caps, arch string, virttype string) (li
 			return guest, nil
 		}
 	}
-	return libvirtxml.CapsGuest{}, fmt.Errorf("Could not find any guests for architecure type %s/%s", virttype, arch)
+	return libvirtxml.CapsGuest{}, fmt.Errorf("Could not find any guests for architecture type %s/%s", virttype, arch)
 }
 
 func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string, targetmachine string) (string, error) {
@@ -497,9 +497,6 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 
 	glog.Infof("setDisks")
 	VolumeKey := baseVolumePath + volumeName
-	if volumeName == "" {
-		volumeName = name
-	}
 	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}

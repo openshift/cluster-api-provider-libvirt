@@ -158,7 +158,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	return nil
 }
 
-// Exists test for the existance of a machine and is invoked by the Machine Controller
+// Exists test for the existence of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
@@ -175,7 +175,7 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
-// is the caller's responsiblity to free this.
+// is the caller's responsibility to free this.
 func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client *libvirtutils.Client) (*libvirt.Domain, error) {
 	// decode config
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
