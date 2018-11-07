@@ -25,6 +25,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/diff"
 	"k8s.io/client-go/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -302,7 +303,7 @@ func (a *Actuator) applyMachineStatus(
 		return nil
 	}
 
-	glog.Infof("Machine %s status has changed, updating", machine.Name)
+	glog.Infof("Machine %s status has changed: %s", machine.Name, diff.ObjectReflectDiff(machine.Status, machineCopy.Status))
 
 	now := metav1.Now()
 	machineCopy.Status.LastUpdated = &now
