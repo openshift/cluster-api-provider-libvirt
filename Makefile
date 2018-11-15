@@ -81,9 +81,9 @@ integration: deps-cgo ## Run integration test
 build-e2e:
 	$(DOCKER_CMD) go test -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
 
-.PHONY: e2e
-e2e: e2e-provision ## Run end-to-end test
-	# TODO @ingvagabund @spangenberg add e2e test command here
+.PHONY: test-e2e
+e2e: images build-e2e e2e-provision ## Run end-to-end test
+	hack/test-e2e.sh
 	hack/packet-provision.sh destroy
 
 .PHONY: e2e-provision
