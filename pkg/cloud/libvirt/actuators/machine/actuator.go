@@ -307,8 +307,7 @@ func (a *Actuator) applyMachineStatus(
 	now := metav1.Now()
 	machineCopy.Status.LastUpdated = &now
 	_, err = a.clusterClient.ClusterV1alpha1().
-		Machines(machineCopy.Namespace).Update(machineCopy)
-
+		Machines(machineCopy.Namespace).UpdateStatus(machineCopy)
 	return err
 }
 
