@@ -356,6 +356,9 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 				return fmt.Errorf("Error retrieving network name: %s", err)
 			}
 			networkDef, err := newDefNetworkfromLibvirt(network)
+			if err != nil {
+				return fmt.Errorf("Error retrieving network definition: %v", err)
+			}
 
 			if HasDHCP(networkDef) {
 				hostname := domainDef.Name
