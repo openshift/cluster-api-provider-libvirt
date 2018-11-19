@@ -674,6 +674,19 @@ func ClusterRoleManifest() *rbacv1.ClusterRole {
 					"nodes",
 				},
 			},
+			{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"secrets",
+				},
+			},
 		},
 	}
 }
@@ -886,7 +899,6 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, 
 							Args: []string{
 								"--logtostderr=true",
 								"--v=3",
-								"--kubeconfig=/etc/kubernetes/admin.conf",
 							},
 							Resources: apiv1.ResourceRequirements{
 								Requests: apiv1.ResourceList{
@@ -914,7 +926,6 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, 
 								},
 							},
 							Command: []string{"./nodelink-controller"},
-							Args:    []string{"--kubeconfig=/etc/kubernetes/admin.conf"},
 							Resources: apiv1.ResourceRequirements{
 								Requests: apiv1.ResourceList{
 									"cpu":    resource.MustParse("100m"),
