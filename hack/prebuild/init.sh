@@ -13,4 +13,4 @@ virsh pool-start default
 virsh pool-autostart default
 
 # Start minikube
-/usr/local/bin/minikube start --vm-driver kvm2
+/usr/local/bin/minikube start --vm-driver kvm2 --kubernetes-version="v1.11.3" -v=5
