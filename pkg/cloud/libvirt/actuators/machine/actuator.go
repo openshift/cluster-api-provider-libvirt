@@ -189,6 +189,7 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 	baseVolume := machineProviderConfig.Volume.BaseVolumeID
 	pool := machineProviderConfig.Volume.PoolName
 	ignKey := machineProviderConfig.IgnKey
+	ignition := machineProviderConfig.Ignition
 	networkInterfaceName := machineProviderConfig.NetworkInterfaceName
 	networkInterfaceAddress := machineProviderConfig.NetworkInterfaceAddress
 	autostart := machineProviderConfig.Autostart
@@ -201,7 +202,7 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 	}
 
 	// Create domain
-	if err = libvirtutils.CreateDomain(name, ignKey, name, name, networkInterfaceName, networkInterfaceAddress, pool, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
+	if err = libvirtutils.CreateDomain(name, ignKey, ignition, name, name, networkInterfaceName, networkInterfaceAddress, pool, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
 		if err := libvirtutils.DeleteVolume(name, client); err != nil {
@@ -233,6 +234,11 @@ func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Clie
 
 	// Delete cloud init volume if exists
 	if err := libvirtutils.EnsureCloudInitVolumeIsDeleted(machine.Name, client); err != nil {
+		return fmt.Errorf("error deleting volume: %v", err)
+	}
+
+	// Delete cloud init volume if exists
+	if err := libvirtutils.EnsureIgnitionVolumeIsDeleted(machine.Name, client); err != nil {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 

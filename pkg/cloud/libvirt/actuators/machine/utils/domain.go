@@ -468,7 +468,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	return nil
 }
 
-func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, networkInterfaceAddress, poolName string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
+func CreateDomain(name, ignKey string, ignition *providerconfigv1.Ignition, volumeName, hostName, networkInterfaceName, networkInterfaceAddress, poolName string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
 	if name == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -486,7 +486,11 @@ func CreateDomain(name, ignKey, volumeName, hostName, networkInterfaceName, netw
 	}
 
 	glog.Infof("setCoreOSIgnition")
-	if ignKey != "" {
+	if ignition != nil {
+		if err := SetIgnition(&domainDef, client, ignition, kubeClient, machineNamespace, volumeName, poolName); err != nil {
+			return err
+		}
+	} else if ignKey != "" {
 		if err := setCoreOSIgnition(&domainDef, ignKey); err != nil {
 			return err
 		}
