@@ -715,111 +715,6 @@ func ClusterRoleBinding(clusterAPINamespace string) *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func ManagerManifest(clusterAPINamespace, managerImage string) *appsv1.StatefulSet {
-	var terminationGracePeriodSeconds int64 = 10
-	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "StatefulSet",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "controller-manager",
-			Namespace: clusterAPINamespace,
-			Labels: map[string]string{
-				"control-plane":           "controller-manager",
-				"controller-tools.k8s.io": "1.0",
-			},
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"control-plane":           "controller-manager",
-					"controller-tools.k8s.io": "1.0",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"control-plane":           "controller-manager",
-						"controller-tools.k8s.io": "1.0",
-					},
-				},
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						{
-							Name:  "manager",
-							Image: managerImage,
-							Command: []string{
-								"/manager",
-							},
-							Resources: apiv1.ResourceRequirements{
-								Limits: apiv1.ResourceList{
-									"memory": resource.MustParse("30Mi"),
-									"cpu":    resource.MustParse("100m"),
-								},
-								Requests: apiv1.ResourceList{
-									"cpu":    resource.MustParse("100m"),
-									"memory": resource.MustParse("30Mi"),
-								},
-							},
-						},
-					},
-					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:    "node-role.kubernetes.io/master",
-							Effect: "NoSchedule",
-						},
-						{
-							Key:      "CriticalAddonsOnly",
-							Operator: "Exists",
-						},
-						{
-							Key:      "node.alpha.kubernetes.io/notReady",
-							Operator: "Exists",
-							Effect:   "NoExecute",
-						},
-						{
-							Key:      "node.alpha.kubernetes.io/unreachable",
-							Operator: "Exists",
-							Effect:   "NoExecute",
-						},
-					},
-				},
-			},
-			ServiceName: "controller-manager-service",
-		},
-	}
-}
-
-func ManagerService(clusterAPINamespace string) *apiv1.Service {
-	return &apiv1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "controller-manager-service",
-			Namespace: clusterAPINamespace,
-			Labels: map[string]string{
-				"control-plane":           "controller-manager",
-				"controller-tools.k8s.io": "1.0",
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
-				{
-					Port: 443,
-				},
-			},
-			Selector: map[string]string{
-				"control-plane":           "controller-manager",
-				"controller-tools.k8s.io": "1.0",
-			},
-		},
-	}
-}
-
 func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, ActuatorPrivateKey string) *appsv1.Deployment {
 	var replicas int32 = 1
 	deployment := &appsv1.Deployment{
@@ -932,6 +827,23 @@ func ClusterAPIControllersDeployment(clusterAPINamespace, actuatorImage string, 
 									"memory": resource.MustParse("20Mi"),
 								},
 								Limits: apiv1.ResourceList{
+									"cpu":    resource.MustParse("100m"),
+									"memory": resource.MustParse("30Mi"),
+								},
+							},
+						},
+						{
+							Name:  "manager",
+							Image: actuatorImage,
+							Command: []string{
+								"/manager",
+							},
+							Resources: apiv1.ResourceRequirements{
+								Limits: apiv1.ResourceList{
+									"memory": resource.MustParse("30Mi"),
+									"cpu":    resource.MustParse("100m"),
+								},
+								Requests: apiv1.ResourceList{
 									"cpu":    resource.MustParse("100m"),
 									"memory": resource.MustParse("30Mi"),
 								},
