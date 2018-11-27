@@ -16,8 +16,6 @@ spec:
       kind: LibvirtMachineProviderConfig
       domainMemory: 2048
       domainVcpu: 2
-      ignition:
-        userDataSecret: libvirt-actuator-ignition-secret
       cloudInit:
         sshAccess: true
         userDataSecret: libvirt-actuator-user-data-secret
@@ -27,7 +25,7 @@ spec:
       networkInterfaceName: default
       networkInterfaceAddress: 192.168.122.0/24
       autostart: false
-      uri: qemu:///system
+      uri: qemu+ssh://root@147.75.96.109/system
   versions:
     kubelet: ""
     controlPlane: ""
