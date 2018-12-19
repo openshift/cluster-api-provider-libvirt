@@ -201,18 +201,6 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 	return nil
 }
 
-func EnsureVolumeIsDeleted(volumeName string, client *Client) error {
-	exists, err := VolumeExists(volumeName, client)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		glog.Infof("Volume %s does not exists", volumeName)
-		return nil
-	}
-	return DeleteVolume(volumeName, client)
-}
-
 // VolumeExists checks if a volume exists
 func VolumeExists(volumeName string, client *Client) (bool, error) {
 	glog.Infof("Check if %q volume exists", volumeName)

@@ -22,6 +22,7 @@ import (
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
+	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -122,7 +123,7 @@ func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	}
 
 	defer client.Close()
-	exists, err := libvirtutils.DomainExists(machine.Name, client)
+	exists, err := client.DomainExists(machine.Name)
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 	defer client.Close()
 
-	dom, err := libvirtutils.LookupDomainByName(machine.Name, client)
+	dom, err := client.LookupDomainByName(machine.Name)
 	if err != nil {
 		return errWrapper.WithLog(err, "failed to look up domain by name")
 	}
@@ -171,7 +172,7 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 
 	defer client.Close()
 
-	return libvirtutils.DomainExists(machine.Name, client)
+	return client.DomainExists(machine.Name)
 }
 
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
@@ -184,28 +185,40 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
 
-	// TODO(alberto) create struct and function for converting machineconfig->libvirtConfig
-	name := machine.Name
-	baseVolume := machineProviderConfig.Volume.BaseVolumeID
-	pool := machineProviderConfig.Volume.PoolName
-	ignKey := machineProviderConfig.IgnKey
-	ignition := machineProviderConfig.Ignition
-	networkInterfaceName := machineProviderConfig.NetworkInterfaceName
-	networkInterfaceAddress := machineProviderConfig.NetworkInterfaceAddress
-	autostart := machineProviderConfig.Autostart
-	memory := machineProviderConfig.DomainMemory
-	vcpu := machineProviderConfig.DomainVcpu
+	domainName := machine.Name
 
 	// Create volume
-	if err := libvirtutils.CreateVolume(name, pool, baseVolume, "", "qcow2", client); err != nil {
+	if err := client.CreateVolume(
+		libvirtclient.CreateVolumeInput{
+			VolumeName:   domainName,
+			PoolName:     machineProviderConfig.Volume.PoolName,
+			BaseVolumeID: machineProviderConfig.Volume.BaseVolumeID,
+			VolumeFormat: "qcow2",
+		}); err != nil {
 		return nil, fmt.Errorf("error creating volume: %v", err)
 	}
 
 	// Create domain
-	if err = libvirtutils.CreateDomain(name, ignKey, ignition, name, name, networkInterfaceName, networkInterfaceAddress, pool, autostart, memory, vcpu, offset, client, machineProviderConfig.CloudInit, kubeClient, machine.Namespace); err != nil {
+	if err = client.CreateDomain(libvirtclient.CreateDomainInput{
+		DomainName:              domainName,
+		IgnKey:                  machineProviderConfig.IgnKey,
+		Ignition:                machineProviderConfig.Ignition,
+		VolumeName:              domainName,
+		VolumePoolName:          machineProviderConfig.Volume.PoolName,
+		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
+		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
+		AddressRange:            offset,
+		HostName:                domainName,
+		Autostart:               machineProviderConfig.Autostart,
+		DomainMemory:            machineProviderConfig.DomainMemory,
+		DomainVcpu:              machineProviderConfig.DomainVcpu,
+		CloudInit:               machineProviderConfig.CloudInit,
+		KubeClient:              kubeClient,
+		MachineNamespace:        machine.Namespace,
+	}); err != nil {
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
-		if err := libvirtutils.DeleteVolume(name, client); err != nil {
+		if err := client.DeleteVolume(domainName); err != nil {
 			glog.Errorf("error cleaning up volume: %v", err)
 		}
 
@@ -213,7 +226,7 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 	}
 
 	// Lookup created domain for return.
-	dom, err := libvirtutils.LookupDomainByName(name, client)
+	dom, err := client.LookupDomainByName(domainName)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up libvirt machine: %v", err)
 	}
@@ -223,23 +236,23 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
 func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Client) error {
-	if err := libvirtutils.EnsureDomainIsDeleted(machine.Name, client); err != nil {
+	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtutils.ErrDomainNotFound {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
 	// Delete machine volume
-	if err := libvirtutils.EnsureVolumeIsDeleted(machine.Name, client); err != nil {
+	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtutils.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := libvirtutils.EnsureCloudInitVolumeIsDeleted(machine.Name, client); err != nil {
-		return fmt.Errorf("error deleting volume: %v", err)
+	if err := client.DeleteVolume(libvirtutils.CloudInitVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+		return fmt.Errorf("error deleting cloud init volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := libvirtutils.EnsureIgnitionVolumeIsDeleted(machine.Name, client); err != nil {
-		return fmt.Errorf("error deleting volume: %v", err)
+	if err := client.DeleteVolume(libvirtutils.IgnitionVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+		return fmt.Errorf("error deleting ignition volume: %v", err)
 	}
 
 	return nil

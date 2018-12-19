@@ -26,7 +26,7 @@ func (client *Client) Close() error {
 }
 
 // CreateDomain creates domain based on CreateDomainInput
-func (client *Client) CreateDomain(input *client.CreateDomainInput) error {
+func (client *Client) CreateDomain(input client.CreateDomainInput) error {
 	return CreateDomain(
 		input.DomainName,
 		input.IgnKey,
@@ -39,7 +39,7 @@ func (client *Client) CreateDomain(input *client.CreateDomainInput) error {
 		input.Autostart,
 		input.DomainMemory,
 		input.DomainVcpu,
-		input.Offset,
+		input.AddressRange,
 		client,
 		input.CloudInit,
 		input.KubeClient,
@@ -69,7 +69,7 @@ func (client *Client) DeleteDomain(name string) error {
 }
 
 // CreateVolume creates volume based on CreateVolumeInput
-func (client *Client) CreateVolume(input *client.CreateVolumeInput) error {
+func (client *Client) CreateVolume(input client.CreateVolumeInput) error {
 	return CreateVolume(
 		input.VolumeName,
 		input.PoolName,

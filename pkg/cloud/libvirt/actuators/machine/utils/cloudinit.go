@@ -20,12 +20,8 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func getCloudInitVolumeName(volumeName string) string {
+func CloudInitVolumeName(volumeName string) string {
 	return fmt.Sprintf("%v_cloud-init", volumeName)
-}
-
-func EnsureCloudInitVolumeIsDeleted(name string, client *Client) error {
-	return EnsureVolumeIsDeleted(getCloudInitVolumeName(name), client)
 }
 
 func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
@@ -59,7 +55,7 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 		return fmt.Errorf("can not render cloud init meta-data: %v", err)
 	}
 
-	cloudInitISOName := getCloudInitVolumeName(volumeName)
+	cloudInitISOName := CloudInitVolumeName(volumeName)
 
 	cloudInitDef := newCloudInitDef()
 	cloudInitDef.UserData = string(userData)
