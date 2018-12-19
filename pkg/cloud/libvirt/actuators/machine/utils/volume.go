@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,6 +18,9 @@ const (
 	// TODO: support size in the API
 	size = 17706254336
 )
+
+// ErrVolumeNotFound is returned when a domain is not found
+var ErrVolumeNotFound = errors.New("Domain not found")
 
 // WaitSleepInterval time
 var WaitSleepInterval = 1 * time.Second

@@ -30,25 +30,11 @@ const (
 // ErrLibVirtConIsNil is returned when the libvirt connection is nil.
 var ErrLibVirtConIsNil = errors.New("the libvirt connection was nil")
 
+// ErrDomainNotFound is returned when a domain is not found
+var ErrDomainNotFound = errors.New("Domain not found")
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
-}
-
-// Client libvirt
-type Client struct {
-	connection *libvirt.Connect
-}
-
-// Close closes the client's libvirt connection.
-func (c *Client) Close() error {
-	glog.Infof("Closing libvirt connection: %p", c.connection)
-
-	_, err := c.connection.Close()
-	if err != nil {
-		glog.Infof("Error closing libvirt connection: %v", err)
-	}
-
-	return err
 }
 
 type pendingMapping struct {
