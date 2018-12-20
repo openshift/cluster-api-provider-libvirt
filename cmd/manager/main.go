@@ -4,6 +4,7 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
+	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -78,6 +79,7 @@ func initActuator(m manager.Manager) {
 	params := machineactuator.ActuatorParams{
 		ClusterClient: client,
 		KubeClient:    kubeClient,
+		ClientBuilder: libvirtclient.NewClient,
 		Codec:         codec,
 	}
 

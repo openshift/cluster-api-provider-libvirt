@@ -56,6 +56,7 @@ type Actuator struct {
 	clusterClient clusterclient.Interface
 	cidrOffset    int
 	kubeClient    kubernetes.Interface
+	clientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	codec         codec
 }
 
@@ -69,6 +70,7 @@ type codec interface {
 type ActuatorParams struct {
 	ClusterClient clusterclient.Interface
 	KubeClient    kubernetes.Interface
+	ClientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	Codec         codec
 }
 
@@ -78,6 +80,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 		clusterClient: params.ClusterClient,
 		cidrOffset:    50,
 		kubeClient:    params.KubeClient,
+		clientBuilder: params.ClientBuilder,
 		codec:         params.Codec,
 	}, nil
 }
@@ -87,7 +90,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -116,7 +119,7 @@ func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -138,7 +141,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -164,7 +167,7 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return false, errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -393,13 +396,13 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 
 // clientForMachine returns a libvirt client for the URI in the given
 // machine's provider config.
-func clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
+func (a *Actuator) clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
 
-	return libvirtclient.NewClient(machineProviderConfig.URI)
+	return a.clientBuilder(machineProviderConfig.URI)
 }
 
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a

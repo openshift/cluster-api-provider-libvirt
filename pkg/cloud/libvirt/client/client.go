@@ -83,6 +83,9 @@ type CreateVolumeInput struct {
 	VolumeFormat string
 }
 
+// LibvirtClientBuilderFuncType is function type for building aws client
+type LibvirtClientBuilderFuncType func(URI string) (Client, error)
+
 // Client is a wrapper object for actual libvirt library to allow for easier testing.
 type Client interface {
 	// Close closes the client's libvirt connection.
