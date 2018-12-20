@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/xml"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -208,14 +209,98 @@ func (client *Client) DeleteDomain(name string) error {
 
 // CreateVolume creates volume based on CreateVolumeInput
 func (client *Client) CreateVolume(input client.CreateVolumeInput) error {
-	return CreateVolume(
-		input.VolumeName,
-		input.PoolName,
-		input.BaseVolumeID,
-		input.Source,
-		input.VolumeFormat,
-		client,
-	)
+	var volume *libvirt.StorageVol
+
+	glog.Infof("Create a libvirt volume with name %s for pool %s from the base volume %s", input.VolumeName, input.PoolName, input.BaseVolumeID)
+
+	// TODO: lock pool
+	//client.poolMutexKV.Lock(input.PoolName)
+	//defer client.poolMutexKV.Unlock(input.PoolName)
+
+	pool, err := client.connection.LookupStoragePoolByName(input.PoolName)
+	if err != nil {
+		return fmt.Errorf("can't find storage pool '%s'", input.PoolName)
+	}
+	defer pool.Free()
+
+	// Refresh the pool of the volume so that libvirt knows it is
+	// not longer in use.
+	waitForSuccess("error refreshing pool for volume", func() error {
+		return pool.Refresh(0)
+	})
+
+	// Check whether the storage volume already exists. Its name needs to be
+	// unique.
+	if _, err := pool.LookupStorageVolByName(input.VolumeName); err == nil {
+		return fmt.Errorf("storage volume '%s' already exists", input.VolumeName)
+	}
+
+	volumeDef := newDefVolume()
+	volumeDef.Name = input.VolumeName
+	volumeDef.Target.Format.Type = input.VolumeFormat
+	var img image
+	// an source image was given, this mean we can't choose size
+	if input.Source != "" {
+		if input.BaseVolumeID != "" {
+			return fmt.Errorf("'base_volume_id' can't be specified when also 'source' is given")
+		}
+
+		if img, err = newImage(input.Source); err != nil {
+			return err
+		}
+
+		// update the image in the description, even if the file has not changed
+		size, err := img.Size()
+		if err != nil {
+			return err
+		}
+		glog.Infof("Image %s image is: %d bytes", img, size)
+		volumeDef.Capacity.Unit = "B"
+		volumeDef.Capacity.Value = size
+	} else if input.BaseVolumeID != "" {
+		volume = nil
+		volumeDef.Capacity.Value = uint64(size)
+		baseVolume, err := client.connection.LookupStorageVolByKey(input.BaseVolumeID)
+		if err != nil {
+			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeID)
+		}
+		backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
+		if err != nil {
+			return fmt.Errorf("Could not retrieve backing store %s", input.BaseVolumeID)
+		}
+		volumeDef.BackingStore = &backingStoreDef
+	}
+
+	if volume == nil {
+		volumeDefXML, err := xml.Marshal(volumeDef)
+		if err != nil {
+			return fmt.Errorf("Error serializing libvirt volume: %s", err)
+		}
+
+		// create the volume
+		v, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
+		if err != nil {
+			return fmt.Errorf("Error creating libvirt volume: %s", err)
+		}
+		volume = v
+		defer volume.Free()
+	}
+
+	// we use the key as the id
+	key, err := volume.GetKey()
+	if err != nil {
+		return fmt.Errorf("Error retrieving volume key: %s", err)
+	}
+
+	if input.Source != "" {
+		err = img.Import(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+		if err != nil {
+			return fmt.Errorf("Error while uploading source %s: %s", img.String(), err)
+		}
+	}
+
+	glog.Infof("Volume ID: %s", key)
+	return nil
 }
 
 // DeleteVolume deletes a domain based on its name
