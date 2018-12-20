@@ -65,12 +65,12 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 
 	glog.Infof("cloudInitDef: %+v", cloudInitDef)
 
-	iso, err := cloudInitDef.CreateIso()
+	iso, err := cloudInitDef.createISO()
 	if err != nil {
 		return fmt.Errorf("unable to create ISO %v: %v", cloudInitISOName, err)
 	}
 
-	key, err := cloudInitDef.UploadIso(client, iso)
+	key, err := cloudInitDef.uploadIso(client, iso)
 	if err != nil {
 		return fmt.Errorf("unable to upload ISO: %v", err)
 	}
@@ -110,17 +110,6 @@ type defCloudInit struct {
 
 func newCloudInitDef() defCloudInit {
 	return defCloudInit{}
-}
-
-// Create a ISO file based on the contents of the CloudInit instance and
-// uploads it to the libVirt pool
-// Returns a string holding terraform's internal ID of this resource
-func (ci *defCloudInit) CreateIso() (string, error) {
-	iso, err := ci.createISO()
-	if err != nil {
-		return "", err
-	}
-	return iso, err
 }
 
 // Create the ISO holding all the cloud-init data
@@ -182,7 +171,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 	return tmpDir, nil
 }
 
-func (ci *defCloudInit) UploadIso(client *Client, iso string) (string, error) {
+func (ci *defCloudInit) uploadIso(client *Client, iso string) (string, error) {
 
 	pool, err := client.connection.LookupStoragePoolByName(ci.PoolName)
 	if err != nil {
