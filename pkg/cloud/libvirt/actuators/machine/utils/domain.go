@@ -11,7 +11,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 
 	"math/rand"
 
@@ -20,7 +19,6 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
 const (
@@ -451,103 +449,6 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	//setFirmware(d, &domainDef)
 	//setBootDevices(d, &domainDef)
 
-	return nil
-}
-
-func CreateDomain(name, ignKey string, ignition *providerconfigv1.Ignition, volumeName, hostName, networkInterfaceName, networkInterfaceAddress, poolName string, autostart bool, memory, vcpu, offset int, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace string) error {
-	if name == "" {
-		return fmt.Errorf("Failed to create domain, name is empty")
-	}
-	glog.Infof("Create resource libvirt_domain")
-
-	// Get default values from Host
-	domainDef, err := newDomainDefForConnection(client.connection)
-	if err != nil {
-		return fmt.Errorf("Failed to newDomainDefForConnection: %s", err)
-	}
-
-	// Get values from machineProviderConfig
-	if err := domainDefInit(&domainDef, name, memory, vcpu); err != nil {
-		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
-	}
-
-	glog.Infof("setCoreOSIgnition")
-	if ignition != nil {
-		if err := SetIgnition(&domainDef, client, ignition, kubeClient, machineNamespace, volumeName, poolName); err != nil {
-			return err
-		}
-	} else if ignKey != "" {
-		if err := setCoreOSIgnition(&domainDef, ignKey); err != nil {
-			return err
-		}
-	} else if cloudInit != nil {
-		if err := setCloudInit(&domainDef, client, cloudInit, kubeClient, machineNamespace, volumeName, poolName); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
-	}
-
-	glog.Infof("setDisks")
-	VolumeKey := baseVolumePath + volumeName
-	if volumeName == "" {
-		volumeName = name
-	}
-	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
-		return fmt.Errorf("Failed to setDisks: %s", err)
-	}
-
-	glog.Infof("setNetworkInterfaces")
-	var waitForLeases []*libvirtxml.DomainInterface
-	if hostName == "" {
-		hostName = name
-	}
-	// TODO: support more than 1 interface
-	partialNetIfaces := make(map[string]*pendingMapping, 1)
-	if err := setNetworkInterfaces(&domainDef, client.connection, partialNetIfaces, &waitForLeases,
-		hostName, networkInterfaceName,
-		networkInterfaceAddress, offset); err != nil {
-		return err
-	}
-
-	// TODO: support setFilesystems
-	//if err := setFilesystems(d, &domainDef); err != nil {
-	//	return err
-	//}
-
-	connectURI, err := client.connection.GetURI()
-	if err != nil {
-		return fmt.Errorf("error retrieving libvirt connection URI: %v", err)
-	}
-	glog.Infof("Creating libvirt domain at %s", connectURI)
-
-	data, err := xmlMarshallIndented(domainDef)
-	if err != nil {
-		return fmt.Errorf("error serializing libvirt domain: %v", err)
-	}
-
-	glog.Infof("Creating libvirt domain with XML:\n%s", data)
-	domain, err := client.connection.DomainDefineXML(data)
-	if err != nil {
-		return fmt.Errorf("error defining libvirt domain: %v", err)
-	}
-
-	if err := domain.SetAutostart(autostart); err != nil {
-		return fmt.Errorf("error setting Autostart: %v", err)
-	}
-
-	err = domain.Create()
-	if err != nil {
-		return fmt.Errorf("error creating libvirt domain: %v", err)
-	}
-	defer domain.Free()
-
-	id, err := domain.GetUUIDString()
-	if err != nil {
-		return fmt.Errorf("error retrieving libvirt domain id: %v", err)
-	}
-
-	glog.Infof("Domain ID: %s", id)
 	return nil
 }
 
