@@ -23,6 +23,12 @@ type CreateDomainInput struct {
 	// VolumeName of volume to be added to domain definition
 	VolumeName string
 
+	// CloudInitVolumeName of cloud init volume to be added to domain definition
+	CloudInitVolumeName string
+
+	// IgnitionVolumeName of ignition volume to be added to domain definition
+	IgnitionVolumeName string
+
 	// VolumePoolName of pool where VolumeName volume is located
 	VolumePoolName string
 

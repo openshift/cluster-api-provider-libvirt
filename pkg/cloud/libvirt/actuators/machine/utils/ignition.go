@@ -17,10 +17,6 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func IgnitionVolumeName(volumeName string) string {
-	return fmt.Sprintf("%v.ignition", volumeName)
-}
-
 func SetIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
 	glog.Infof("creating ignition file")
 	ignitionDef := newIgnitionDef()
@@ -38,7 +34,7 @@ func SetIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *provide
 		return fmt.Errorf("can not retrieve user data secret '%v/%v' when constructing cloud init volume: key 'userData' not found in the secret", machineNamespace, ignition.UserDataSecret)
 	}
 
-	ignitionDef.Name = IgnitionVolumeName(volumeName)
+	ignitionDef.Name = volumeName
 	ignitionDef.PoolName = poolName
 	ignitionDef.Content = string(userDataSecret)
 

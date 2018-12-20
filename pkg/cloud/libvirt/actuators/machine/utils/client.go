@@ -49,7 +49,7 @@ func (client *Client) CreateDomain(input client.CreateDomainInput) error {
 
 	glog.Infof("setCoreOSIgnition")
 	if input.Ignition != nil {
-		if err := SetIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.VolumeName, input.VolumePoolName); err != nil {
+		if err := SetIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, input.VolumePoolName); err != nil {
 			return err
 		}
 	} else if input.IgnKey != "" {
@@ -57,7 +57,7 @@ func (client *Client) CreateDomain(input client.CreateDomainInput) error {
 			return err
 		}
 	} else if input.CloudInit != nil {
-		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.VolumeName, input.VolumePoolName); err != nil {
+		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.VolumePoolName, input.DomainName); err != nil {
 			return err
 		}
 	} else {

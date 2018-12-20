@@ -175,6 +175,14 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	return client.DomainExists(machine.Name)
 }
 
+func cloudInitVolumeName(volumeName string) string {
+	return fmt.Sprintf("%v_cloud-init", volumeName)
+}
+
+func ignitionVolumeName(volumeName string) string {
+	return fmt.Sprintf("%v.ignition", volumeName)
+}
+
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
@@ -204,6 +212,8 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 		IgnKey:                  machineProviderConfig.IgnKey,
 		Ignition:                machineProviderConfig.Ignition,
 		VolumeName:              domainName,
+		CloudInitVolumeName:     cloudInitVolumeName(domainName),
+		IgnitionVolumeName:      ignitionVolumeName(domainName),
 		VolumePoolName:          machineProviderConfig.Volume.PoolName,
 		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
 		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
@@ -246,12 +256,12 @@ func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Clie
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(libvirtutils.CloudInitVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(cloudInitVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting cloud init volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(libvirtutils.IgnitionVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(ignitionVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting ignition volume: %v", err)
 	}
 
