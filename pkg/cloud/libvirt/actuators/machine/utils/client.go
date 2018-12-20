@@ -124,9 +124,20 @@ func (client *Client) CreateDomain(input client.CreateDomainInput) error {
 	return nil
 }
 
-// LookupDomainByName looks up a domain based on its name
+// LookupDomainByName looks up a domain by name and returns a pointer to it.
+// Note: The caller is responsible for freeing the returned domain.
 func (client *Client) LookupDomainByName(name string) (*libvirt.Domain, error) {
-	return LookupDomainByName(name, client)
+	glog.Infof("Lookup domain by name: %q", name)
+	if client.connection == nil {
+		return nil, ErrLibVirtConIsNil
+	}
+
+	domain, err := client.connection.LookupDomainByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return domain, nil
 }
 
 // DomainExists checks if domain exists

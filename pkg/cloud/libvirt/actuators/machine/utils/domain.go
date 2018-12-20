@@ -501,22 +501,6 @@ func EnsureDomainIsDeleted(name string, client *Client) error {
 	return DeleteDomain(name, client)
 }
 
-// LookupDomainByName looks up a domain by name and returns a pointer to it.
-// Note: The caller is responsible for freeing the returned domain.
-func LookupDomainByName(name string, client *Client) (*libvirt.Domain, error) {
-	glog.Infof("Lookup domain by name: %q", name)
-	if client.connection == nil {
-		return nil, ErrLibVirtConIsNil
-	}
-
-	domain, err := client.connection.LookupDomainByName(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return domain, nil
-}
-
 // DomainExists verify a domain exists for given machine
 func DomainExists(name string, client *Client) (bool, error) {
 	glog.Infof("Check if %q domain exists", name)
