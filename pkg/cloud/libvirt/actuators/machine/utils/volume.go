@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,6 +18,9 @@ const (
 	// TODO: support size in the API
 	size = 17706254336
 )
+
+// ErrVolumeNotFound is returned when a domain is not found
+var ErrVolumeNotFound = errors.New("Domain not found")
 
 // WaitSleepInterval time
 var WaitSleepInterval = 1 * time.Second
@@ -195,18 +199,6 @@ func CreateVolume(volumeName, poolName, baseVolumeID, source, volumeFormat strin
 
 	glog.Infof("Volume ID: %s", key)
 	return nil
-}
-
-func EnsureVolumeIsDeleted(volumeName string, client *Client) error {
-	exists, err := VolumeExists(volumeName, client)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		glog.Infof("Volume %s does not exists", volumeName)
-		return nil
-	}
-	return DeleteVolume(volumeName, client)
 }
 
 // VolumeExists checks if a volume exists
