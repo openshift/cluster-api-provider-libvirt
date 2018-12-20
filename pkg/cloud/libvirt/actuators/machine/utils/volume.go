@@ -106,22 +106,6 @@ func newDefVolumeFromXML(s string) (libvirtxml.StorageVolume, error) {
 	return volumeDef, nil
 }
 
-// VolumeExists checks if a volume exists
-func VolumeExists(volumeName string, client *Client) (bool, error) {
-	glog.Infof("Check if %q volume exists", volumeName)
-	if client.connection == nil {
-		return false, ErrLibVirtConIsNil
-	}
-
-	volumePath := fmt.Sprintf(baseVolumePath+"%s", volumeName)
-	volume, err := client.connection.LookupStorageVolByPath(volumePath)
-	if err != nil {
-		return false, nil
-	}
-	volume.Free()
-	return true, nil
-}
-
 func timeFromEpoch(str string) time.Time {
 	var s, ns int
 

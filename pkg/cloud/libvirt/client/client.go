@@ -92,6 +92,9 @@ type Client interface {
 	// CreateVolume creates volume based on CreateVolumeInput
 	CreateVolume(CreateVolumeInput) error
 
+	// VolumeExists checks if volume exists
+	VolumeExists(name string) (bool, error)
+
 	// DeleteVolume deletes a domain based on its name
 	DeleteVolume(name string) error
 }

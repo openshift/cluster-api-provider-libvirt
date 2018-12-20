@@ -303,9 +303,25 @@ func (client *Client) CreateVolume(input client.CreateVolumeInput) error {
 	return nil
 }
 
+// VolumeExists checks if a volume exists
+func (client *Client) VolumeExists(volumeName string) (bool, error) {
+	glog.Infof("Check if %q volume exists", volumeName)
+	if client.connection == nil {
+		return false, ErrLibVirtConIsNil
+	}
+
+	volumePath := fmt.Sprintf(baseVolumePath+"%s", volumeName)
+	volume, err := client.connection.LookupStorageVolByPath(volumePath)
+	if err != nil {
+		return false, nil
+	}
+	volume.Free()
+	return true, nil
+}
+
 // DeleteVolume deletes a domain based on its name
 func (client *Client) DeleteVolume(name string) error {
-	exists, err := VolumeExists(name, client)
+	exists, err := client.VolumeExists(name)
 	if err != nil {
 		return err
 	}
