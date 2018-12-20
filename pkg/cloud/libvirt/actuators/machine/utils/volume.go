@@ -122,53 +122,6 @@ func VolumeExists(volumeName string, client *Client) (bool, error) {
 	return true, nil
 }
 
-// DeleteVolume removes the volume identified by `key` from libvirt
-func DeleteVolume(name string, client *Client) error {
-	glog.Infof("Deleting volume %s", name)
-
-	volumePath := fmt.Sprintf(baseVolumePath+"%s", name)
-	volume, err := client.connection.LookupStorageVolByPath(volumePath)
-	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s", volumePath)
-	}
-	defer volume.Free()
-
-	// Refresh the pool of the volume so that libvirt knows it is
-	// not longer in use.
-	volPool, err := volume.LookupPoolByVolume()
-	if err != nil {
-		return fmt.Errorf("Error retrieving pool for volume: %s", err)
-	}
-	defer volPool.Free()
-
-	// TODO: add locking support
-	//poolName, err := volPool.GetName()
-	//if err != nil {
-	//	return fmt.Errorf("Error retrieving name of volume: %s", err)
-	//}
-	//client.poolMutexKV.Lock(poolName)
-	//defer client.poolMutexKV.Unlock(poolName)
-
-	waitForSuccess("Error refreshing pool for volume", func() error {
-		return volPool.Refresh(0)
-	})
-
-	// Workaround for redhat#1293804
-	// https://bugzilla.redhat.com/show_bug.cgi?id=1293804#c12
-	// Does not solve the problem but it makes it happen less often.
-	_, err = volume.GetXMLDesc(0)
-	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s XML desc: %s", volumePath, err)
-	}
-
-	err = volume.Delete(0)
-	if err != nil {
-		return fmt.Errorf("Can't delete volume %s: %s", volumePath, err)
-	}
-
-	return nil
-}
-
 func timeFromEpoch(str string) time.Time {
 	var s, ns int
 
