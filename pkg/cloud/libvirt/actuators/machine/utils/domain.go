@@ -452,44 +452,6 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	return nil
 }
 
-func DeleteDomain(name string, client *Client) error {
-	if client.connection == nil {
-		return ErrLibVirtConIsNil
-	}
-
-	glog.Infof("Deleting domain %s", name)
-
-	domain, err := client.connection.LookupDomainByName(name)
-	if err != nil {
-		return fmt.Errorf("Error retrieving libvirt domain: %s", err)
-	}
-	defer domain.Free()
-
-	state, _, err := domain.GetState()
-	if err != nil {
-		return fmt.Errorf("Couldn't get info about domain: %s", err)
-	}
-
-	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
-		if err := domain.Destroy(); err != nil {
-			return fmt.Errorf("Couldn't destroy libvirt domain: %s", err)
-		}
-	}
-
-	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
-		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
-			glog.Infof("libvirt does not support undefine flags: will try again without flags")
-			if err := domain.Undefine(); err != nil {
-				return fmt.Errorf("Couldn't undefine libvirt domain: %s", err)
-			}
-		} else {
-			return fmt.Errorf("Couldn't undefine libvirt domain with flags: %s", err)
-		}
-	}
-
-	return nil
-}
-
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a
 // given libvirt domain.
 func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {

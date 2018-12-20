@@ -168,7 +168,42 @@ func (client *Client) DeleteDomain(name string) error {
 	if !exists {
 		return ErrDomainNotFound
 	}
-	return DeleteDomain(name, client)
+
+	if client.connection == nil {
+		return ErrLibVirtConIsNil
+	}
+
+	glog.Infof("Deleting domain %s", name)
+
+	domain, err := client.connection.LookupDomainByName(name)
+	if err != nil {
+		return fmt.Errorf("Error retrieving libvirt domain: %s", err)
+	}
+	defer domain.Free()
+
+	state, _, err := domain.GetState()
+	if err != nil {
+		return fmt.Errorf("Couldn't get info about domain: %s", err)
+	}
+
+	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
+		if err := domain.Destroy(); err != nil {
+			return fmt.Errorf("Couldn't destroy libvirt domain: %s", err)
+		}
+	}
+
+	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
+		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
+			glog.Infof("libvirt does not support undefine flags: will try again without flags")
+			if err := domain.Undefine(); err != nil {
+				return fmt.Errorf("Couldn't undefine libvirt domain: %s", err)
+			}
+		} else {
+			return fmt.Errorf("Couldn't undefine libvirt domain with flags: %s", err)
+		}
+	}
+
+	return nil
 }
 
 // CreateVolume creates volume based on CreateVolumeInput
