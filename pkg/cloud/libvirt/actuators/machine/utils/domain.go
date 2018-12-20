@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"math/rand"
 
 	"github.com/davecgh/go-spew/spew"
@@ -434,57 +432,4 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 	//setBootDevices(d, &domainDef)
 
 	return nil
-}
-
-// NodeAddresses returns a slice of corev1.NodeAddress objects for a
-// given libvirt domain.
-func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
-	addrs := []corev1.NodeAddress{}
-
-	// If the domain is nil, return an empty address array.
-	if dom == nil {
-		return addrs, nil
-	}
-
-	ifaceSource := libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
-	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, iface := range ifaces {
-		for _, addr := range iface.Addrs {
-			addrs = append(addrs, corev1.NodeAddress{
-				Type:    corev1.NodeInternalIP,
-				Address: addr.Addr,
-			})
-		}
-	}
-
-	return addrs, nil
-}
-
-// DomainStateString returns a human-readable string for the given
-// libvirt domain state.
-func DomainStateString(state libvirt.DomainState) string {
-	switch state {
-	case libvirt.DOMAIN_NOSTATE:
-		return "None"
-	case libvirt.DOMAIN_RUNNING:
-		return "Running"
-	case libvirt.DOMAIN_BLOCKED:
-		return "Blocked"
-	case libvirt.DOMAIN_PAUSED:
-		return "Paused"
-	case libvirt.DOMAIN_SHUTDOWN:
-		return "Shutdown"
-	case libvirt.DOMAIN_CRASHED:
-		return "Crashed"
-	case libvirt.DOMAIN_PMSUSPENDED:
-		return "Suspended"
-	case libvirt.DOMAIN_SHUTOFF:
-		return "Shutoff"
-	default:
-		return "Unknown"
-	}
 }

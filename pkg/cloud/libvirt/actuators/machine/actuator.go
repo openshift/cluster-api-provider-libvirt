@@ -299,7 +299,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain)
 		return err
 	}
 
-	addrs, err := libvirtutils.NodeAddresses(dom)
+	addrs, err := NodeAddresses(dom)
 	if err != nil {
 		glog.Error("Unable to get node addresses: %v", err)
 		return err
@@ -384,7 +384,7 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 		return err
 	}
 
-	stateString := libvirtutils.DomainStateString(state)
+	stateString := DomainStateString(state)
 
 	status.InstanceID = &uuid
 	status.InstanceState = &stateString
@@ -401,4 +401,57 @@ func clientForMachine(codec codec, machine *clusterv1.Machine) (*libvirtutils.Cl
 	}
 
 	return libvirtutils.NewClient(machineProviderConfig.URI)
+}
+
+// NodeAddresses returns a slice of corev1.NodeAddress objects for a
+// given libvirt domain.
+func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
+	addrs := []corev1.NodeAddress{}
+
+	// If the domain is nil, return an empty address array.
+	if dom == nil {
+		return addrs, nil
+	}
+
+	ifaceSource := libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
+	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		for _, addr := range iface.Addrs {
+			addrs = append(addrs, corev1.NodeAddress{
+				Type:    corev1.NodeInternalIP,
+				Address: addr.Addr,
+			})
+		}
+	}
+
+	return addrs, nil
+}
+
+// DomainStateString returns a human-readable string for the given
+// libvirt domain state.
+func DomainStateString(state libvirt.DomainState) string {
+	switch state {
+	case libvirt.DOMAIN_NOSTATE:
+		return "None"
+	case libvirt.DOMAIN_RUNNING:
+		return "Running"
+	case libvirt.DOMAIN_BLOCKED:
+		return "Blocked"
+	case libvirt.DOMAIN_PAUSED:
+		return "Paused"
+	case libvirt.DOMAIN_SHUTDOWN:
+		return "Shutdown"
+	case libvirt.DOMAIN_CRASHED:
+		return "Crashed"
+	case libvirt.DOMAIN_PMSUSPENDED:
+		return "Suspended"
+	case libvirt.DOMAIN_SHUTOFF:
+		return "Shutoff"
+	default:
+		return "Unknown"
+	}
 }
