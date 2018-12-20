@@ -400,5 +400,5 @@ func clientForMachine(codec codec, machine *clusterv1.Machine) (*libvirtutils.Cl
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
 
-	return libvirtutils.BuildClient(machineProviderConfig.URI)
+	return libvirtutils.NewClient(machineProviderConfig.URI)
 }

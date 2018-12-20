@@ -404,22 +404,6 @@ type Config struct {
 	URI string
 }
 
-// Client libvirt, generate libvirt client given URI
-func BuildClient(URI string) (*Client, error) {
-	libvirtClient, err := libvirt.NewConnect(URI)
-	if err != nil {
-		return nil, err
-	}
-
-	glog.Infof("Created libvirt connection: %p", libvirtClient)
-
-	client := &Client{
-		connection: libvirtClient,
-	}
-
-	return client, nil
-}
-
 func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) error {
 	if name != "" {
 		domainDef.Name = name

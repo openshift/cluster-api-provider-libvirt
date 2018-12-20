@@ -17,6 +17,22 @@ type Client struct {
 
 var _ client.Client = &Client{}
 
+// NewClient libvirt, generate libvirt client given URI
+func NewClient(URI string) (*Client, error) {
+	libvirtClient, err := libvirt.NewConnect(URI)
+	if err != nil {
+		return nil, err
+	}
+
+	glog.Infof("Created libvirt connection: %p", libvirtClient)
+
+	client := &Client{
+		connection: libvirtClient,
+	}
+
+	return client, nil
+}
+
 // Close closes the client's libvirt connection.
 func (client *Client) Close() error {
 	glog.Infof("Closing libvirt connection: %p", client.connection)
