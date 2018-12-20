@@ -49,7 +49,7 @@ func (client *Client) CreateDomain(input client.CreateDomainInput) error {
 
 	glog.Infof("setCoreOSIgnition")
 	if input.Ignition != nil {
-		if err := SetIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, input.VolumePoolName); err != nil {
+		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, input.VolumePoolName); err != nil {
 			return err
 		}
 	} else if input.IgnKey != "" {
@@ -250,7 +250,7 @@ func (client *Client) CreateVolume(input client.CreateVolumeInput) error {
 		}
 
 		// update the image in the description, even if the file has not changed
-		size, err := img.Size()
+		size, err := img.size()
 		if err != nil {
 			return err
 		}
@@ -293,9 +293,9 @@ func (client *Client) CreateVolume(input client.CreateVolumeInput) error {
 	}
 
 	if input.Source != "" {
-		err = img.Import(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+		err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
 		if err != nil {
-			return fmt.Errorf("Error while uploading source %s: %s", img.String(), err)
+			return fmt.Errorf("Error while uploading source %s: %s", img.string(), err)
 		}
 	}
 

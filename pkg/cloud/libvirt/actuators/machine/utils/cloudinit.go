@@ -195,7 +195,7 @@ func (ci *defCloudInit) uploadIso(client *Client, iso string) (string, error) {
 
 	defer removeTmpIsoDirectory(iso)
 
-	size, err := img.Size()
+	size, err := img.size()
 	if err != nil {
 		return "", err
 	}
@@ -217,9 +217,9 @@ func (ci *defCloudInit) uploadIso(client *Client, iso string) (string, error) {
 	defer volume.Free()
 
 	// upload ISO file
-	err = img.Import(newCopier(client.connection, volume, uint64(size)), volumeDef)
+	err = img.importImage(newCopier(client.connection, volume, uint64(size)), volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error while uploading cloudinit %s: %s", img.String(), err)
+		return "", fmt.Errorf("Error while uploading cloudinit %s: %s", img.string(), err)
 	}
 
 	volumeKey, err := volume.GetKey()

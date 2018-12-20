@@ -17,7 +17,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func SetIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
+func setIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
 	glog.Infof("creating ignition file")
 	ignitionDef := newIgnitionDef()
 
@@ -40,7 +40,7 @@ func SetIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *provide
 
 	glog.Infof("ignition: %+v", ignitionDef)
 
-	ignitionVolumeName, err := ignitionDef.CreateAndUpload(client)
+	ignitionVolumeName, err := ignitionDef.createAndUpload(client)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func newIgnitionDef() defIgnition {
 // Create a ISO file based on the contents of the CloudInit instance and
 // uploads it to the libVirt pool
 // Returns a string holding terraform's internal ID of this resource
-func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
+func (ign *defIgnition) createAndUpload(client *Client) (string, error) {
 	pool, err := client.connection.LookupStoragePoolByName(ign.PoolName)
 	if err != nil {
 		return "", fmt.Errorf("can't find storage pool %q", ign.PoolName)
@@ -112,7 +112,7 @@ func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
 		return "", err
 	}
 
-	size, err := img.Size()
+	size, err := img.size()
 	if err != nil {
 		return "", err
 	}
@@ -134,9 +134,9 @@ func (ign *defIgnition) CreateAndUpload(client *Client) (string, error) {
 	defer volume.Free()
 
 	// upload ignition file
-	err = img.Import(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+	err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error while uploading ignition file %s: %s", img.String(), err)
+		return "", fmt.Errorf("Error while uploading ignition file %s: %s", img.string(), err)
 	}
 
 	key, err := volume.GetKey()
@@ -207,7 +207,7 @@ func newCopier(virConn *libvirt.Connect, volume *libvirt.StorageVol, size uint64
 
 		volume.Upload(stream, 0, size, 0)
 
-		sio := NewStreamIO(*stream)
+		sio := newStreamIO(*stream)
 
 		bytesCopied, err = io.Copy(sio, src)
 		if err != nil {

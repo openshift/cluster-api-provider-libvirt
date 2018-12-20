@@ -1,26 +1,34 @@
 package utils
 
-import libvirt "github.com/libvirt/libvirt-go"
+import (
+	"io"
+
+	libvirt "github.com/libvirt/libvirt-go"
+)
 
 // StreamIO libvirt struct
-type StreamIO struct {
-	Stream libvirt.Stream
+type streamIO struct {
+	stream libvirt.Stream
 }
+
+var _ io.Writer = &streamIO{}
+var _ io.Reader = &streamIO{}
+var _ io.Closer = &streamIO{}
 
 // NewStreamIO returns libvirt StreamIO
-func NewStreamIO(s libvirt.Stream) *StreamIO {
-	return &StreamIO{Stream: s}
+func newStreamIO(s libvirt.Stream) *streamIO {
+	return &streamIO{stream: s}
 }
 
-func (sio *StreamIO) Read(p []byte) (int, error) {
-	return sio.Stream.Recv(p)
+func (sio *streamIO) Read(p []byte) (int, error) {
+	return sio.stream.Recv(p)
 }
 
-func (sio *StreamIO) Write(p []byte) (int, error) {
-	return sio.Stream.Send(p)
+func (sio *streamIO) Write(p []byte) (int, error) {
+	return sio.stream.Send(p)
 }
 
 // Close closes the stream
-func (sio *StreamIO) Close() error {
-	return sio.Stream.Finish()
+func (sio *streamIO) Close() error {
+	return sio.stream.Finish()
 }

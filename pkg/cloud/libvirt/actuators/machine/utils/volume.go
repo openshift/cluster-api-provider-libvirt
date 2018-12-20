@@ -22,11 +22,10 @@ const (
 // ErrVolumeNotFound is returned when a domain is not found
 var ErrVolumeNotFound = errors.New("Domain not found")
 
-// WaitSleepInterval time
-var WaitSleepInterval = 1 * time.Second
+var waitSleepInterval = 1 * time.Second
 
-// WaitTimeout time
-var WaitTimeout = 5 * time.Minute
+// waitTimeout time
+var waitTimeout = 5 * time.Minute
 
 // waitForSuccess wait for success and timeout after 5 minutes.
 func waitForSuccess(errorMessage string, f func() error) error {
@@ -38,8 +37,8 @@ func waitForSuccess(errorMessage string, f func() error) error {
 		}
 		glog.Infof("%s. Re-trying.\n", err)
 
-		time.Sleep(WaitSleepInterval)
-		if time.Since(start) > WaitTimeout {
+		time.Sleep(waitSleepInterval)
+		if time.Since(start) > waitTimeout {
 			return fmt.Errorf("%s: %s", errorMessage, err)
 		}
 	}
