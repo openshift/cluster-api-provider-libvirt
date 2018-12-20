@@ -142,12 +142,26 @@ func (client *Client) LookupDomainByName(name string) (*libvirt.Domain, error) {
 
 // DomainExists checks if domain exists
 func (client *Client) DomainExists(name string) (bool, error) {
-	return DomainExists(name, client)
+	glog.Infof("Check if %q domain exists", name)
+	if client.connection == nil {
+		return false, ErrLibVirtConIsNil
+	}
+
+	domain, err := client.connection.LookupDomainByName(name)
+	if err != nil {
+		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
+			return false, nil
+		}
+		return false, err
+	}
+	defer domain.Free()
+
+	return true, nil
 }
 
 // DeleteDomain deletes a domain
 func (client *Client) DeleteDomain(name string) error {
-	exists, err := DomainExists(name, client)
+	exists, err := client.DomainExists(name)
 	if err != nil {
 		return err
 	}

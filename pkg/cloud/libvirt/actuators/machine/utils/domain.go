@@ -490,36 +490,6 @@ func DeleteDomain(name string, client *Client) error {
 	return nil
 }
 
-func EnsureDomainIsDeleted(name string, client *Client) error {
-	exists, err := DomainExists(name, client)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return nil
-	}
-	return DeleteDomain(name, client)
-}
-
-// DomainExists verify a domain exists for given machine
-func DomainExists(name string, client *Client) (bool, error) {
-	glog.Infof("Check if %q domain exists", name)
-	if client.connection == nil {
-		return false, ErrLibVirtConIsNil
-	}
-
-	domain, err := client.connection.LookupDomainByName(name)
-	if err != nil {
-		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
-			return false, nil
-		}
-		return false, err
-	}
-	defer domain.Free()
-
-	return true, nil
-}
-
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a
 // given libvirt domain.
 func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
