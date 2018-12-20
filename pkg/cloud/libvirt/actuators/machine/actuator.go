@@ -21,7 +21,6 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
-	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -186,7 +185,7 @@ func ignitionVolumeName(volumeName string) string {
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client *libvirtutils.Client) (*libvirt.Domain, error) {
+func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client libvirtclient.Client) (*libvirt.Domain, error) {
 	// decode config
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
@@ -245,23 +244,23 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 }
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
-func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Client) error {
-	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtutils.ErrDomainNotFound {
+func deleteVolumeAndDomain(machine *clusterv1.Machine, client libvirtclient.Client) error {
+	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtclient.ErrDomainNotFound {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
 	// Delete machine volume
-	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(cloudInitVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(cloudInitVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting cloud init volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(ignitionVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(ignitionVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting ignition volume: %v", err)
 	}
 
@@ -394,13 +393,13 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 
 // clientForMachine returns a libvirt client for the URI in the given
 // machine's provider config.
-func clientForMachine(codec codec, machine *clusterv1.Machine) (*libvirtutils.Client, error) {
+func clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
 
-	return libvirtutils.NewClient(machineProviderConfig.URI)
+	return libvirtclient.NewClient(machineProviderConfig.URI)
 }
 
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a

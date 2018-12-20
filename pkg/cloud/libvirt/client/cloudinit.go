@@ -1,4 +1,4 @@
-package utils
+package client
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName, domainName string) error {
+func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName, domainName string) error {
 
 	// At least user data or ssh access needs to be set to create the cloud init
 	if cloudInit.UserDataSecret == "" && !cloudInit.SSHAccess {
@@ -167,7 +167,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 	return tmpDir, nil
 }
 
-func (ci *defCloudInit) uploadIso(client *Client, iso string) (string, error) {
+func (ci *defCloudInit) uploadIso(client *libvirtClient, iso string) (string, error) {
 
 	pool, err := client.connection.LookupStoragePoolByName(ci.PoolName)
 	if err != nil {

@@ -1,4 +1,4 @@
-package utils
+package client
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func setIgnition(domainDef *libvirtxml.Domain, client *Client, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
+func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
 	glog.Infof("creating ignition file")
 	ignitionDef := newIgnitionDef()
 
@@ -74,7 +74,7 @@ func newIgnitionDef() defIgnition {
 // Create a ISO file based on the contents of the CloudInit instance and
 // uploads it to the libVirt pool
 // Returns a string holding terraform's internal ID of this resource
-func (ign *defIgnition) createAndUpload(client *Client) (string, error) {
+func (ign *defIgnition) createAndUpload(client *libvirtClient) (string, error) {
 	pool, err := client.connection.LookupStoragePoolByName(ign.PoolName)
 	if err != nil {
 		return "", fmt.Errorf("can't find storage pool %q", ign.PoolName)
