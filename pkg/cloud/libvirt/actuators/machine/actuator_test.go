@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -63,7 +64,7 @@ func TestMachineEvents(t *testing.T) {
 			name:    "Create machine event failed (invalid configuration)",
 			machine: machineInvalidProviderConfig,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedCreate InvalidConfiguration",
 		},
@@ -72,7 +73,7 @@ func TestMachineEvents(t *testing.T) {
 			machine: machine,
 			error:   libvirtClientError,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedCreate CreateError",
 		},
@@ -81,7 +82,7 @@ func TestMachineEvents(t *testing.T) {
 			machine:         machine,
 			createVolumeErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedCreate CreateError",
 		},
@@ -90,7 +91,7 @@ func TestMachineEvents(t *testing.T) {
 			machine:         machine,
 			createDomainErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedCreate CreateError",
 		},
@@ -99,7 +100,7 @@ func TestMachineEvents(t *testing.T) {
 			machine:         machine,
 			lookupDomainErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedCreate CreateError",
 		},
@@ -107,7 +108,7 @@ func TestMachineEvents(t *testing.T) {
 			name:    "Create machine event succeed",
 			machine: machine,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Create(cluster, machine)
+				actuator.Create(context.TODO(), cluster, machine)
 			},
 			event: "Normal Created Created Machine libvirt-actuator-testing-machine",
 		},
@@ -115,7 +116,7 @@ func TestMachineEvents(t *testing.T) {
 			name:    "Delete machine event failed (invalid configuration)",
 			machine: machineInvalidProviderConfig,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedDelete InvalidConfiguration",
 		},
@@ -124,7 +125,7 @@ func TestMachineEvents(t *testing.T) {
 			machine: machine,
 			error:   libvirtClientError,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedDelete DeleteError",
 		},
@@ -133,7 +134,7 @@ func TestMachineEvents(t *testing.T) {
 			machine:         machine,
 			domainExistsErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedDelete DeleteError",
 		},
@@ -143,7 +144,7 @@ func TestMachineEvents(t *testing.T) {
 			domainExists:    true,
 			deleteDomainErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedDelete DeleteError",
 		},
@@ -153,7 +154,7 @@ func TestMachineEvents(t *testing.T) {
 			domainExists:    true,
 			deleteVolumeErr: fmt.Errorf("error"),
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Warning FailedDelete DeleteError",
 		},
@@ -162,7 +163,7 @@ func TestMachineEvents(t *testing.T) {
 			machine:      machine,
 			domainExists: true,
 			operation: func(actuator *Actuator, cluster *clusterv1.Cluster, machine *clusterv1.Machine) {
-				actuator.Delete(cluster, machine)
+				actuator.Delete(context.TODO(), cluster, machine)
 			},
 			event: "Normal Deleted Deleted Machine libvirt-actuator-testing-machine",
 		},
