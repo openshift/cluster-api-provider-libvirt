@@ -12,6 +12,10 @@ spec:
     plural: machinedeployments
   scope: Namespaced
   subresources:
+    scale:
+      labelSelectorPath: .status.labelSelector
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.replicas
     status: {}
   validation:
     openAPIV3Schema:
@@ -65,6 +69,12 @@ spec:
                         value:
                           type: object
                         valueFrom:
+                          properties:
+                            machineClass:
+                              properties:
+                                provider:
+                                  type: string
+                              type: object
                           type: object
                       type: object
                     taints:
