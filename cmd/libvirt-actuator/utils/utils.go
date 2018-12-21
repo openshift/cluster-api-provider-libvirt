@@ -12,6 +12,7 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
+	"github.com/openshift/cluster-api-provider-libvirt/test"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
@@ -70,7 +71,7 @@ func CreateActuator(machine *clusterv1.Machine, userData *apiv1.Secret) *machine
 	}
 
 	params := machineactuator.ActuatorParams{
-		ClusterClient: NewSimpleClientset(machine),
+		ClusterClient: test.NewSimpleClientset(machine),
 		KubeClient:    fakeKubeClient,
 		ClientBuilder: libvirtclient.NewClient,
 		Codec:         codec,
