@@ -27,11 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/diff"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 	clusterclient "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
+	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
 )
 
 type errorWrapper struct {
@@ -58,6 +60,7 @@ type Actuator struct {
 	kubeClient    kubernetes.Interface
 	clientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	codec         codec
+	eventRecorder record.EventRecorder
 }
 
 type codec interface {
@@ -72,6 +75,7 @@ type ActuatorParams struct {
 	KubeClient    kubernetes.Interface
 	ClientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	Codec         codec
+	EventRecorder record.EventRecorder
 }
 
 // NewActuator creates a new Actuator
@@ -82,7 +86,25 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 		kubeClient:    params.KubeClient,
 		clientBuilder: params.ClientBuilder,
 		codec:         params.Codec,
+		eventRecorder: params.EventRecorder,
 	}, nil
+}
+
+const (
+	createEventAction = "Create"
+	deleteEventAction = "Delete"
+	noEventAction     = ""
+)
+
+// Set corresponding event based on error. It also returns the original error
+// for convenience, so callers can do "return handleMachineError(...)".
+func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors.MachineError, eventAction string) error {
+	if eventAction != noEventAction {
+		a.eventRecorder.Eventf(machine, corev1.EventTypeWarning, "Failed"+eventAction, "%v", err.Reason)
+	}
+
+	glog.Errorf("Machine error: %v", err.Message)
+	return err
 }
 
 // Create creates a machine and is invoked by the Machine Controller
@@ -90,9 +112,14 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := a.clientForMachine(a.codec, machine)
+	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
 	if err != nil {
-		return errWrapper.WithLog(err, "error creating libvirt client")
+		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), createEventAction)
+	}
+
+	client, err := a.clientBuilder(machineProviderConfig.URI)
+	if err != nil {
+		return a.handleMachineError(machine, apierrors.CreateMachine("error creating libvirt client: %v", err), createEventAction)
 	}
 
 	defer client.Close()
@@ -100,16 +127,22 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
 	a.cidrOffset++
 
-	dom, err := createVolumeAndDomain(a.codec, machine, a.cidrOffset, a.kubeClient, client)
+	dom, err := a.createVolumeAndDomain(machine, machineProviderConfig, client)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt machine")
 	}
 
-	defer dom.Free()
+	defer func() {
+		if dom != nil {
+			dom.Free()
+		}
+	}()
 
 	if err := a.updateStatus(machine, dom); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
+
+	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Created", "Created Machine %v", machine.Name)
 
 	return nil
 }
@@ -117,20 +150,25 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
-	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := a.clientForMachine(a.codec, machine)
+	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
 	if err != nil {
-		return errWrapper.WithLog(err, "error creating libvirt client")
+		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), deleteEventAction)
+	}
+
+	client, err := a.clientBuilder(machineProviderConfig.URI)
+	if err != nil {
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error creating libvirt client: %v", err), deleteEventAction)
 	}
 
 	defer client.Close()
+
 	exists, err := client.DomainExists(machine.Name)
 	if err != nil {
-		return err
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error checking for domain existence: %v", err), deleteEventAction)
 	}
 	if exists {
-		return deleteVolumeAndDomain(machine, client)
+		return a.deleteVolumeAndDomain(machine, client)
 	}
 	glog.Infof("Domain %s does not exist. Skipping deletion...", machine.Name)
 	return nil
@@ -188,13 +226,7 @@ func ignitionVolumeName(volumeName string) string {
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client libvirtclient.Client) (*libvirt.Domain, error) {
-	// decode config
-	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
-	if err != nil {
-		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
-	}
-
+func (a *Actuator) createVolumeAndDomain(machine *clusterv1.Machine, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, client libvirtclient.Client) (*libvirt.Domain, error) {
 	domainName := machine.Name
 
 	// Create volume
@@ -205,11 +237,11 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 			BaseVolumeID: machineProviderConfig.Volume.BaseVolumeID,
 			VolumeFormat: "qcow2",
 		}); err != nil {
-		return nil, fmt.Errorf("error creating volume: %v", err)
+		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating volume %v", err), createEventAction)
 	}
 
 	// Create domain
-	if err = client.CreateDomain(libvirtclient.CreateDomainInput{
+	if err := client.CreateDomain(libvirtclient.CreateDomainInput{
 		DomainName:              domainName,
 		IgnKey:                  machineProviderConfig.IgnKey,
 		Ignition:                machineProviderConfig.Ignition,
@@ -219,13 +251,13 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 		VolumePoolName:          machineProviderConfig.Volume.PoolName,
 		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
 		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
-		AddressRange:            offset,
+		AddressRange:            a.cidrOffset,
 		HostName:                domainName,
 		Autostart:               machineProviderConfig.Autostart,
 		DomainMemory:            machineProviderConfig.DomainMemory,
 		DomainVcpu:              machineProviderConfig.DomainVcpu,
 		CloudInit:               machineProviderConfig.CloudInit,
-		KubeClient:              kubeClient,
+		KubeClient:              a.kubeClient,
 		MachineNamespace:        machine.Namespace,
 	}); err != nil {
 		// Clean up the created volume if domain creation fails,
@@ -234,38 +266,40 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 			glog.Errorf("error cleaning up volume: %v", err)
 		}
 
-		return nil, fmt.Errorf("error creating domain: %v", err)
+		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating domain %v", err), createEventAction)
 	}
 
 	// Lookup created domain for return.
 	dom, err := client.LookupDomainByName(domainName)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up libvirt machine: %v", err)
+		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error looking up libvirt machine %v", err), createEventAction)
 	}
 
 	return dom, nil
 }
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
-func deleteVolumeAndDomain(machine *clusterv1.Machine, client libvirtclient.Client) error {
+func (a *Actuator) deleteVolumeAndDomain(machine *clusterv1.Machine, client libvirtclient.Client) error {
 	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtclient.ErrDomainNotFound {
-		return fmt.Errorf("error deleting domain: %v", err)
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q domain %v", machine.Name, err), deleteEventAction)
 	}
 
 	// Delete machine volume
 	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtclient.ErrVolumeNotFound {
-		return fmt.Errorf("error deleting volume: %v", err)
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q volume %v", machine.Name, err), deleteEventAction)
 	}
 
 	// Delete cloud init volume if exists
 	if err := client.DeleteVolume(cloudInitVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
-		return fmt.Errorf("error deleting cloud init volume: %v", err)
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q cloud init volume %v", cloudInitVolumeName(machine.Name), err), deleteEventAction)
 	}
 
 	// Delete cloud init volume if exists
 	if err := client.DeleteVolume(ignitionVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
-		return fmt.Errorf("error deleting ignition volume: %v", err)
+		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q ignition volume %v", ignitionVolumeName(machine.Name), err), deleteEventAction)
 	}
+
+	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Deleted", "Deleted Machine %v", machine.Name)
 
 	return nil
 }
@@ -291,24 +325,24 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
 	if err != nil {
-		glog.Error("Unable to get provider status from machine: %v", err)
+		glog.Errorf("Unable to get provider status from machine: %v", err)
 		return err
 	}
 
 	// Update the libvirt provider status in-place.
 	if err := UpdateProviderStatus(status, dom); err != nil {
-		glog.Error("Unable to update provider status: %v", err)
+		glog.Errorf("Unable to update provider status: %v", err)
 		return err
 	}
 
 	addrs, err := NodeAddresses(dom)
 	if err != nil {
-		glog.Error("Unable to get node addresses: %v", err)
+		glog.Errorf("Unable to get node addresses: %v", err)
 		return err
 	}
 
 	if err := a.applyMachineStatus(machine, status, addrs); err != nil {
-		glog.Error("Unable to apply machine status: %v", err)
+		glog.Errorf("Unable to apply machine status: %v", err)
 		return err
 	}
 
@@ -399,7 +433,7 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 func (a *Actuator) clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
-		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
+		return nil, a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), createEventAction)
 	}
 
 	return a.clientBuilder(machineProviderConfig.URI)
