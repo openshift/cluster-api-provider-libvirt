@@ -1,4 +1,4 @@
-package utils
+package client
 
 import (
 	"fmt"
@@ -14,20 +14,20 @@ import (
 )
 
 type image interface {
-	Size() (uint64, error)
-	Import(func(io.Reader) error, libvirtxml.StorageVolume) error
-	String() string
+	size() (uint64, error)
+	importImage(func(io.Reader) error, libvirtxml.StorageVolume) error
+	string() string
 }
 
 type httpImage struct {
 	url *url.URL
 }
 
-func (i *httpImage) String() string {
+func (i *httpImage) string() string {
 	return i.url.String()
 }
 
-func (i *httpImage) Size() (uint64, error) {
+func (i *httpImage) size() (uint64, error) {
 	response, err := http.Head(i.url.String())
 	if err != nil {
 		return 0, err
@@ -52,7 +52,7 @@ func (i *httpImage) Size() (uint64, error) {
 	return uint64(length), nil
 }
 
-func (i *httpImage) Import(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
+func (i *httpImage) importImage(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", i.url.String(), nil)
 
@@ -92,11 +92,11 @@ func newImage(source string) (image, error) {
 	}
 }
 
-func (i *localImage) String() string {
+func (i *localImage) string() string {
 	return i.path
 }
 
-func (i *localImage) Size() (uint64, error) {
+func (i *localImage) size() (uint64, error) {
 	fi, err := os.Stat(i.path)
 	if err != nil {
 		return 0, err
@@ -104,7 +104,7 @@ func (i *localImage) Size() (uint64, error) {
 	return uint64(fi.Size()), nil
 }
 
-func (i *localImage) Import(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
+func (i *localImage) importImage(copier func(io.Reader) error, vol libvirtxml.StorageVolume) error {
 	file, err := os.Open(i.path)
 	defer file.Close()
 	if err != nil {

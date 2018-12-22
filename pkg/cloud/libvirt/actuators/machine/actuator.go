@@ -21,7 +21,6 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
-	libvirtutils "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine/utils"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -57,6 +56,7 @@ type Actuator struct {
 	clusterClient clusterclient.Interface
 	cidrOffset    int
 	kubeClient    kubernetes.Interface
+	clientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	codec         codec
 }
 
@@ -70,6 +70,7 @@ type codec interface {
 type ActuatorParams struct {
 	ClusterClient clusterclient.Interface
 	KubeClient    kubernetes.Interface
+	ClientBuilder libvirtclient.LibvirtClientBuilderFuncType
 	Codec         codec
 }
 
@@ -79,6 +80,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 		clusterClient: params.ClusterClient,
 		cidrOffset:    50,
 		kubeClient:    params.KubeClient,
+		clientBuilder: params.ClientBuilder,
 		codec:         params.Codec,
 	}, nil
 }
@@ -88,7 +90,7 @@ func (a *Actuator) Create(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -117,7 +119,7 @@ func (a *Actuator) Delete(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -139,7 +141,7 @@ func (a *Actuator) Update(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -165,7 +167,7 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
-	client, err := clientForMachine(a.codec, machine)
+	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
 		return false, errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -175,10 +177,18 @@ func (a *Actuator) Exists(cluster *clusterv1.Cluster, machine *clusterv1.Machine
 	return client.DomainExists(machine.Name)
 }
 
+func cloudInitVolumeName(volumeName string) string {
+	return fmt.Sprintf("%v_cloud-init", volumeName)
+}
+
+func ignitionVolumeName(volumeName string) string {
+	return fmt.Sprintf("%v.ignition", volumeName)
+}
+
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client *libvirtutils.Client) (*libvirt.Domain, error) {
+func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, kubeClient kubernetes.Interface, client libvirtclient.Client) (*libvirt.Domain, error) {
 	// decode config
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
@@ -204,6 +214,8 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 		IgnKey:                  machineProviderConfig.IgnKey,
 		Ignition:                machineProviderConfig.Ignition,
 		VolumeName:              domainName,
+		CloudInitVolumeName:     cloudInitVolumeName(domainName),
+		IgnitionVolumeName:      ignitionVolumeName(domainName),
 		VolumePoolName:          machineProviderConfig.Volume.PoolName,
 		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
 		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
@@ -235,23 +247,23 @@ func createVolumeAndDomain(codec codec, machine *clusterv1.Machine, offset int, 
 }
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
-func deleteVolumeAndDomain(machine *clusterv1.Machine, client *libvirtutils.Client) error {
-	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtutils.ErrDomainNotFound {
+func deleteVolumeAndDomain(machine *clusterv1.Machine, client libvirtclient.Client) error {
+	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtclient.ErrDomainNotFound {
 		return fmt.Errorf("error deleting domain: %v", err)
 	}
 
 	// Delete machine volume
-	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(machine.Name); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(libvirtutils.CloudInitVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(cloudInitVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting cloud init volume: %v", err)
 	}
 
 	// Delete cloud init volume if exists
-	if err := client.DeleteVolume(libvirtutils.IgnitionVolumeName(machine.Name)); err != nil && err != libvirtutils.ErrVolumeNotFound {
+	if err := client.DeleteVolume(ignitionVolumeName(machine.Name)); err != nil && err != libvirtclient.ErrVolumeNotFound {
 		return fmt.Errorf("error deleting ignition volume: %v", err)
 	}
 
@@ -289,7 +301,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain)
 		return err
 	}
 
-	addrs, err := libvirtutils.NodeAddresses(dom)
+	addrs, err := NodeAddresses(dom)
 	if err != nil {
 		glog.Error("Unable to get node addresses: %v", err)
 		return err
@@ -374,7 +386,7 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 		return err
 	}
 
-	stateString := libvirtutils.DomainStateString(state)
+	stateString := DomainStateString(state)
 
 	status.InstanceID = &uuid
 	status.InstanceState = &stateString
@@ -384,11 +396,64 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 
 // clientForMachine returns a libvirt client for the URI in the given
 // machine's provider config.
-func clientForMachine(codec codec, machine *clusterv1.Machine) (*libvirtutils.Client, error) {
+func (a *Actuator) clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("error getting machineProviderConfig from spec: %v", err)
 	}
 
-	return libvirtutils.BuildClient(machineProviderConfig.URI)
+	return a.clientBuilder(machineProviderConfig.URI)
+}
+
+// NodeAddresses returns a slice of corev1.NodeAddress objects for a
+// given libvirt domain.
+func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
+	addrs := []corev1.NodeAddress{}
+
+	// If the domain is nil, return an empty address array.
+	if dom == nil {
+		return addrs, nil
+	}
+
+	ifaceSource := libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
+	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		for _, addr := range iface.Addrs {
+			addrs = append(addrs, corev1.NodeAddress{
+				Type:    corev1.NodeInternalIP,
+				Address: addr.Addr,
+			})
+		}
+	}
+
+	return addrs, nil
+}
+
+// DomainStateString returns a human-readable string for the given
+// libvirt domain state.
+func DomainStateString(state libvirt.DomainState) string {
+	switch state {
+	case libvirt.DOMAIN_NOSTATE:
+		return "None"
+	case libvirt.DOMAIN_RUNNING:
+		return "Running"
+	case libvirt.DOMAIN_BLOCKED:
+		return "Blocked"
+	case libvirt.DOMAIN_PAUSED:
+		return "Paused"
+	case libvirt.DOMAIN_SHUTDOWN:
+		return "Shutdown"
+	case libvirt.DOMAIN_CRASHED:
+		return "Crashed"
+	case libvirt.DOMAIN_PMSUSPENDED:
+		return "Suspended"
+	case libvirt.DOMAIN_SHUTOFF:
+		return "Shutoff"
+	default:
+		return "Unknown"
+	}
 }

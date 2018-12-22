@@ -1,4 +1,4 @@
-package utils
+package client
 
 import (
 	"bytes"
@@ -20,11 +20,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
 )
 
-func CloudInitVolumeName(volumeName string) string {
-	return fmt.Sprintf("%v_cloud-init", volumeName)
-}
-
-func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
+func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName, domainName string) error {
 
 	// At least user data or ssh access needs to be set to create the cloud init
 	if cloudInit.UserDataSecret == "" && !cloudInit.SSHAccess {
@@ -50,12 +46,12 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 		return fmt.Errorf("can not render cloud init user-data: %v", err)
 	}
 
-	metaData, err := renderMetaDataStr(volumeName)
+	metaData, err := renderMetaDataStr(domainName)
 	if err != nil {
 		return fmt.Errorf("can not render cloud init meta-data: %v", err)
 	}
 
-	cloudInitISOName := CloudInitVolumeName(volumeName)
+	cloudInitISOName := volumeName
 
 	cloudInitDef := newCloudInitDef()
 	cloudInitDef.UserData = string(userData)
@@ -65,12 +61,12 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *Client, cloudInit *provi
 
 	glog.Infof("cloudInitDef: %+v", cloudInitDef)
 
-	iso, err := cloudInitDef.CreateIso()
+	iso, err := cloudInitDef.createISO()
 	if err != nil {
 		return fmt.Errorf("unable to create ISO %v: %v", cloudInitISOName, err)
 	}
 
-	key, err := cloudInitDef.UploadIso(client, iso)
+	key, err := cloudInitDef.uploadIso(client, iso)
 	if err != nil {
 		return fmt.Errorf("unable to upload ISO: %v", err)
 	}
@@ -110,17 +106,6 @@ type defCloudInit struct {
 
 func newCloudInitDef() defCloudInit {
 	return defCloudInit{}
-}
-
-// Create a ISO file based on the contents of the CloudInit instance and
-// uploads it to the libVirt pool
-// Returns a string holding terraform's internal ID of this resource
-func (ci *defCloudInit) CreateIso() (string, error) {
-	iso, err := ci.createISO()
-	if err != nil {
-		return "", err
-	}
-	return iso, err
 }
 
 // Create the ISO holding all the cloud-init data
@@ -182,7 +167,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 	return tmpDir, nil
 }
 
-func (ci *defCloudInit) UploadIso(client *Client, iso string) (string, error) {
+func (ci *defCloudInit) uploadIso(client *libvirtClient, iso string) (string, error) {
 
 	pool, err := client.connection.LookupStoragePoolByName(ci.PoolName)
 	if err != nil {
@@ -210,7 +195,7 @@ func (ci *defCloudInit) UploadIso(client *Client, iso string) (string, error) {
 
 	defer removeTmpIsoDirectory(iso)
 
-	size, err := img.Size()
+	size, err := img.size()
 	if err != nil {
 		return "", err
 	}
@@ -232,9 +217,9 @@ func (ci *defCloudInit) UploadIso(client *Client, iso string) (string, error) {
 	defer volume.Free()
 
 	// upload ISO file
-	err = img.Import(newCopier(client.connection, volume, uint64(size)), volumeDef)
+	err = img.importImage(newCopier(client.connection, volume, uint64(size)), volumeDef)
 	if err != nil {
-		return "", fmt.Errorf("Error while uploading cloudinit %s: %s", img.String(), err)
+		return "", fmt.Errorf("Error while uploading cloudinit %s: %s", img.string(), err)
 	}
 
 	volumeKey, err := volume.GetKey()
