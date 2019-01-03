@@ -3,6 +3,7 @@ package main
 // Tests individual Libvirt actuator actions
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -64,7 +65,7 @@ func createCommand() *cobra.Command {
 			}
 
 			actuator := utils.CreateActuator(machine, userData)
-			err = actuator.Create(cluster, machine)
+			err = actuator.Create(context.TODO(), cluster, machine)
 			if err != nil {
 				return err
 			}
@@ -93,7 +94,7 @@ func deleteCommand() *cobra.Command {
 			}
 
 			actuator := utils.CreateActuator(machine, userData)
-			err = actuator.Delete(cluster, machine)
+			err = actuator.Delete(context.TODO(), cluster, machine)
 			if err != nil {
 				return err
 			}
@@ -122,7 +123,7 @@ func existsCommand() *cobra.Command {
 			}
 
 			actuator := utils.CreateActuator(machine, userData)
-			exists, err := actuator.Exists(cluster, machine)
+			exists, err := actuator.Exists(context.TODO(), cluster, machine)
 			if err != nil {
 				return err
 			}
@@ -248,7 +249,7 @@ func bootstrapCommand() *cobra.Command {
 			glog.Infof("Creating master machine")
 
 			actuator := utils.CreateActuator(masterMachine, masterUserDataSecret)
-			err = actuator.Create(testCluster, masterMachine)
+			err = actuator.Create(context.TODO(), testCluster, masterMachine)
 			if err != nil {
 				return err
 			}

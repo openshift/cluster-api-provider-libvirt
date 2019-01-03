@@ -11,6 +11,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+//go:generate mockgen -source=./client.go -destination=./mock/client_generated.go -package=mock
+
 // CreateDomainInput specifies input parameters for CreateDomain operation
 type CreateDomainInput struct {
 	// DomainName is name of domain to be created

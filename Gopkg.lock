@@ -88,6 +88,14 @@
   revision = "6f2cf27854a4a29e3811b0371547be335d411b8b"
 
 [[projects]]
+  digest = "1:7912bb30698616cf0c41e5ef6a29a447c9a3e76bfcacbc21420ed3cdf616fd94"
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  pruneopts = "T"
+  revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:832e17df5ff8bbe0e0693d2fb46c5e53f96c662ee804049ce3ab6557df74e3ab"
   name = "github.com/golang/protobuf"
   packages = [
@@ -305,14 +313,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:96c659c9844f8716fbd5d363af8d80f405b52a984db0d88cf6517b14233988c8"
+  digest = "1:689b3b1987d5248b956837dedfd7da013efc1ff6c662f8a22cd9088afa290cc4"
   name = "github.com/openshift/cluster-api-actuator-pkg"
   packages = [
     "pkg/e2e/framework",
     "pkg/manifests",
+    "pkg/types",
   ]
   pruneopts = "T"
-  revision = "7a158e52e0e85180ad5b29847f8a30c19bb3ff6c"
+  revision = "95150a82b5ae6ef9244f19dff48625f7f2c6f0e1"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -821,8 +830,7 @@
   revision = "e494cc58111187acad93e64529228a2fc0153e39"
 
 [[projects]]
-  branch = "master"
-  digest = "1:83227f5bf2052c6d0e58b550a33e4bbd83acd78fb5ea772f30f3a2af4e3a31fd"
+  digest = "1:e99adef47e9f7029c5fa2f0ba03e78a32194cf24ada000a6b8753d6f8cde02cc"
   name = "sigs.k8s.io/cluster-api"
   packages = [
     "pkg/apis",
@@ -831,12 +839,14 @@
     "pkg/client/clientset_generated/clientset",
     "pkg/client/clientset_generated/clientset/scheme",
     "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "pkg/controller/error",
     "pkg/controller/machine",
+    "pkg/errors",
     "pkg/util",
   ]
   pruneopts = "T"
-  revision = "f80969d1a60cc19ecce34bb9f8db4acda369a11d"
+  revision = "0734939e05aeb64ab198e3feeee8b4e90ee5cbb2"
 
 [[projects]]
   digest = "1:4c3be496e0e0977b54e265fea184b57e9928fed12a1a14687c04b5d42e044abc"
@@ -901,6 +911,14 @@
   pruneopts = "T"
   revision = "5818a3a284a11812aaed11d5ca0bcadec2c50e83"
 
+[[projects]]
+  digest = "1:7719608fe0b52a4ece56c2dde37bedd95b938677d1ab0f84b8a7852e4c59f849"
+  name = "sigs.k8s.io/yaml"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480"
+  version = "v1.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -909,6 +927,7 @@
     "github.com/emicklei/go-restful",
     "github.com/ghodss/yaml",
     "github.com/golang/glog",
+    "github.com/golang/mock/gomock",
     "github.com/libvirt/libvirt-go",
     "github.com/libvirt/libvirt-go-xml",
     "github.com/onsi/ginkgo",
@@ -916,6 +935,7 @@
     "github.com/openshift/cluster-api-actuator-pkg/pkg/e2e/framework",
     "github.com/openshift/cluster-api-actuator-pkg/pkg/manifests",
     "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
     "k8s.io/api/core/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/equality",
@@ -924,18 +944,27 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/runtime/serializer",
+    "k8s.io/apimachinery/pkg/util/diff",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/apimachinery/pkg/watch",
+    "k8s.io/client-go/discovery",
+    "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/testing",
+    "k8s.io/client-go/tools/record",
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "sigs.k8s.io/cluster-api/pkg/apis",
     "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1",
     "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset",
+    "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "sigs.k8s.io/cluster-api/pkg/controller/machine",
+    "sigs.k8s.io/cluster-api/pkg/errors",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/controller",
