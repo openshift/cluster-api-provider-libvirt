@@ -58,7 +58,7 @@ func stubMachine() (*clusterv1.Machine, error) {
 		},
 
 		Spec: clusterv1.MachineSpec{
-			ProviderConfig: *config,
+			ProviderSpec: *config,
 		},
 	}
 

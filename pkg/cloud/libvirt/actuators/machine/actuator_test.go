@@ -42,8 +42,8 @@ func TestMachineEvents(t *testing.T) {
 	cluster := stubCluster()
 
 	machineInvalidProviderConfig := machine.DeepCopy()
-	machineInvalidProviderConfig.Spec.ProviderConfig.Value = nil
-	machineInvalidProviderConfig.Spec.ProviderConfig.ValueFrom = nil
+	machineInvalidProviderConfig.Spec.ProviderSpec.Value = nil
+	machineInvalidProviderConfig.Spec.ProviderSpec.ValueFrom = nil
 
 	cases := []struct {
 		name               string

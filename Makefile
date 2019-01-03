@@ -83,7 +83,7 @@ build-e2e:
 
 .PHONY: test-e2e
 test-e2e: images build-e2e e2e-provision ## Run end-to-end test
-	hack/test-e2e.sh || $(MAKE) e2e-clean
+	hack/test-e2e.sh || ($(MAKE) e2e-clean && false)
 	$(MAKE) e2e-clean
 
 .PHONY: e2e-provision
