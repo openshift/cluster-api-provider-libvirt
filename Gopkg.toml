@@ -24,8 +24,8 @@ required = [
   branch = "master"
 
 [[constraint]]
-  branch = "cluster-api-to-latest"
   name = "github.com/openshift/cluster-api-actuator-pkg"
+  revision = "6983d93876009e8c004dfe7868c1dece4a9d1137"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"
