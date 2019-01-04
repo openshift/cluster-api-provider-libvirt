@@ -94,7 +94,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		f.DeployClusterAPIStack(testNamespace.Name, f.ActuatorImage, "libvirt-private-key")
+		f.DeployClusterAPIStack(testNamespace.Name, "libvirt-private-key")
 	})
 
 	AfterEach(func() {
@@ -102,7 +102,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 		// machinesToDelete.Delete()
 
 		if testNamespace != nil {
-			f.DestroyClusterAPIStack(testNamespace.Name, f.ActuatorImage, "libvirt-private-key")
+			f.DestroyClusterAPIStack(testNamespace.Name, "libvirt-private-key")
 			glog.V(2).Infof(testNamespace.Name+": %#v", testNamespace)
 			By(fmt.Sprintf("Destroying %q namespace", testNamespace.Name))
 			f.KubeClient.CoreV1().Namespaces().Delete(testNamespace.Name, &metav1.DeleteOptions{})
@@ -247,8 +247,12 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 
 		// Load actuator docker image to the master node
 		By("Upload actuator image to the master guest")
-		err = f.UploadDockerImageToInstance(f.ActuatorImage, masterMachinePrivateIP)
+		err = f.UploadDockerImageToInstance(f.MachineControllerImage, masterMachinePrivateIP)
 		Expect(err).NotTo(HaveOccurred())
+		if f.MachineManagerImage != f.MachineControllerImage {
+			err = f.UploadDockerImageToInstance(f.MachineManagerImage, masterMachinePrivateIP)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		// Deploy the cluster API stack inside the master machine
 		sshConfig, err := framework.DefaultSSHConfig()
@@ -267,7 +271,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		clusterFramework.DeployClusterAPIStack(testNamespace.Name, f.ActuatorImage, "libvirt-private-key")
+		clusterFramework.DeployClusterAPIStack(testNamespace.Name, "libvirt-private-key")
 
 		By("Deploy worker nodes through machineset")
 		masterPrivateIP := masterMachinePrivateIP

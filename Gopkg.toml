@@ -20,11 +20,12 @@ required = [
 
 [[constraint]]
   name = "sigs.k8s.io/cluster-api"
-  revision = "0734939e05aeb64ab198e3feeee8b4e90ee5cbb2"
+  #revision = "0734939e05aeb64ab198e3feeee8b4e90ee5cbb2"
+  branch = "master"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/openshift/cluster-api-actuator-pkg"
+  revision = "6983d93876009e8c004dfe7868c1dece4a9d1137"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"

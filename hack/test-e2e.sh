@@ -4,6 +4,7 @@
 set -e
 
 image="origin-libvirt-machine-controllers:latest"
+nodelink_image="$(docker run registry.svc.ci.openshift.org/openshift/origin-release:v4.0 image machine-api-operator)"
 script_dir="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd -P)"
 
 # Set packet instance connection parameters
@@ -30,4 +31,4 @@ ssh ${SSH_OPTS} "${RHOST}" "docker save $image | bzip2 | ssh -o StrictHostKeyChe
 
 # Copy and execute test binary on remote host
 scp ${SSH_OPTS} bin/machines.test "${RHOST}:."
-ssh ${SSH_OPTS} "${RHOST}" "./machines.test -logtostderr -v 5 -kubeconfig ~/.kube/config -ginkgo.v -actuator-image $image -libvirt-uri 'qemu+ssh://${RHOST}/system?no_verify=1&keyfile=/libvirt.pem' -libvirt-pk /libvirt.pem -ssh-user fedora -ssh-key /guest.pem"
+ssh ${SSH_OPTS} "${RHOST}" "./machines.test -logtostderr -v 5 -kubeconfig ~/.kube/config -ginkgo.v -machine-controller-image $image -machine-manager-image $image -nodelink-controller-image $nodelink_image -libvirt-uri 'qemu+ssh://${RHOST}/system?no_verify=1&keyfile=/libvirt.pem' -libvirt-pk /libvirt.pem -ssh-user fedora -ssh-key /guest.pem"
