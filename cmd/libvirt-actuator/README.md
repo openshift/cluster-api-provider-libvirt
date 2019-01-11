@@ -39,10 +39,10 @@ contains a shell script that deploys kubernetes master node.
 Feel free to modify the file to your needs.
 
 The libvirt actuator expects the user data to be provided by a kubernetes secret
-by setting `spec.providerConfig.value.cloudInit.userDataSecret` field.
+by setting `spec.providerSpec.value.cloudInit.userDataSecret` field.
 See [userdata.yml](../../examples/userdata.yml) for example.
 
-At the same time, the `spec.providerConfig.value.uri` needs to be set to libvirt
+At the same time, the `spec.providerSpec.value.uri` needs to be set to libvirt
 uri. E.g. `qemu+ssh://root@147.75.96.139/system` in case the libivrt instance
 is accessible via ssh on `147.75.96.139` IP address.
 
