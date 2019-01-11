@@ -65,7 +65,7 @@ type Actuator struct {
 }
 
 type codec interface {
-	DecodeFromProviderConfig(clusterv1.ProviderSpec, runtime.Object) error
+	DecodeFromProviderSpec(clusterv1.ProviderSpec, runtime.Object) error
 	DecodeProviderStatus(*runtime.RawExtension, runtime.Object) error
 	EncodeProviderStatus(runtime.Object) (*runtime.RawExtension, error)
 }
@@ -314,7 +314,7 @@ func ProviderConfigMachine(codec codec, ms *clusterv1.MachineSpec) (*providercon
 	}
 
 	var config providerconfigv1.LibvirtMachineProviderConfig
-	if err := codec.DecodeFromProviderConfig(providerSpec, &config); err != nil {
+	if err := codec.DecodeFromProviderSpec(providerSpec, &config); err != nil {
 		return nil, err
 	}
 

@@ -58,8 +58,8 @@ func NewCodec() (*LibvirtProviderConfigCodec, error) {
 	return &codec, nil
 }
 
-// DecodeFromProviderConfig decodes a serialised ProviderConfig into an object
-func (codec *LibvirtProviderConfigCodec) DecodeFromProviderConfig(providerConfig clusterv1alpha1.ProviderSpec, out runtime.Object) error {
+// DecodeFromProviderSpec decodes a serialised ProviderConfig into an object
+func (codec *LibvirtProviderConfigCodec) DecodeFromProviderSpec(providerConfig clusterv1alpha1.ProviderSpec, out runtime.Object) error {
 	if providerConfig.Value != nil {
 		_, _, err := codec.decoder.Decode(providerConfig.Value.Raw, nil, out)
 		if err != nil {
@@ -69,8 +69,8 @@ func (codec *LibvirtProviderConfigCodec) DecodeFromProviderConfig(providerConfig
 	return nil
 }
 
-// EncodeToProviderConfig encodes an object into a serialised ProviderConfig
-func (codec *LibvirtProviderConfigCodec) EncodeToProviderConfig(in runtime.Object) (*clusterv1alpha1.ProviderSpec, error) {
+// EncodeToProviderSpec encodes an object into a serialised ProviderConfig
+func (codec *LibvirtProviderConfigCodec) EncodeToProviderSpec(in runtime.Object) (*clusterv1alpha1.ProviderSpec, error) {
 	var buf bytes.Buffer
 	if err := codec.encoder.Encode(in, &buf); err != nil {
 		return nil, fmt.Errorf("encoding failed: %v", err)

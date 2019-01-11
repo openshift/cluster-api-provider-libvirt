@@ -240,11 +240,11 @@ func bootstrapCommand() *cobra.Command {
 				return err
 			}
 
-			masterMachineProviderConfig, err := testutils.MasterMachineProviderConfig(masterUserDataSecret.Name, libvirturi)
+			masterMachineProviderSpec, err := testutils.MasterMachineProviderSpec(masterUserDataSecret.Name, libvirturi)
 			if err != nil {
 				return err
 			}
-			masterMachine := manifests.MasterMachine(testCluster.Name, testCluster.Namespace, masterMachineProviderConfig)
+			masterMachine := manifests.MasterMachine(testCluster.Name, testCluster.Namespace, masterMachineProviderSpec)
 
 			glog.Infof("Creating master machine")
 
@@ -340,11 +340,11 @@ func bootstrapCommand() *cobra.Command {
 			}
 
 			createSecretAndWait(clusterFramework, workerUserDataSecret)
-			workerMachineSetProviderConfig, err := testutils.WorkerMachineProviderConfig(workerUserDataSecret.Name, inclusterlibvirturi)
+			workerMachineSetProviderSpec, err := testutils.WorkerMachineProviderSpec(workerUserDataSecret.Name, inclusterlibvirturi)
 			if err != nil {
 				return err
 			}
-			workerMachineSet := manifests.WorkerMachineSet(testCluster.Name, testCluster.Namespace, workerMachineSetProviderConfig)
+			workerMachineSet := manifests.WorkerMachineSet(testCluster.Name, testCluster.Namespace, workerMachineSetProviderSpec)
 			clusterFramework.CreateMachineSetAndWait(workerMachineSet, lcw)
 
 			return nil
