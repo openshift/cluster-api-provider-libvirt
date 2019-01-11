@@ -41,7 +41,7 @@ func stubMachine() (*clusterv1.Machine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed creating codec: %v", err)
 	}
-	config, err := codec.EncodeToProviderConfig(machinePc)
+	config, err := codec.EncodeToProviderSpec(machinePc)
 	if err != nil {
 		return nil, fmt.Errorf("encodeToProviderConfig failed: %v", err)
 	}

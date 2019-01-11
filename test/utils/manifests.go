@@ -7,7 +7,7 @@ import (
 	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
-func TestingMachineProviderConfig(uri, clusterID string) (clusterv1alpha1.ProviderSpec, error) {
+func TestingMachineProviderSpec(uri, clusterID string) (clusterv1alpha1.ProviderSpec, error) {
 	machinePc := &providerconfigv1.LibvirtMachineProviderConfig{
 		DomainMemory: 2048,
 		DomainVcpu:   1,
@@ -28,14 +28,14 @@ func TestingMachineProviderConfig(uri, clusterID string) (clusterv1alpha1.Provid
 	if err != nil {
 		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("failed creating codec: %v", err)
 	}
-	config, err := codec.EncodeToProviderConfig(machinePc)
+	config, err := codec.EncodeToProviderSpec(machinePc)
 	if err != nil {
-		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("EncodeToProviderConfig failed: %v", err)
+		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("codec.EncodeToProviderSpec failed: %v", err)
 	}
 	return *config, nil
 }
 
-func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderSpec, error) {
+func MasterMachineProviderSpec(masterUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderSpec, error) {
 	machinePc := &providerconfigv1.LibvirtMachineProviderConfig{
 		DomainMemory: 2048,
 		DomainVcpu:   2,
@@ -57,13 +57,13 @@ func MasterMachineProviderConfig(masterUserDataSecret, libvirturi string) (clust
 	if err != nil {
 		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("failed creating codec: %v", err)
 	}
-	config, err := codec.EncodeToProviderConfig(machinePc)
+	config, err := codec.EncodeToProviderSpec(machinePc)
 	if err != nil {
-		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("EncodeToProviderConfig failed: %v", err)
+		return clusterv1alpha1.ProviderSpec{}, fmt.Errorf("codec.EncodeToProviderSpec failed: %v", err)
 	}
 	return *config, nil
 }
 
-func WorkerMachineProviderConfig(workerUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderSpec, error) {
-	return MasterMachineProviderConfig(workerUserDataSecret, libvirturi)
+func WorkerMachineProviderSpec(workerUserDataSecret, libvirturi string) (clusterv1alpha1.ProviderSpec, error) {
+	return MasterMachineProviderSpec(workerUserDataSecret, libvirturi)
 }

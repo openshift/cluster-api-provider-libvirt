@@ -145,9 +145,9 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			f.CreateClusterAndWait(cluster)
 
 			// Create/delete a single machine, test instance is provisioned/terminated
-			testMachineProviderConfig, err := utils.TestingMachineProviderConfig(f.LibvirtURI, cluster.Name)
+			testMachineProviderSpec, err := utils.TestingMachineProviderSpec(f.LibvirtURI, cluster.Name)
 			Expect(err).NotTo(HaveOccurred())
-			testMachine := manifests.TestingMachine(cluster.Name, cluster.Namespace, testMachineProviderConfig)
+			testMachine := manifests.TestingMachine(cluster.Name, cluster.Namespace, testMachineProviderSpec)
 			lcw, err := NewLibvirtClient("qemu:///system")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -215,9 +215,9 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		createSecretAndWait(f, masterUserDataSecret)
-		masterMachineProviderConfig, err := utils.MasterMachineProviderConfig(masterUserDataSecret.Name, f.LibvirtURI)
+		masterMachineProviderSpec, err := utils.MasterMachineProviderSpec(masterUserDataSecret.Name, f.LibvirtURI)
 		Expect(err).NotTo(HaveOccurred())
-		masterMachine := manifests.MasterMachine(cluster.Name, cluster.Namespace, masterMachineProviderConfig)
+		masterMachine := manifests.MasterMachine(cluster.Name, cluster.Namespace, masterMachineProviderSpec)
 		lcw, err := NewLibvirtClient("qemu:///system")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -282,9 +282,9 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 		workerUserDataSecret, err := manifests.WorkerMachineUserDataSecret("workeruserdatasecret", testNamespace.Name, masterPrivateIP)
 		Expect(err).NotTo(HaveOccurred())
 		createSecretAndWait(clusterFramework, workerUserDataSecret)
-		workerMachineSetProviderConfig, err := utils.WorkerMachineProviderConfig(workerUserDataSecret.Name, f.LibvirtURI)
+		workerMachineSetProviderSpec, err := utils.WorkerMachineProviderSpec(workerUserDataSecret.Name, f.LibvirtURI)
 		Expect(err).NotTo(HaveOccurred())
-		workerMachineSet := manifests.WorkerMachineSet(cluster.Name, cluster.Namespace, workerMachineSetProviderConfig)
+		workerMachineSet := manifests.WorkerMachineSet(cluster.Name, cluster.Namespace, workerMachineSetProviderSpec)
 
 		clusterFramework.CreateMachineSetAndWait(workerMachineSet, lcw)
 		machinesToDelete.AddMachineSet(workerMachineSet, clusterFramework, lcw)

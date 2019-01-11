@@ -65,7 +65,7 @@ type Actuator struct {
 }
 
 type codec interface {
-	DecodeFromProviderConfig(clusterv1.ProviderSpec, runtime.Object) error
+	DecodeFromProviderSpec(clusterv1.ProviderSpec, runtime.Object) error
 	DecodeProviderStatus(*runtime.RawExtension, runtime.Object) error
 	EncodeProviderStatus(runtime.Object) (*runtime.RawExtension, error)
 }
@@ -308,22 +308,13 @@ func (a *Actuator) deleteVolumeAndDomain(machine *clusterv1.Machine, client libv
 // ProviderConfigMachine gets the machine provider config MachineSetSpec from the
 // specified cluster-api MachineSpec.
 func ProviderConfigMachine(codec codec, ms *clusterv1.MachineSpec) (*providerconfigv1.LibvirtMachineProviderConfig, error) {
-	// TODO(jchaloup): Remove providerConfig once all consumers migrate to providerSpec
-	providerSpec := ms.ProviderConfig
-	// providerSpec has higher priority over providerConfig
-	if ms.ProviderSpec.Value != nil || ms.ProviderSpec.ValueFrom != nil {
-		providerSpec = ms.ProviderSpec
-		glog.Infof("Falling to default providerSpec\n")
-	} else {
-		glog.Infof("Falling to providerConfig\n")
-	}
-
+	providerSpec := ms.ProviderSpec
 	if providerSpec.Value == nil {
 		return nil, fmt.Errorf("no Value in ProviderConfig")
 	}
 
 	var config providerconfigv1.LibvirtMachineProviderConfig
-	if err := codec.DecodeFromProviderConfig(providerSpec, &config); err != nil {
+	if err := codec.DecodeFromProviderSpec(providerSpec, &config); err != nil {
 		return nil, err
 	}
 
