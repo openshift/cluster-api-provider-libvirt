@@ -17,12 +17,20 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
+	"k8s.io/klog"
 )
 
 func main() {
-	// the following line exists to make glog happy, for more information, see: https://github.com/kubernetes/kubernetes/issues/17162
-	//flag.CommandLine.Parse([]string{})
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
 	flag.Parse()
+	flag.VisitAll(func(f1 *flag.Flag) {
+		f2 := klogFlags.Lookup(f1.Name)
+		if f2 != nil {
+			value := f1.Value.String()
+			f2.Value.Set(value)
+		}
+	})
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
