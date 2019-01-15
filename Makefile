@@ -52,6 +52,7 @@ gendeepcopy:
 .PHONY: build
 build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/manager
 	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
 
 .PHONY: libvirt-actuator
