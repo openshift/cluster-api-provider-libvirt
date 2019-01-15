@@ -36,6 +36,7 @@ vendor:
 	patch -p1 < 0001-Delete-annotated-machines-first-when-scaling-down.patch
 	patch -p1 < 0002-Sort-machines-before-syncing.patch
 	patch -p1 < 0001-Validate-machineset-before-reconciliation.patch
+	patch -p1 < 0001-Upstream-677-Init-klog-in-manager-properly.patch
 
 .PHONY: generate
 generate: gendeepcopy
@@ -51,6 +52,7 @@ gendeepcopy:
 .PHONY: build
 build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/manager
 	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
 
 .PHONY: libvirt-actuator
