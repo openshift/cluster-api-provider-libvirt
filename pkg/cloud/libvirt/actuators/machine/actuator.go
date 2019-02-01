@@ -30,16 +30,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
+	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	apierrors "github.com/openshift/cluster-api/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
-	clusterclient "sigs.k8s.io/cluster-api/pkg/client/clientset_generated/clientset"
-	apierrors "sigs.k8s.io/cluster-api/pkg/errors"
 )
 
 type errorWrapper struct {
-	cluster *clusterv1.Cluster
-	machine *clusterv1.Machine
+	cluster *machinev1.Cluster
+	machine *machinev1.Machine
 }
 
 func (e *errorWrapper) Error(err error, message string) error {
@@ -65,7 +65,7 @@ type Actuator struct {
 }
 
 type codec interface {
-	DecodeFromProviderSpec(clusterv1.ProviderSpec, runtime.Object) error
+	DecodeFromProviderSpec(machinev1.ProviderSpec, runtime.Object) error
 	DecodeProviderStatus(*runtime.RawExtension, runtime.Object) error
 	EncodeProviderStatus(runtime.Object) (*runtime.RawExtension, error)
 }
@@ -99,7 +99,7 @@ const (
 
 // Set corresponding event based on error. It also returns the original error
 // for convenience, so callers can do "return handleMachineError(...)".
-func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors.MachineError, eventAction string) error {
+func (a *Actuator) handleMachineError(machine *machinev1.Machine, err *apierrors.MachineError, eventAction string) error {
 	if eventAction != noEventAction {
 		a.eventRecorder.Eventf(machine, corev1.EventTypeWarning, "Failed"+eventAction, "%v", err.Reason)
 	}
@@ -109,7 +109,7 @@ func (a *Actuator) handleMachineError(machine *clusterv1.Machine, err *apierrors
 }
 
 // Create creates a machine and is invoked by the Machine Controller
-func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
@@ -149,7 +149,7 @@ func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
-func (a *Actuator) Delete(context context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
@@ -176,7 +176,7 @@ func (a *Actuator) Delete(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Update updates a machine and is invoked by the Machine Controller
-func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine) error {
+func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
@@ -202,7 +202,7 @@ func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
-func (a *Actuator) Exists(context context.Context, cluster *clusterv1.Cluster, machine *clusterv1.Machine) (bool, error) {
+func (a *Actuator) Exists(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
 	errWrapper := errorWrapper{cluster: cluster, machine: machine}
 
@@ -227,7 +227,7 @@ func ignitionVolumeName(volumeName string) string {
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func (a *Actuator) createVolumeAndDomain(machine *clusterv1.Machine, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, client libvirtclient.Client) (*libvirt.Domain, error) {
+func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, client libvirtclient.Client) (*libvirt.Domain, error) {
 	domainName := machine.Name
 
 	// Create volume
@@ -280,7 +280,7 @@ func (a *Actuator) createVolumeAndDomain(machine *clusterv1.Machine, machineProv
 }
 
 // deleteVolumeAndDomain deletes a domain and its referenced volume
-func (a *Actuator) deleteVolumeAndDomain(machine *clusterv1.Machine, client libvirtclient.Client) error {
+func (a *Actuator) deleteVolumeAndDomain(machine *machinev1.Machine, client libvirtclient.Client) error {
 	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtclient.ErrDomainNotFound {
 		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q domain %v", machine.Name, err), deleteEventAction)
 	}
@@ -307,7 +307,7 @@ func (a *Actuator) deleteVolumeAndDomain(machine *clusterv1.Machine, client libv
 
 // ProviderConfigMachine gets the machine provider config MachineSetSpec from the
 // specified cluster-api MachineSpec.
-func ProviderConfigMachine(codec codec, ms *clusterv1.MachineSpec) (*providerconfigv1.LibvirtMachineProviderConfig, error) {
+func ProviderConfigMachine(codec codec, ms *machinev1.MachineSpec) (*providerconfigv1.LibvirtMachineProviderConfig, error) {
 	providerSpec := ms.ProviderSpec
 	if providerSpec.Value == nil {
 		return nil, fmt.Errorf("no Value in ProviderConfig")
@@ -322,7 +322,7 @@ func ProviderConfigMachine(codec codec, ms *clusterv1.MachineSpec) (*providercon
 }
 
 // updateStatus updates a machine object's status.
-func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain) error {
+func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain) error {
 	glog.Infof("Updating status for %s", machine.Name)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
@@ -352,7 +352,7 @@ func (a *Actuator) updateStatus(machine *clusterv1.Machine, dom *libvirt.Domain)
 }
 
 func (a *Actuator) applyMachineStatus(
-	machine *clusterv1.Machine,
+	machine *machinev1.Machine,
 	status *providerconfigv1.LibvirtMachineProviderStatus,
 	addrs []corev1.NodeAddress,
 ) error {
@@ -378,7 +378,7 @@ func (a *Actuator) applyMachineStatus(
 
 	now := metav1.Now()
 	machineCopy.Status.LastUpdated = &now
-	_, err = a.clusterClient.ClusterV1alpha1().
+	_, err = a.clusterClient.MachineV1beta1().
 		Machines(machineCopy.Namespace).UpdateStatus(machineCopy)
 	return err
 }
@@ -392,7 +392,7 @@ func EncodeProviderStatus(codec codec, status *providerconfigv1.LibvirtMachinePr
 
 // ProviderStatusFromMachine deserializes a libvirt provider status
 // from a machine object.
-func ProviderStatusFromMachine(codec codec, machine *clusterv1.Machine) (*providerconfigv1.LibvirtMachineProviderStatus, error) {
+func ProviderStatusFromMachine(codec codec, machine *machinev1.Machine) (*providerconfigv1.LibvirtMachineProviderStatus, error) {
 	status := &providerconfigv1.LibvirtMachineProviderStatus{}
 	var err error
 	if machine.Status.ProviderStatus != nil {
@@ -432,7 +432,7 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 
 // clientForMachine returns a libvirt client for the URI in the given
 // machine's provider config.
-func (a *Actuator) clientForMachine(codec codec, machine *clusterv1.Machine) (libvirtclient.Client, error) {
+func (a *Actuator) clientForMachine(codec codec, machine *machinev1.Machine) (libvirtclient.Client, error) {
 	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
 	if err != nil {
 		return nil, a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), createEventAction)

@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 )
 
 const (
@@ -34,7 +34,7 @@ func stubProviderConfig() *providerconfigv1.LibvirtMachineProviderConfig {
 	}
 }
 
-func stubMachine() (*clusterv1.Machine, error) {
+func stubMachine() (*machinev1.Machine, error) {
 	machinePc := stubProviderConfig()
 
 	codec, err := providerconfigv1.NewCodec()
@@ -46,7 +46,7 @@ func stubMachine() (*clusterv1.Machine, error) {
 		return nil, fmt.Errorf("encodeToProviderConfig failed: %v", err)
 	}
 
-	machine := &clusterv1.Machine{
+	machine := &machinev1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "libvirt-actuator-testing-machine",
 			Namespace: defaultNamespace,
@@ -57,7 +57,7 @@ func stubMachine() (*clusterv1.Machine, error) {
 			},
 		},
 
-		Spec: clusterv1.MachineSpec{
+		Spec: machinev1.MachineSpec{
 			ProviderSpec: *config,
 		},
 	}
@@ -65,8 +65,8 @@ func stubMachine() (*clusterv1.Machine, error) {
 	return machine, nil
 }
 
-func stubCluster() *clusterv1.Cluster {
-	return &clusterv1.Cluster{
+func stubCluster() *machinev1.Cluster {
+	return &machinev1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterID,
 			Namespace: defaultNamespace,
