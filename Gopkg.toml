@@ -19,13 +19,13 @@ required = [
   go-tests = true
 
 [[constraint]]
-  name = "sigs.k8s.io/cluster-api"
-  #revision = "0734939e05aeb64ab198e3feeee8b4e90ee5cbb2"
-  branch = "master"
+  name = "github.com/openshift/cluster-api"
+  # This is temporoary while we finish the pivot to OpenShift types.
+  revision = "91fca585a85b163ddfd119fd09c128c9feadddca"
 
 [[constraint]]
   name = "github.com/openshift/cluster-api-actuator-pkg"
-  revision = "6983d93876009e8c004dfe7868c1dece4a9d1137"
+  revision = "71b571e0ba46fae812da42733f926c1df654f666"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"
