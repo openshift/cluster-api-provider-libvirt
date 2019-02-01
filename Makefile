@@ -1,6 +1,10 @@
 DBG         ?= 0
 VERSION     ?= $(shell git describe --always --abbrev=7)
 MUTABLE_TAG ?= latest
+PROJECT     ?= cluster-api-provider-libvirt
+ORG_PATH    ?= github.com/openshift
+REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
+CLUSTER_API ?= github.com/openshift/cluster-api
 IMAGE        = origin-libvirt-machine-controllers
 
 ifeq ($(DBG),1)
@@ -16,7 +20,7 @@ ifeq ($(NO_DOCKER), 1)
   IMAGE_BUILD_CMD = imagebuilder
   CGO_ENABLED = 1
 else
-  DOCKER_CMD := docker run --rm -e CGO_ENABLED=1 -v "$(PWD)":/go/src/github.com/openshift/cluster-api-provider-libvirt:Z -w /go/src/github.com/openshift/cluster-api-provider-libvirt openshift/origin-release:golang-1.10
+  DOCKER_CMD := docker run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" openshift/origin-release:golang-1.10
   IMAGE_BUILD_CMD = docker build
 endif
 
@@ -43,7 +47,7 @@ generate: gendeepcopy
 
 .PHONY: gendeepcopy
 gendeepcopy:
-	go build -o $$GOPATH/bin/deepcopy-gen github.com/openshift/cluster-api-provider-libvirt/vendor/k8s.io/code-generator/cmd/deepcopy-gen
+	go build -o $$GOPATH/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
 	deepcopy-gen \
           -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1alpha1 \
           -O zz_generated.deepcopy \
@@ -51,13 +55,13 @@ gendeepcopy:
 
 .PHONY: build
 build: ## build binaries
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller github.com/openshift/cluster-api-provider-libvirt/cmd/manager
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager github.com/openshift/cluster-api-provider-libvirt/vendor/sigs.k8s.io/cluster-api/cmd/manager
-	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller "$(REPO_PATH)/cmd/manager"
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager "$(REPO_PATH)/vendor/$(CLUSTER_API)/cmd/manager"
+	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test "$(REPO_PATH)/test/machines"
 
 .PHONY: libvirt-actuator
 libvirt-actuator:
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator github.com/openshift/cluster-api-provider-libvirt/cmd/libvirt-actuator
+	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator "$(REPO_PATH)/cmd/libvirt-actuator"
 
 .PHONY: images
 images: ## Create images
@@ -75,13 +79,9 @@ check: fmt vet lint test ## Check your code
 test: # Run unit test
 	$(DOCKER_CMD) go test -race -cover ./cmd/... ./cloud/...
 
-.PHONY: integration
-integration: deps-cgo ## Run integration test
-	$(DOCKER_CMD) go test -v sigs.k8s.io/cluster-api-provider-libvirt/test/integration
-
 .PHONY: build-e2e
 build-e2e:
-	$(DOCKER_CMD) go test -c -o bin/machines.test github.com/openshift/cluster-api-provider-libvirt/test/machines
+	$(DOCKER_CMD) go test -c -o bin/machines.test "$(REPO_PATH)/test/machines"
 
 .PHONY: test-e2e
 test-e2e: images build-e2e e2e-provision ## Run end-to-end test
