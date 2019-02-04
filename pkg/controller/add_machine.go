@@ -15,7 +15,7 @@ package controller
 
 import (
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
-	"sigs.k8s.io/cluster-api/pkg/controller/machine"
+	"github.com/openshift/cluster-api/pkg/controller/machine"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

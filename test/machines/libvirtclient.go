@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	libvirt "github.com/libvirt/libvirt-go"
-	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
+	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 )
 
 type libvirtClient struct {
@@ -23,7 +23,7 @@ func NewLibvirtClient(uri string) (*libvirtClient, error) {
 	}, nil
 }
 
-func (client *libvirtClient) GetRunningInstances(machine *clusterv1alpha1.Machine) ([]interface{}, error) {
+func (client *libvirtClient) GetRunningInstances(machine *machinev1.Machine) ([]interface{}, error) {
 	domain, err := client.getRunningDomain(machine.Name)
 	if err != nil {
 		return nil, err
@@ -34,11 +34,11 @@ func (client *libvirtClient) GetRunningInstances(machine *clusterv1alpha1.Machin
 	return []interface{}{domain}, nil
 }
 
-func (client *libvirtClient) GetPublicDNSName(machine *clusterv1alpha1.Machine) (string, error) {
+func (client *libvirtClient) GetPublicDNSName(machine *machinev1.Machine) (string, error) {
 	return client.GetPrivateIP(machine)
 }
 
-func (client *libvirtClient) GetPrivateIP(machine *clusterv1alpha1.Machine) (string, error) {
+func (client *libvirtClient) GetPrivateIP(machine *machinev1.Machine) (string, error) {
 	domain, err := client.getRunningDomain(machine.Name)
 	if err != nil {
 		return "", err

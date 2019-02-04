@@ -17,9 +17,9 @@ import (
 	"github.com/openshift/cluster-api-actuator-pkg/pkg/manifests"
 	"github.com/openshift/cluster-api-provider-libvirt/test/utils"
 
+	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1alpha1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
 const (
@@ -124,17 +124,17 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 				clusterID = "cluster-" + string(uuid.NewUUID())
 			}
 
-			cluster := &clusterv1alpha1.Cluster{
+			cluster := &machinev1beta1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      clusterID,
 					Namespace: testNamespace.Name,
 				},
-				Spec: clusterv1alpha1.ClusterSpec{
-					ClusterNetwork: clusterv1alpha1.ClusterNetworkingConfig{
-						Services: clusterv1alpha1.NetworkRanges{
+				Spec: machinev1beta1.ClusterSpec{
+					ClusterNetwork: machinev1beta1.ClusterNetworkingConfig{
+						Services: machinev1beta1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
-						Pods: clusterv1alpha1.NetworkRanges{
+						Pods: machinev1beta1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
 						ServiceDomain: "example.com",
@@ -186,17 +186,17 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			clusterID = "cluster-" + clusterUUID[:8]
 		}
 
-		cluster := &clusterv1alpha1.Cluster{
+		cluster := &machinev1beta1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      clusterID,
 				Namespace: testNamespace.Name,
 			},
-			Spec: clusterv1alpha1.ClusterSpec{
-				ClusterNetwork: clusterv1alpha1.ClusterNetworkingConfig{
-					Services: clusterv1alpha1.NetworkRanges{
+			Spec: machinev1beta1.ClusterSpec{
+				ClusterNetwork: machinev1beta1.ClusterNetworkingConfig{
+					Services: machinev1beta1.NetworkRanges{
 						CIDRBlocks: []string{"10.0.0.1/24"},
 					},
-					Pods: clusterv1alpha1.NetworkRanges{
+					Pods: machinev1beta1.NetworkRanges{
 						CIDRBlocks: []string{"10.0.0.1/24"},
 					},
 					ServiceDomain: "example.com",
@@ -311,7 +311,7 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			}
 
 			glog.V(2).Infof("Non-master nodes to check: %#v", nonMasterNodes)
-			machines, err := clusterFramework.CAPIClient.ClusterV1alpha1().Machines(workerMachineSet.Namespace).List(metav1.ListOptions{
+			machines, err := clusterFramework.CAPIClient.MachineV1beta1().Machines(workerMachineSet.Namespace).List(metav1.ListOptions{
 				LabelSelector: labels.SelectorFromSet(workerMachineSet.Spec.Selector.MatchLabels).String(),
 			})
 			Expect(err).NotTo(HaveOccurred())

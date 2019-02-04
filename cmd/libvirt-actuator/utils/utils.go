@@ -13,13 +13,13 @@ import (
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/test"
+	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/pkg/apis/cluster/v1alpha1"
 )
 
-func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*clusterv1.Cluster, *clusterv1.Machine, *apiv1.Secret, error) {
-	machine := &clusterv1.Machine{}
+func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*machinev1.Cluster, *machinev1.Machine, *apiv1.Secret, error) {
+	machine := &machinev1.Machine{}
 	{
 		bytes, err := ioutil.ReadFile(machineLoc)
 		if err != nil {
@@ -31,7 +31,7 @@ func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*clusterv
 		}
 	}
 
-	cluster := &clusterv1.Cluster{}
+	cluster := &machinev1.Cluster{}
 	{
 		bytes, err := ioutil.ReadFile(clusterLoc)
 		if err != nil {
@@ -59,7 +59,7 @@ func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*clusterv
 	return cluster, machine, userDataSecret, nil
 }
 
-func CreateActuator(machine *clusterv1.Machine, userData *apiv1.Secret) *machineactuator.Actuator {
+func CreateActuator(machine *machinev1.Machine, userData *apiv1.Secret) *machineactuator.Actuator {
 	objList := []runtime.Object{}
 	if userData != nil {
 		objList = append(objList, userData)
