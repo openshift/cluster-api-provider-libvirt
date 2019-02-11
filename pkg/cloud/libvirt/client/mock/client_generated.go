@@ -36,7 +36,6 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 
 // Close mocks base method
 func (m *MockClient) Close() error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -44,13 +43,11 @@ func (m *MockClient) Close() error {
 
 // Close indicates an expected call of Close
 func (mr *MockClientMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClient)(nil).Close))
 }
 
 // CreateDomain mocks base method
 func (m *MockClient) CreateDomain(arg0 client.CreateDomainInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateDomain", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -58,13 +55,11 @@ func (m *MockClient) CreateDomain(arg0 client.CreateDomainInput) error {
 
 // CreateDomain indicates an expected call of CreateDomain
 func (mr *MockClientMockRecorder) CreateDomain(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomain", reflect.TypeOf((*MockClient)(nil).CreateDomain), arg0)
 }
 
 // DeleteDomain mocks base method
 func (m *MockClient) DeleteDomain(name string) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteDomain", name)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -72,13 +67,11 @@ func (m *MockClient) DeleteDomain(name string) error {
 
 // DeleteDomain indicates an expected call of DeleteDomain
 func (mr *MockClientMockRecorder) DeleteDomain(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDomain", reflect.TypeOf((*MockClient)(nil).DeleteDomain), name)
 }
 
 // DomainExists mocks base method
 func (m *MockClient) DomainExists(name string) (bool, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DomainExists", name)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
@@ -87,13 +80,11 @@ func (m *MockClient) DomainExists(name string) (bool, error) {
 
 // DomainExists indicates an expected call of DomainExists
 func (mr *MockClientMockRecorder) DomainExists(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainExists", reflect.TypeOf((*MockClient)(nil).DomainExists), name)
 }
 
 // LookupDomainByName mocks base method
 func (m *MockClient) LookupDomainByName(name string) (*libvirt_go.Domain, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LookupDomainByName", name)
 	ret0, _ := ret[0].(*libvirt_go.Domain)
 	ret1, _ := ret[1].(error)
@@ -102,13 +93,11 @@ func (m *MockClient) LookupDomainByName(name string) (*libvirt_go.Domain, error)
 
 // LookupDomainByName indicates an expected call of LookupDomainByName
 func (mr *MockClientMockRecorder) LookupDomainByName(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupDomainByName", reflect.TypeOf((*MockClient)(nil).LookupDomainByName), name)
 }
 
 // CreateVolume mocks base method
 func (m *MockClient) CreateVolume(arg0 client.CreateVolumeInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateVolume", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -116,13 +105,11 @@ func (m *MockClient) CreateVolume(arg0 client.CreateVolumeInput) error {
 
 // CreateVolume indicates an expected call of CreateVolume
 func (mr *MockClientMockRecorder) CreateVolume(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVolume", reflect.TypeOf((*MockClient)(nil).CreateVolume), arg0)
 }
 
 // VolumeExists mocks base method
 func (m *MockClient) VolumeExists(name string) (bool, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VolumeExists", name)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
@@ -131,13 +118,11 @@ func (m *MockClient) VolumeExists(name string) (bool, error) {
 
 // VolumeExists indicates an expected call of VolumeExists
 func (mr *MockClientMockRecorder) VolumeExists(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VolumeExists", reflect.TypeOf((*MockClient)(nil).VolumeExists), name)
 }
 
 // DeleteVolume mocks base method
 func (m *MockClient) DeleteVolume(name string) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteVolume", name)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -145,6 +130,5 @@ func (m *MockClient) DeleteVolume(name string) error {
 
 // DeleteVolume indicates an expected call of DeleteVolume
 func (mr *MockClientMockRecorder) DeleteVolume(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolume", reflect.TypeOf((*MockClient)(nil).DeleteVolume), name)
 }

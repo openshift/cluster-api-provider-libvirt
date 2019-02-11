@@ -9,7 +9,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
-	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
+	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/test"
@@ -66,7 +66,7 @@ func CreateActuator(machine *machinev1.Machine, userData *apiv1.Secret) *machine
 	}
 	fakeKubeClient := kubernetesfake.NewSimpleClientset(objList...)
 
-	codec, err := v1alpha1.NewCodec()
+	codec, err := v1beta1.NewCodec()
 	if err != nil {
 		glog.Fatal(err)
 	}

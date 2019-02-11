@@ -17,7 +17,7 @@ import (
 	"github.com/golang/glog"
 
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
 
 func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName, domainName string) error {

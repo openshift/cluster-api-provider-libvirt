@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
-	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
+	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
@@ -79,7 +79,7 @@ func initActuator(m manager.Manager) {
 		glog.Fatalf("Could not create kubernetes client to talk to the apiserver: %v", err)
 	}
 
-	codec, err := v1alpha1.NewCodec()
+	codec, err := v1beta1.NewCodec()
 	if err != nil {
 		glog.Fatal(err)
 	}
