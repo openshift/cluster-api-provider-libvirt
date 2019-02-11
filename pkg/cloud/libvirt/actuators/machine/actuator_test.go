@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	libvirt "github.com/libvirt/libvirt-go"
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	mocklibvirt "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client/mock"
 	fakeclusterclientset "github.com/openshift/cluster-api-provider-libvirt/test"

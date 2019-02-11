@@ -21,7 +21,7 @@ import (
 
 	libvirt "github.com/libvirt/libvirt-go"
 
-	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1alpha1"
+	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 
 	"k8s.io/apimachinery/pkg/api/equality"

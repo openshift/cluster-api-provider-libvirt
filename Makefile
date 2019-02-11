@@ -39,13 +39,18 @@ vendor:
 	dep ensure -v
 
 .PHONY: generate
-generate: gendeepcopy
+generate: gendeepcopy gencode
+
+.PHONY: gencode
+gencode:
+	go install $(GOGCFLAGS) -ldflags '-extldflags "-static"' sigs.k8s.io/cluster-api-provider-aws/vendor/github.com/golang/mock/mockgen
+	go generate ./pkg/... ./cmd/...
 
 .PHONY: gendeepcopy
 gendeepcopy:
 	go build -o $$GOPATH/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
 	deepcopy-gen \
-          -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1alpha1 \
+          -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1beta1 \
           -O zz_generated.deepcopy \
           -h hack/boilerplate.go.txt
 
@@ -73,7 +78,7 @@ check: fmt vet lint test ## Check your code
 
 .PHONY: test
 test: # Run unit test
-	$(DOCKER_CMD) go test -race -cover ./cmd/... ./cloud/...
+	$(DOCKER_CMD) go test -race -cover ./cmd/... ./pkg/cloud/...
 
 .PHONY: build-e2e
 build-e2e:
