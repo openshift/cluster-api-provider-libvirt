@@ -38,12 +38,11 @@ import (
 )
 
 type errorWrapper struct {
-	cluster *machinev1.Cluster
 	machine *machinev1.Machine
 }
 
 func (e *errorWrapper) Error(err error, message string) error {
-	return fmt.Errorf("%s/%s: %s: %v", e.cluster.Name, e.machine.Name, message, err)
+	return fmt.Errorf("%s: %s: %v", e.machine.Name, message, err)
 }
 
 func (e *errorWrapper) WithLog(err error, message string) error {
@@ -110,8 +109,8 @@ func (a *Actuator) handleMachineError(machine *machinev1.Machine, err *apierrors
 
 // Create creates a machine and is invoked by the Machine Controller
 func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
-	glog.Infof("Creating machine %q for cluster %q.", machine.Name, cluster.Name)
-	errWrapper := errorWrapper{cluster: cluster, machine: machine}
+	glog.Infof("Creating machine %q", machine.Name)
+	errWrapper := errorWrapper{machine: machine}
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
 	if err != nil {
@@ -150,7 +149,7 @@ func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, m
 
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
-	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
+	glog.Infof("Deleting machine %q", machine.Name)
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
 	if err != nil {
@@ -177,8 +176,8 @@ func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, m
 
 // Update updates a machine and is invoked by the Machine Controller
 func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
-	glog.Infof("Updating machine %v for cluster %v.", machine.Name, cluster.Name)
-	errWrapper := errorWrapper{cluster: cluster, machine: machine}
+	glog.Infof("Updating machine %v", machine.Name)
+	errWrapper := errorWrapper{machine: machine}
 
 	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
@@ -203,8 +202,8 @@ func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, m
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
 func (a *Actuator) Exists(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) (bool, error) {
-	glog.Infof("Checking if machine %v for cluster %v exists.", machine.Name, cluster.Name)
-	errWrapper := errorWrapper{cluster: cluster, machine: machine}
+	glog.Infof("Checking if machine %v exists.", machine.Name)
+	errWrapper := errorWrapper{machine: machine}
 
 	client, err := a.clientForMachine(a.codec, machine)
 	if err != nil {
