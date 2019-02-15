@@ -15,7 +15,9 @@ package machine
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -30,9 +32,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
+	"github.com/go-log/log/info"
 	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	clustererror "github.com/openshift/cluster-api/pkg/controller/error"
 	apierrors "github.com/openshift/cluster-api/pkg/errors"
+	kubedrain "github.com/openshift/kubernetes-drain"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -95,6 +100,10 @@ const (
 	createEventAction = "Create"
 	deleteEventAction = "Delete"
 	noEventAction     = ""
+
+	requeueAfterSeconds = 20
+	// ExcludeNodeDrainingAnnotation annotation explicitly skips node draining if set
+	ExcludeNodeDrainingAnnotation = "machine.openshift.io/exclude-node-draining"
 )
 
 // Set corresponding event based on error. It also returns the original error
@@ -150,6 +159,40 @@ func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, m
 
 // Delete deletes a machine and is invoked by the Machine Controller
 func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
+	// Drain node before deleting
+	if _, exists := machine.ObjectMeta.Annotations[ExcludeNodeDrainingAnnotation]; !exists {
+		if machine.Status.NodeRef == nil {
+			// Draining a node of a machine without a node needs to be explicitely inspected
+			err := errors.New("draining node without a node reference during machine deletion operation is forbidden")
+			glog.Error(err)
+			return err
+		}
+		glog.Infof("Draining node before delete")
+		node, err := a.kubeClient.CoreV1().Nodes().Get(machine.Status.NodeRef.Name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to get node %q: %v", machine.Status.NodeRef.Name, err)
+		}
+
+		if err := kubedrain.Drain(
+			a.kubeClient,
+			[]*corev1.Node{node},
+			&kubedrain.DrainOptions{
+				Force:              true,
+				IgnoreDaemonsets:   true,
+				DeleteLocalData:    true,
+				GracePeriodSeconds: -1,
+				Logger:             info.New(glog.V(0)),
+			},
+		); err != nil {
+			// Machine still tries to terminate after drain failure
+			glog.Warningf("drain failed for machine %q: %v", machine.Name, err)
+			return &clustererror.RequeueAfterError{RequeueAfter: requeueAfterSeconds * time.Second}
+		}
+
+		glog.Infof("drain successful for machine %q", machine.Name)
+		a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Deleted", "Node %q drained", node.Name)
+	}
+
 	glog.Infof("Deleting machine %q for cluster %q.", machine.Name, cluster.Name)
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
