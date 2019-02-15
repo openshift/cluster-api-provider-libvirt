@@ -38,6 +38,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:21a059c83c396c067fe8c0ecdcabe452ddd7b14504d41e8077a249002dc0a39b"
+  name = "github.com/go-log/log"
+  packages = [
+    ".",
+    "info",
+  ]
+  pruneopts = "T"
+  revision = "a514cf01a3eb56ec6aff9ae5663453d990e68ed3"
+
+[[projects]]
+  branch = "master"
   digest = "1:65587005c6fa4293c0b8a2e457e689df7fda48cc5e1f5449ea2c1e7784551558"
   name = "github.com/go-logr/logr"
   packages = ["."]
@@ -323,6 +334,7 @@
     "pkg/client/clientset_generated/clientset",
     "pkg/client/clientset_generated/clientset/scheme",
     "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
     "pkg/controller/error",
@@ -343,6 +355,14 @@
   ]
   pruneopts = "T"
   revision = "71b571e0ba46fae812da42733f926c1df654f666"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f7646c654e93258958dba300641f8f674d5a9ed015c11119793ba1156e2acbe9"
+  name = "github.com/openshift/kubernetes-drain"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "c2e51be1758efa30d71a4d30dc4e2db86b70a4df"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -936,6 +956,7 @@
     "github.com/davecgh/go-spew/spew",
     "github.com/emicklei/go-restful",
     "github.com/ghodss/yaml",
+    "github.com/go-log/log/info",
     "github.com/golang/glog",
     "github.com/golang/mock/gomock",
     "github.com/libvirt/libvirt-go",
@@ -947,10 +968,14 @@
     "github.com/openshift/cluster-api/pkg/apis",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
+    "github.com/openshift/cluster-api/pkg/controller/error",
     "github.com/openshift/cluster-api/pkg/controller/machine",
     "github.com/openshift/cluster-api/pkg/errors",
+    "github.com/openshift/kubernetes-drain",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "k8s.io/api/core/v1",
