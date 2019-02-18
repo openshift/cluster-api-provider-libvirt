@@ -5,24 +5,24 @@ metadata:
   name: worker-example-machine-set
   namespace: test
   labels:
-    sigs.k8s.io/cluster-api-cluster: tb-asg-35
-    sigs.k8s.io/cluster-api-machine-role: infra
-    sigs.k8s.io/cluster-api-machine-type: worker
+    machine.openshift.io/cluster-api-cluster: tb-asg-35
+    machine.openshift.io/cluster-api-machine-role: infra
+    machine.openshift.io/cluster-api-machine-type: worker
 spec:
   replicas: 2
   selector:
     matchLabels:
-      sigs.k8s.io/cluster-api-machineset: worker-example-machine-set
-      sigs.k8s.io/cluster-api-cluster: tb-asg-35
-      sigs.k8s.io/cluster-api-machine-role: infra
-      sigs.k8s.io/cluster-api-machine-type: worker
+      machine.openshift.io/cluster-api-machineset: worker-example-machine-set
+      machine.openshift.io/cluster-api-cluster: tb-asg-35
+      machine.openshift.io/cluster-api-machine-role: infra
+      machine.openshift.io/cluster-api-machine-type: worker
   template:
     metadata:
       labels:
-        sigs.k8s.io/cluster-api-machineset: worker-example-machine-set
-        sigs.k8s.io/cluster-api-cluster: tb-asg-35
-        sigs.k8s.io/cluster-api-machine-role: infra
-        sigs.k8s.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: worker-example-machine-set
+        machine.openshift.io/cluster-api-cluster: tb-asg-35
+        machine.openshift.io/cluster-api-machine-role: infra
+        machine.openshift.io/cluster-api-machine-type: worker
     spec:
       providerConfig:
         value:
