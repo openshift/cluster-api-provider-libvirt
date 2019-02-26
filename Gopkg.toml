@@ -20,8 +20,7 @@ required = [
 
 [[constraint]]
   name = "github.com/openshift/cluster-api"
-  # This is temporoary while we finish the pivot to OpenShift types.
-  revision = "91fca585a85b163ddfd119fd09c128c9feadddca"
+  revision = "0c3e884db79556cf786aa8436f5be977ef10c211"
 
 [[constraint]]
   name = "github.com/openshift/cluster-api-actuator-pkg"
