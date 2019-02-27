@@ -5,9 +5,9 @@ metadata:
   name: worker-example
   namespace: test
   labels:
-    sigs.k8s.io/cluster-api-cluster: cluster-name
-    sigs.k8s.io/cluster-api-machine-role: infra
-    sigs.k8s.io/cluster-api-machine-type: worker
+    machine.openshift.io/cluster-api-cluster: cluster-name
+    machine.openshift.io/cluster-api-machine-role: infra
+    machine.openshift.io/cluster-api-machine-type: worker
 spec:
   providerConfig:
     value:
