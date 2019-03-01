@@ -1,5 +1,153 @@
 # Changes
 
+## 0.36.0
+
+- spanner:
+  - Reduce minimum retry backoff from 1s to 100ms. This makes time between
+    retries much faster and should improve latency.
+- storage:
+  - Add support for Bucket Policy Only.
+- kms:
+  - Add ResourceIAM helper method.
+  - Deprecate KeyRingIAM and CryptoKeyIAM. Please use ResourceIAM.
+- firestore:
+  - Switch from v1beta1 API to v1 API.
+  - Allow emulator with FIRESTORE_EMULATOR_HOST.
+- bigquery:
+  - Add NumLongTermBytes to Table.
+  - Add TotalBytesProcessedAccuracy to QueryStatistics.
+- irm:
+  - Add new v1alpha2 client.
+- talent:
+  - Add new v4beta1 client.
+- rpcreplay:
+  - Fix connection to work with grpc >= 1.17.
+  - It is now required for an actual gRPC server to be running for Dial to
+    succeed.
+
+## 0.35.1
+
+- spanner:
+  - Adds OpenCensus views back to public API.
+
+## v0.35.0
+
+- all:
+  - Add go.mod and go.sum.
+  - Switch usage of gax-go to gax-go/v2.
+- bigquery:
+  - Fix bug where time partitioning could not be removed from a table.
+  - Fix panic that occurred with empty query parameters.
+- bttest:
+  - Fix bug where deleted rows were returned by ReadRows.
+- bigtable/emulator:
+  - Configure max message size to 256 MiB.
+- firestore:
+  - Allow non-transactional queries in transactions.
+  - Allow StartAt/EndBefore on direct children at any depth.
+  - QuerySnapshotIterator.Stop may be called in an error state.
+  - Fix bug the prevented reset of transaction write state in between retries.
+- functions/metadata:
+  - Make Metadata.Resource a pointer.
+- logging:
+  - Make SpanID available in logging.Entry.
+- metadata:
+  - Wrap !200 error code in a typed err.
+- profiler:
+  - Add function to check if function name is within a particular file in the
+    profile.
+  - Set parent field in create profile request.
+  - Return kubernetes client to start cluster, so client can be used to poll
+    cluster.
+  - Add function for checking if filename is in profile.
+- pubsub:
+  - Fix bug where messages expired without an initial modack in
+    synchronous=true mode.
+  - Receive does not retry ResourceExhausted errors.
+- spanner:
+  - client.Close now cancels existing requests and should be much faster for
+    large amounts of sessions.
+  - Correctly allow MinOpened sessions to be spun up.
+
+## v0.34.0
+
+- functions/metadata:
+  - Switch to using JSON in context.
+  - Make Resource a value.
+- vision: Fix ProductSearch return type.
+- datastore: Add an example for how to handle MultiError.
+
+## v0.33.1
+
+- compute: Removes an erroneously added go.mod.
+- logging: Populate source location in fromLogEntry.
+
+## v0.33.0
+
+- bttest:
+  - Add support for apply_label_transformer.
+- expr:
+  - Add expr library.
+- firestore:
+  - Support retrieval of missing documents.
+- kms:
+  - Add IAM methods.
+- pubsub:
+  - Clarify extension documentation.
+- scheduler:
+  - Add v1beta1 client.
+- vision:
+  - Add product search helper.
+  - Add new product search client.
+
+## v0.32.0
+
+Note: This release is the last to support Go 1.6 and 1.8.
+
+- bigquery:
+    - Add support for removing an expiration.
+    - Ignore NeverExpire in Table.Create.
+    - Validate table expiration time.
+- cbt:
+    - Add note about not supporting arbitrary bytes.
+- datastore:
+    - Align key checks.
+- firestore:
+    - Return an error when using Start/End without providing values.
+- pubsub:
+    - Add pstest Close method.
+    - Clarify MaxExtension documentation.
+- securitycenter:
+    - Add v1beta1 client.
+- spanner:
+    - Allow nil in mutations.
+    - Improve doc of SessionPoolConfig.MaxOpened.
+    - Increase session deletion timeout from 5s to 15s.
+
+## v0.31.0
+
+- bigtable:
+    - Group mutations across multiple requests.
+- bigquery:
+    - Link to bigquery troubleshooting errors page in bigquery.Error comment.
+- cbt:
+    - Fix go generate command.
+    - Document usage of both maxage + maxversions.
+- datastore:
+    - Passing nil keys results in ErrInvalidKey.
+- firestore:
+    - Clarify what Document.DataTo does with untouched struct fields.
+- profile:
+    - Validate service name in agent.
+- pubsub:
+    - Fix deadlock with pstest and ctx.Cancel.
+    - Fix a possible deadlock in pstest.
+- trace:
+    - Update doc URL with new fragment.
+
+Special thanks to @fastest963 for going above and beyond helping us to debug
+hard-to-reproduce Pub/Sub issues.
+
 ## v0.30.0
 
 - spanner: DML support added. See https://godoc.org/cloud.google.com/go/spanner#hdr-DML_and_Partitioned_DML for more information.
@@ -106,7 +254,7 @@
 
 ## v0.25.0
 
-- Added [Code of Conduct](https://github.com/GoogleCloudPlatform/google-cloud-go/blob/master/CODE_OF_CONDUCT.md)
+- Added [Code of Conduct](https://github.com/googleapis/google-cloud-go/blob/master/CODE_OF_CONDUCT.md)
 - bigtable:
   - cbt: Support a GC policy of "never".
 - errorreporting:
