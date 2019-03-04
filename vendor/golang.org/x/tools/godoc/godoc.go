@@ -33,7 +33,9 @@ import (
 )
 
 // Fake relative package path for built-ins. Documentation for all globals
-// (not just exported ones) will be shown for packages in this directory.
+// (not just exported ones) will be shown for packages in this directory,
+// and there will be no association of consts, vars, and factory functions
+// with types (see issue 6645).
 const builtinPkgPath = "builtin"
 
 // FuncMap defines template functions used in godoc templates.
@@ -109,6 +111,9 @@ func (p *Presentation) initFuncMap() {
 
 		// check whether to display third party section or not
 		"hasThirdParty": hasThirdParty,
+
+		// get the no. of columns to split the toc in search page
+		"tocColCount": tocColCount,
 	}
 	if p.URLForSrc != nil {
 		p.funcMap["srcLink"] = p.URLForSrc
