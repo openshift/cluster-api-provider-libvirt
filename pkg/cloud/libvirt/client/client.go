@@ -152,7 +152,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	if input.DomainName == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
-	glog.Infof("Create resource libvirt_domain")
+	glog.Info("Create resource libvirt_domain")
 
 	// Get default values from Host
 	domainDef, err := newDomainDefForConnection(client.connection)
@@ -165,7 +165,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
 	}
 
-	glog.Infof("setCoreOSIgnition")
+	glog.Info("Create ignition configuration")
 	if input.Ignition != nil {
 		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, input.VolumePoolName); err != nil {
 			return err
@@ -182,13 +182,13 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 		return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
 	}
 
-	glog.Infof("setDisks")
+	glog.Info("Create volume")
 	VolumeKey := baseVolumePath + input.VolumeName
 	if err := setDisks(&domainDef, client.connection, VolumeKey); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
-	glog.Infof("setNetworkInterfaces")
+	glog.Info("Set up network interface")
 	var waitForLeases []*libvirtxml.DomainInterface
 	hostName := input.HostName
 	if hostName == "" {
@@ -313,12 +313,12 @@ func (client *libvirtClient) DeleteDomain(name string) error {
 
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
 		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
-			glog.Infof("libvirt does not support undefine flags: will try again without flags")
+			glog.Info("libvirt does not support undefine flags: will try again without flags")
 			if err := domain.Undefine(); err != nil {
-				return fmt.Errorf("Couldn't undefine libvirt domain: %s", err)
+				return fmt.Errorf("couldn't undefine libvirt domain: %v", err)
 			}
 		} else {
-			return fmt.Errorf("Couldn't undefine libvirt domain with flags: %s", err)
+			return fmt.Errorf("couldn't undefine libvirt domain with flags: %v", err)
 		}
 	}
 

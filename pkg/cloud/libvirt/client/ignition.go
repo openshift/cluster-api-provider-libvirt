@@ -18,7 +18,7 @@ import (
 )
 
 func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName string) error {
-	glog.Infof("creating ignition file")
+	glog.Info("Creating ignition file")
 	ignitionDef := newIgnitionDef()
 
 	if ignition.UserDataSecret == "" {
@@ -38,7 +38,7 @@ func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *
 	ignitionDef.PoolName = poolName
 	ignitionDef.Content = string(userDataSecret)
 
-	glog.Infof("ignition: %+v", ignitionDef)
+	glog.Infof("Ignition: %+v", ignitionDef)
 
 	ignitionVolumeName, err := ignitionDef.createAndUpload(client)
 	if err != nil {

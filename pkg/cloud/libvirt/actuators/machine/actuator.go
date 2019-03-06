@@ -263,7 +263,7 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
 		if err := client.DeleteVolume(domainName); err != nil {
-			glog.Errorf("error cleaning up volume: %v", err)
+			glog.Errorf("Error cleaning up volume: %v", err)
 		}
 
 		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating domain %v", err), createEventAction)
@@ -373,7 +373,7 @@ func (a *Actuator) applyMachineStatus(
 		return nil
 	}
 
-	glog.Infof("Machine %s status has changed: %s", machine.Name, diff.ObjectReflectDiff(machine.Status, machineCopy.Status))
+	glog.Infof("Machine %s status has changed: %q", machine.Name, diff.ObjectReflectDiff(machine.Status, machineCopy.Status))
 
 	now := metav1.Now()
 	machineCopy.Status.LastUpdated = &now
