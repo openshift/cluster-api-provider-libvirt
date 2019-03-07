@@ -465,6 +465,15 @@ func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
 		}
 	}
 
+	hostname, err := dom.GetHostname(0)
+	if err != nil {
+		return addrs, nil
+	}
+	addrs = append(addrs, corev1.NodeAddress{
+		Type:    corev1.NodeHostName,
+		Address: hostname,
+	})
+
 	return addrs, nil
 }
 
