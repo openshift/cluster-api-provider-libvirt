@@ -92,6 +92,7 @@ func NewActuator(params ActuatorParams) (*Actuator, error) {
 
 const (
 	createEventAction = "Create"
+	updateEventAction = "Update"
 	deleteEventAction = "Delete"
 	noEventAction     = ""
 )
@@ -179,19 +180,26 @@ func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, m
 	glog.Infof("Updating machine %v", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
-	client, err := a.clientForMachine(a.codec, machine)
+	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
 	if err != nil {
-		return errWrapper.WithLog(err, "error creating libvirt client")
+		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), updateEventAction)
+	}
+
+	client, err := a.clientBuilder(machineProviderConfig.URI)
+	if err != nil {
+		return a.handleMachineError(machine, apierrors.UpdateMachine("error creating libvirt client: %v", err), updateEventAction)
 	}
 
 	defer client.Close()
 
 	dom, err := client.LookupDomainByName(machine.Name)
 	if err != nil {
-		return errWrapper.WithLog(err, "failed to look up domain by name")
+		return a.handleMachineError(machine, apierrors.UpdateMachine("failed to look up domain by name: %v", err), updateEventAction)
 	}
 
 	defer dom.Free()
+
+	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", machine.Name)
 
 	if err := a.updateStatus(machine, dom); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
@@ -205,7 +213,12 @@ func (a *Actuator) Exists(context context.Context, cluster *machinev1.Cluster, m
 	glog.Infof("Checking if machine %v exists.", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
-	client, err := a.clientForMachine(a.codec, machine)
+	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
+	if err != nil {
+		return false, a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), noEventAction)
+	}
+
+	client, err := a.clientBuilder(machineProviderConfig.URI)
 	if err != nil {
 		return false, errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -427,17 +440,6 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 	status.InstanceState = &stateString
 
 	return nil
-}
-
-// clientForMachine returns a libvirt client for the URI in the given
-// machine's provider config.
-func (a *Actuator) clientForMachine(codec codec, machine *machinev1.Machine) (libvirtclient.Client, error) {
-	machineProviderConfig, err := ProviderConfigMachine(codec, &machine.Spec)
-	if err != nil {
-		return nil, a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), createEventAction)
-	}
-
-	return a.clientBuilder(machineProviderConfig.URI)
 }
 
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a
