@@ -147,7 +147,7 @@ func getHostCapabilities(virConn *libvirt.Connect) (libvirtxml.Caps, error) {
 
 func getGuestForArchType(caps libvirtxml.Caps, arch string, virttype string) (libvirtxml.CapsGuest, error) {
 	for _, guest := range caps.Guests {
-		glog.Infof("Checking for %s/%s against %s/%s\n", arch, virttype, guest.Arch.Name, guest.OSType)
+		glog.Infof("Checking for %s/%s against %s/%s", arch, virttype, guest.Arch.Name, guest.OSType)
 		if guest.Arch.Name == arch && guest.OSType == virttype {
 			glog.Infof("Found %d machines in guest for %s/%s", len(guest.Arch.Machines), arch, virttype)
 			return guest, nil
@@ -157,7 +157,7 @@ func getGuestForArchType(caps libvirtxml.Caps, arch string, virttype string) (li
 }
 
 func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string, targetmachine string) (string, error) {
-	glog.Infof("getCanonicalMachineName")
+	glog.Info("Get machine name")
 	guest, err := getGuestForArchType(caps, arch, virttype)
 	if err != nil {
 		return "", err
@@ -267,18 +267,18 @@ func randomWWN(strlen int) string {
 
 func setDisks(domainDef *libvirtxml.Domain, virConn *libvirt.Connect, volumeKey string) error {
 	disk := newDefDisk(0)
-	glog.Infof("LookupStorageVolByKey")
+	glog.Info("Looking up storage volume by key")
 	diskVolume, err := virConn.LookupStorageVolByKey(volumeKey)
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", volumeKey)
 	}
-	glog.Infof("diskVolume")
+	glog.Info("Getting disk volume")
 	diskVolumeFile, err := diskVolume.GetPath()
 	if err != nil {
 		return fmt.Errorf("Error retrieving volume file: %s", err)
 	}
 
-	glog.Infof("DomainDiskSource")
+	glog.Info("Constructing domain disk source")
 	disk.Source = &libvirtxml.DomainDiskSource{
 		File: &libvirtxml.DomainDiskSourceFile{
 			File: diskVolumeFile,
@@ -347,7 +347,7 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 				if networkInterfaceHostname != "" {
 					hostname = networkInterfaceHostname
 				}
-				glog.Infof("Networkaddress %v", networkInterfaceAddress)
+				glog.Infof("Networkaddress: %v", networkInterfaceAddress)
 				if networkInterfaceAddress != "" {
 					_, networkCIDR, err := net.ParseCIDR(networkInterfaceAddress)
 					if err != nil {

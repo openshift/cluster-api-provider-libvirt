@@ -111,7 +111,7 @@ func newCloudInitDef() defCloudInit {
 // Create the ISO holding all the cloud-init data
 // Returns a string with the full path to the ISO file
 func (ci *defCloudInit) createISO() (string, error) {
-	glog.Infof("Creating new ISO")
+	glog.Info("Creating new ISO")
 	tmpDir, err := ci.createFiles()
 	if err != nil {
 		return "", err
@@ -132,7 +132,7 @@ func (ci *defCloudInit) createISO() (string, error) {
 
 	glog.Infof("About to execute cmd: %+v", cmd)
 	if err = cmd.Run(); err != nil {
-		return "", fmt.Errorf("Error while starting the creation of CloudInit's ISO image: %s", err)
+		return "", fmt.Errorf("error while starting the creation of CloudInit's ISO image: %s", err)
 	}
 	glog.Infof("ISO created at %s", isoDestination)
 
@@ -143,7 +143,7 @@ func (ci *defCloudInit) createISO() (string, error) {
 // Returns a string containing the name of the temporary directory and an error
 // object
 func (ci *defCloudInit) createFiles() (string, error) {
-	glog.Infof("Creating ISO contents")
+	glog.Info("Creating ISO contents")
 	tmpDir, err := ioutil.TempDir("", "cloudinit")
 	if err != nil {
 		return "", fmt.Errorf("Cannot create tmp directory for cloudinit ISO generation: %s",
@@ -162,7 +162,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 		return "", fmt.Errorf("Error while writing network-config to file: %s", err)
 	}
 
-	glog.Infof("ISO contents created")
+	glog.Info("ISO contents created")
 
 	return tmpDir, nil
 }

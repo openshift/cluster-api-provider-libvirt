@@ -282,7 +282,7 @@ func bootstrapCommand() *cobra.Command {
 				},
 			}
 
-			glog.Infof("Collecting master kubeconfig")
+			glog.Info("Collecting master kubeconfig")
 			config, err := f.GetMasterMachineRestConfig(masterMachine, lcw)
 			if err != nil {
 				return err
@@ -399,7 +399,6 @@ func checkFlags(cmd *cobra.Command) error {
 func main() {
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error occurred: %v\n", err)
-		os.Exit(1)
+		glog.Fatalf("Error occurred: %v", err)
 	}
 }

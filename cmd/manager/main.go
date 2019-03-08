@@ -44,7 +44,7 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	glog.Infof("Registering Components.")
+	glog.Info("Registering Components")
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
@@ -61,10 +61,13 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	glog.Infof("Starting the Cmd.")
+	glog.Info("Starting the Cmd")
 
 	// Start the Cmd
-	glog.Fatal(mgr.Start(signals.SetupSignalHandler()))
+	err = mgr.Start(signals.SetupSignalHandler())
+	if err != nil {
+		glog.Fatal(err)
+	}
 }
 
 func initActuator(m manager.Manager) {
