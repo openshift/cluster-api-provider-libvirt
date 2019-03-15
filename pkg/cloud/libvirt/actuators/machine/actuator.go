@@ -465,7 +465,11 @@ func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
 		}
 	}
 
-	hostname, err := dom.GetHostname(0)
+	// In case of libvirt dom.GetHostname(0) will not provide the hostname info since it need qemu-guest-agent
+	// installed on the VM to fetch this info https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainGetHostname
+	// Since for libvirt case we are providing the hostname using libvirt provided dhcp and assign same to domain name
+	// We can reuse it here also instead adding another package to RHCOS image.
+	hostname, err := dom.GetName()
 	if err != nil {
 		return addrs, nil
 	}
