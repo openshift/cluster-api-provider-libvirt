@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -168,24 +167,7 @@ func (ci *defCloudInit) createFiles() (string, error) {
 }
 
 func (ci *defCloudInit) uploadIso(client *libvirtClient, iso string) (string, error) {
-
-	pool, err := client.connection.LookupStoragePoolByName(ci.PoolName)
-	if err != nil {
-		return "", fmt.Errorf("can't find storage pool '%s'", ci.PoolName)
-	}
-	defer pool.Free()
-
-	// client.poolMutexKV.Lock(ci.PoolName)
-	// defer client.poolMutexKV.Unlock(ci.PoolName)
-
-	// Refresh the pool of the volume so that libvirt knows it is
-	// not longer in use.
-	waitForSuccess("Error refreshing pool for volume", func() error {
-		return pool.Refresh(0)
-	})
-
-	volumeDef := newDefVolume()
-	volumeDef.Name = ci.Name
+	volumeDef := newDefVolume(ci.Name)
 
 	// an existing image was given, this mean we can't choose size
 	img, err := newImage(iso)
@@ -204,30 +186,7 @@ func (ci *defCloudInit) uploadIso(client *libvirtClient, iso string) (string, er
 	volumeDef.Capacity.Value = size
 	volumeDef.Target.Format.Type = "raw"
 
-	volumeDefXML, err := xml.Marshal(volumeDef)
-	if err != nil {
-		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
-	}
-
-	// create the volume
-	volume, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
-	if err != nil {
-		return "", fmt.Errorf("Error creating libvirt volume for cloudinit device %s: %s", ci.Name, err)
-	}
-	defer volume.Free()
-
-	// upload ISO file
-	err = img.importImage(newCopier(client.connection, volume, uint64(size)), volumeDef)
-	if err != nil {
-		return "", fmt.Errorf("Error while uploading cloudinit %s: %s", img.string(), err)
-	}
-
-	volumeKey, err := volume.GetKey()
-	if err != nil {
-		return "", fmt.Errorf("Error retrieving volume key: %s", err)
-	}
-
-	return volumeKey, nil
+	return uploadVolume(ci.PoolName, client, volumeDef, img)
 }
 
 func removeTmpIsoDirectory(iso string) {

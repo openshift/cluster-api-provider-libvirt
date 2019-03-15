@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,7 +11,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/golang/glog"
-	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
@@ -75,26 +73,7 @@ func newIgnitionDef() defIgnition {
 // uploads it to the libVirt pool
 // Returns a string holding terraform's internal ID of this resource
 func (ign *defIgnition) createAndUpload(client *libvirtClient) (string, error) {
-	pool, err := client.connection.LookupStoragePoolByName(ign.PoolName)
-	if err != nil {
-		return "", fmt.Errorf("can't find storage pool %q", ign.PoolName)
-	}
-	defer pool.Free()
-
-	//client.poolMutexKV.Lock(ign.PoolName)
-	//defer client.poolMutexKV.Unlock(ign.PoolName)
-
-	// Refresh the pool of the volume so that libvirt knows it is
-	// not longer in use.
-	err = waitForSuccess("Error refreshing pool for volume", func() error {
-		return pool.Refresh(0)
-	})
-	if err != nil {
-		return "", fmt.Errorf("timeout when calling waitForSuccess: %v", err)
-	}
-
-	volumeDef := newDefVolume()
-	volumeDef.Name = ign.Name
+	volumeDef := newDefVolume(ign.Name)
 
 	ignFile, err := ign.createFile()
 	if err != nil {
@@ -121,30 +100,8 @@ func (ign *defIgnition) createAndUpload(client *libvirtClient) (string, error) {
 	volumeDef.Capacity.Value = size
 	volumeDef.Target.Format.Type = "raw"
 
-	volumeDefXML, err := xml.Marshal(volumeDef)
-	if err != nil {
-		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
-	}
+	return uploadVolume(ign.PoolName, client, volumeDef, img)
 
-	// create the volume
-	volume, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
-	if err != nil {
-		return "", fmt.Errorf("Error creating libvirt volume for Ignition %s: %s", ign.Name, err)
-	}
-	defer volume.Free()
-
-	// upload ignition file
-	err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
-	if err != nil {
-		return "", fmt.Errorf("Error while uploading ignition file %s: %s", img.string(), err)
-	}
-
-	key, err := volume.GetKey()
-	if err != nil {
-		return "", fmt.Errorf("Error retrieving volume key: %s", err)
-	}
-	glog.Infof("Ignition ID: %s", key)
-	return key, nil
 }
 
 // Dumps the Ignition object to a temporary ignition file
@@ -185,36 +142,4 @@ func (ign *defIgnition) createFile() (string, error) {
 		}
 	}
 	return tempFile.Name(), nil
-}
-
-func newCopier(virConn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) func(src io.Reader) error {
-	copier := func(src io.Reader) error {
-		var bytesCopied int64
-
-		stream, err := virConn.NewStream(0)
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			if uint64(bytesCopied) != size {
-				stream.Abort()
-			} else {
-				stream.Finish()
-			}
-			stream.Free()
-		}()
-
-		volume.Upload(stream, 0, size, 0)
-
-		sio := newStreamIO(*stream)
-
-		bytesCopied, err = io.Copy(sio, src)
-		if err != nil {
-			return err
-		}
-		glog.Infof("%d bytes uploaded\n", bytesCopied)
-		return nil
-	}
-	return copier
 }
