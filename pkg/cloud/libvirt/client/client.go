@@ -113,6 +113,9 @@ type Client interface {
 
 	// DeleteVolume deletes a domain based on its name
 	DeleteVolume(name string) error
+
+	// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
+	LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error)
 }
 
 type libvirtClient struct {
@@ -121,7 +124,7 @@ type libvirtClient struct {
 
 var _ Client = &libvirtClient{}
 
-// Client libvirt, generate libvirt client given URI
+// NewClient returns libvirt client for the specified URI
 func NewClient(URI string) (Client, error) {
 	connection, err := libvirt.NewConnect(URI)
 	if err != nil {
@@ -490,4 +493,26 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	}
 
 	return nil
+}
+
+// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
+func (client *libvirtClient) LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error) {
+	network, err := client.connection.LookupNetworkByName(networkName)
+	if err != nil {
+		glog.Errorf("Failed to fetch network %s from the libvirt", networkName)
+		return "", err
+	}
+
+	dchpLeases, err := network.GetDHCPLeases()
+	if err != nil {
+		glog.Errorf("Failed to fetch dhcp leases for the network %s", networkName)
+		return "", err
+	}
+
+	for _, lease := range dchpLeases {
+		if lease.IPaddr == domIPAddress {
+			return lease.Hostname, nil
+		}
+	}
+	return "", fmt.Errorf("Failed to find hostname for the DHCP lease with IP %s", domIPAddress)
 }

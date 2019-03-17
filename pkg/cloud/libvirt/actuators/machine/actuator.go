@@ -139,7 +139,7 @@ func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, m
 		}
 	}()
 
-	if err := a.updateStatus(machine, dom); err != nil {
+	if err := a.updateStatus(machine, dom, client); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
 
@@ -201,7 +201,7 @@ func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, m
 
 	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", machine.Name)
 
-	if err := a.updateStatus(machine, dom); err != nil {
+	if err := a.updateStatus(machine, dom, client); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
 
@@ -334,7 +334,7 @@ func ProviderConfigMachine(codec codec, ms *machinev1.MachineSpec) (*providercon
 }
 
 // updateStatus updates a machine object's status.
-func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain) error {
+func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain, client libvirtclient.Client) error {
 	glog.Infof("Updating status for %s", machine.Name)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
@@ -349,7 +349,12 @@ func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain)
 		return err
 	}
 
-	addrs, err := NodeAddresses(dom)
+	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
+	if err != nil {
+		glog.Errorf("Unable to get provider config from the machine %s", machine.Name)
+	}
+
+	addrs, err := NodeAddresses(client, dom, machineProviderConfig.NetworkInterfaceName)
 	if err != nil {
 		glog.Errorf("Unable to get node addresses: %v", err)
 		return err
@@ -444,7 +449,7 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 
 // NodeAddresses returns a slice of corev1.NodeAddress objects for a
 // given libvirt domain.
-func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
+func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInterfaceName string) ([]corev1.NodeAddress, error) {
 	addrs := []corev1.NodeAddress{}
 
 	// If the domain is nil, return an empty address array.
@@ -464,18 +469,20 @@ func NodeAddresses(dom *libvirt.Domain) ([]corev1.NodeAddress, error) {
 				Type:    corev1.NodeInternalIP,
 				Address: addr.Addr,
 			})
+
+			if networkInterfaceName != "" {
+				hostname, err := client.LookupDomainHostnameByDHCPLease(addr.Addr, networkInterfaceName)
+				if err != nil {
+					return addrs, err
+				}
+
+				addrs = append(addrs, corev1.NodeAddress{
+					Type:    corev1.NodeHostName,
+					Address: hostname,
+				})
+			}
 		}
 	}
-
-	hostname, err := dom.GetHostname(0)
-	if err != nil {
-		return addrs, nil
-	}
-	addrs = append(addrs, corev1.NodeAddress{
-		Type:    corev1.NodeHostName,
-		Address: hostname,
-	})
-
 	return addrs, nil
 }
 
