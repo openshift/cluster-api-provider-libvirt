@@ -2,6 +2,7 @@ required = [
     "github.com/emicklei/go-restful",
     "github.com/onsi/ginkgo", # for test framework
     "github.com/onsi/gomega", # for test matchers
+    "github.com/golang/mock/mockgen", # for mock generation
     "k8s.io/client-go/plugin/pkg/client/auth/gcp", # for development against gcp
     "k8s.io/code-generator/cmd/deepcopy-gen", # for go generate
     "sigs.k8s.io/controller-tools/cmd/controller-gen", # for crd/rbac generation
@@ -25,6 +26,10 @@ required = [
 [[constraint]]
   name = "github.com/davecgh/go-spew"
   version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/golang/mock"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/ghodss/yaml"
