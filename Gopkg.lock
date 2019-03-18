@@ -98,7 +98,11 @@
 [[projects]]
   digest = "1:7912bb30698616cf0c41e5ef6a29a447c9a3e76bfcacbc21420ed3cdf616fd94"
   name = "github.com/golang/mock"
-  packages = ["gomock"]
+  packages = [
+    "gomock",
+    "mockgen",
+    "mockgen/model",
+  ]
   pruneopts = "T"
   revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
   version = "v1.2.0"
@@ -1040,6 +1044,7 @@
     "github.com/ghodss/yaml",
     "github.com/golang/glog",
     "github.com/golang/mock/gomock",
+    "github.com/golang/mock/mockgen",
     "github.com/libvirt/libvirt-go",
     "github.com/libvirt/libvirt-go-xml",
     "github.com/onsi/ginkgo",
