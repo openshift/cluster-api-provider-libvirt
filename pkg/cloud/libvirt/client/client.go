@@ -353,8 +353,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		return fmt.Errorf("storage volume '%s' already exists", input.VolumeName)
 	}
 
-	volumeDef := newDefVolume()
-	volumeDef.Name = input.VolumeName
+	volumeDef := newDefVolume(input.VolumeName)
 	volumeDef.Target.Format.Type = input.VolumeFormat
 	var img image
 	// an source image was given, this mean we can't choose size
@@ -377,7 +376,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		volumeDef.Capacity.Value = size
 	} else if input.BaseVolumeID != "" {
 		volume = nil
-		volumeDef.Capacity.Value = uint64(size)
+		volumeDef.Capacity.Value = uint64(defaultSize)
 		baseVolume, err := client.connection.LookupStorageVolByKey(input.BaseVolumeID)
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeID)

@@ -4,11 +4,11 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"github.com/golang/glog"
+	"io"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang/glog"
 
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
@@ -16,7 +16,7 @@ import (
 
 const (
 	// TODO: support size in the API
-	size = 17706254336
+	defaultSize = 17706254336
 )
 
 // ErrVolumeNotFound is returned when a domain is not found
@@ -44,8 +44,9 @@ func waitForSuccess(errorMessage string, f func() error) error {
 	}
 }
 
-func newDefVolume() libvirtxml.StorageVolume {
+func newDefVolume(name string) libvirtxml.StorageVolume {
 	return libvirtxml.StorageVolume{
+		Name: name,
 		Target: &libvirtxml.StorageVolumeTarget{
 			Format: &libvirtxml.StorageVolumeTargetFormat{
 				Type: "qcow2",
@@ -115,4 +116,80 @@ func timeFromEpoch(str string) time.Time {
 	s, _ = strconv.Atoi(ts[0])
 
 	return time.Unix(int64(s), int64(ns))
+}
+
+func uploadVolume(poolName string, client *libvirtClient, volumeDef libvirtxml.StorageVolume, img image) (string, error) {
+	pool, err := client.connection.LookupStoragePoolByName(poolName)
+	if err != nil {
+		return "", fmt.Errorf("can't find storage pool %q", poolName)
+	}
+	defer pool.Free()
+
+	//client.poolMutexKV.Lock(poolName)
+	//defer client.poolMutexKV.Unlock(poolName)
+
+	// Refresh the pool of the volume so that libvirt knows it is
+	// not longer in use.
+	err = waitForSuccess("Error refreshing pool for volume", func() error {
+		return pool.Refresh(0)
+	})
+	if err != nil {
+		return "", fmt.Errorf("timeout when calling waitForSuccess: %v", err)
+	}
+
+	volumeDefXML, err := xml.Marshal(volumeDef)
+	if err != nil {
+		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
+	}
+	// create the volume
+	volume, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
+	if err != nil {
+		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
+	}
+	defer volume.Free()
+
+	// upload ISO file
+	err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+	if err != nil {
+		return "", fmt.Errorf("Error while uploading volume %s: %s", img.string(), err)
+	}
+
+	volumeKey, err := volume.GetKey()
+	if err != nil {
+		return "", fmt.Errorf("Error retrieving volume key: %s", err)
+	}
+	glog.Infof("Volume ID: %s", volumeKey)
+	return volumeKey, nil
+}
+
+func newCopier(virConn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) func(src io.Reader) error {
+	copier := func(src io.Reader) error {
+		var bytesCopied int64
+
+		stream, err := virConn.NewStream(0)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if uint64(bytesCopied) != size {
+				stream.Abort()
+			} else {
+				stream.Finish()
+			}
+			stream.Free()
+		}()
+
+		volume.Upload(stream, 0, size, 0)
+
+		sio := newStreamIO(*stream)
+
+		bytesCopied, err = io.Copy(sio, src)
+		if err != nil {
+			return err
+		}
+		glog.Infof("%d bytes uploaded\n", bytesCopied)
+		return nil
+	}
+	return copier
 }
