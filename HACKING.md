@@ -63,6 +63,8 @@ image:
 
 ```
 oc scale --replicas 0 deployments/clusterapi-manager-controllers
+# If we scale up immediately after, new images will not be used.
+sleep 5
 oc scale --replicas 1 deployments/clusterapi-manager-controllers
 ```
 
