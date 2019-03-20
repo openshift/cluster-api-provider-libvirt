@@ -20,8 +20,9 @@ required = [
   go-tests = true
 
 [[constraint]]
-  name = "github.com/openshift/cluster-api"
-  revision = "0c3e884db79556cf786aa8436f5be977ef10c211"
+  # cluster-api-actuator-pkg defines the contstraint for cluster-api
+  name = "github.com/openshift/cluster-api-actuator-pkg"
+  revision = "a086b6d5db86e7e48a6ebce24343e461be233440"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"
