@@ -10,7 +10,7 @@ metadata:
     machine.openshift.io/cluster-api-machine-role: infra
     machine.openshift.io/cluster-api-machine-type: worker
 spec:
-  providerConfig:
+  providerSpec:
     value:
       apiVersion: libvirtproviderconfig.k8s.io/v1alpha1
       kind: LibvirtMachineProviderConfig
