@@ -32,12 +32,6 @@ kubeadm init --apiserver-bind-port 8443 --token 2iqzqm.85bs0x6miyx1nm7l {{range 
 # Enable networking by default.
 kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml --kubeconfig /etc/kubernetes/admin.conf
 
-# Binaries expected under /opt/cni/bin are actually under /usr/libexec/cni
-mkdir -p /opt/cni/bin
-pushd /usr/libexec/cni
-cp bridge loopback host-local /opt/cni/bin
-popd
-
 mkdir -p /root/.kube
 cp -i /etc/kubernetes/admin.conf /root/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
