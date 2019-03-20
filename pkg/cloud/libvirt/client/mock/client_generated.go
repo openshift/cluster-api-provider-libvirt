@@ -148,3 +148,18 @@ func (mr *MockClientMockRecorder) DeleteVolume(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolume", reflect.TypeOf((*MockClient)(nil).DeleteVolume), name)
 }
+
+// LookupDomainHostnameByDHCPLease mocks base method
+func (m *MockClient) LookupDomainHostnameByDHCPLease(domIPAddress, networkName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LookupDomainHostnameByDHCPLease", domIPAddress, networkName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LookupDomainHostnameByDHCPLease indicates an expected call of LookupDomainHostnameByDHCPLease
+func (mr *MockClientMockRecorder) LookupDomainHostnameByDHCPLease(domIPAddress, networkName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupDomainHostnameByDHCPLease", reflect.TypeOf((*MockClient)(nil).LookupDomainHostnameByDHCPLease), domIPAddress, networkName)
+}
