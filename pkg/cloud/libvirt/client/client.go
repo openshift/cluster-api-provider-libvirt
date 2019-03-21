@@ -379,10 +379,20 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		volumeDef.Capacity.Value = size
 	} else if input.BaseVolumeID != "" {
 		volume = nil
-		volumeDef.Capacity.Value = uint64(defaultSize)
+
 		baseVolume, err := client.connection.LookupStorageVolByKey(input.BaseVolumeID)
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeID)
+		}
+		var baseVolumeInfo *libvirt.StorageVolInfo
+		baseVolumeInfo, err = baseVolume.GetInfo()
+		if err != nil {
+			return fmt.Errorf("Can't retrieve volume info %s", input.BaseVolumeID)
+		}
+		if baseVolumeInfo.Capacity > uint64(defaultSize) {
+			volumeDef.Capacity.Value = baseVolumeInfo.Capacity
+		} else {
+			volumeDef.Capacity.Value = uint64(defaultSize)
 		}
 		backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 		if err != nil {
