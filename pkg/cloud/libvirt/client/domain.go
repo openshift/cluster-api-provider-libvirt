@@ -426,6 +426,8 @@ func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) 
 		return fmt.Errorf("machine does not have an DomainVcpu set")
 	}
 
+	domainDef.CPU.Mode = "host-passthrough"
+
 	//setConsoles(d, &domainDef)
 	//setCmdlineArgs(d, &domainDef)
 	//setFirmware(d, &domainDef)
