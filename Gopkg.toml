@@ -19,9 +19,9 @@ required = [
 [prune]
   go-tests = true
 
-[[constraint]]
+[[override]]
   name = "github.com/openshift/cluster-api"
-  revision = "8b6a416a1830212712a6b03c5431afbd4f586d62"
+  branch = "openshift-4.0-cluster-api-0.0.0-alpha.4"
 
 [[constraint]]
   name = "github.com/openshift/cluster-api-actuator-pkg"
