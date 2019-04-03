@@ -4,7 +4,7 @@ COPY . .
 RUN go build -o machine-controller-manager ./cmd/manager
 RUN go build -o manager ./vendor/github.com/openshift/cluster-api/cmd/manager
 
-FROM registry.svc.ci.openshift.org/openshift/origin-v4.0:base
+FROM docker.io/centos:7
 RUN INSTALL_PKGS=" \
       libvirt-libs openssh-clients genisoimage \
       " && \
