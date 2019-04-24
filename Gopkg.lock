@@ -428,6 +428,8 @@
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
     "pkg/controller/error",
     "pkg/controller/machine",
+    "pkg/controller/node",
+    "pkg/controller/noderefutil",
     "pkg/errors",
     "pkg/util",
   ]
@@ -436,7 +438,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9c11f175671408bd03a6ef847b0d3de5a7c89ccd7ec92def30a96d5d93a6369d"
+  digest = "1:4d5a5c42448464de04f04edccde08da77ada279f7f3ad2f5278aa63fe13b9716"
   name = "github.com/openshift/cluster-api-actuator-pkg"
   packages = [
     "pkg/e2e/framework",
@@ -444,15 +446,18 @@
     "pkg/types",
   ]
   pruneopts = "T"
-  revision = "417ca171b620cd9ed3c504dc2f39ebe31f4dad3d"
+  revision = "90309f4b0f5ae4255cc04cbe6dacbfc00267cab6"
 
 [[projects]]
   branch = "master"
-  digest = "1:99f72b8afa76d7ccac0225c685d3cbeee2f137d69b387c3ef5a9b0b0416a493c"
+  digest = "1:e01b8e3b0ce71b77c06a7d08ff3ddb103da96ced53eb1b4dabca4be90d711491"
   name = "github.com/openshift/cluster-autoscaler-operator"
-  packages = ["pkg/apis/autoscaling/v1alpha1"]
+  packages = [
+    "pkg/apis/autoscaling/v1",
+    "pkg/apis/autoscaling/v1beta1",
+  ]
   pruneopts = "T"
-  revision = "54672e5e562be1c55db424a744da445fc715f7b3"
+  revision = "d443071aaf9f99a15f107744e82a7d5a358a89f5"
 
 [[projects]]
   branch = "master"
