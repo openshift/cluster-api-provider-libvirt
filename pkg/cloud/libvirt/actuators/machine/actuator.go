@@ -118,7 +118,7 @@ func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, m
 		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), createEventAction)
 	}
 
-	client, err := a.clientBuilder(machineProviderConfig.URI)
+	client, err := a.clientBuilder(machineProviderConfig.URI, machineProviderConfig.Volume.PoolName)
 	if err != nil {
 		return a.handleMachineError(machine, apierrors.CreateMachine("error creating libvirt client: %v", err), createEventAction)
 	}
@@ -157,7 +157,7 @@ func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, m
 		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), deleteEventAction)
 	}
 
-	client, err := a.clientBuilder(machineProviderConfig.URI)
+	client, err := a.clientBuilder(machineProviderConfig.URI, machineProviderConfig.Volume.PoolName)
 	if err != nil {
 		return a.handleMachineError(machine, apierrors.DeleteMachine("error creating libvirt client: %v", err), deleteEventAction)
 	}
@@ -185,7 +185,7 @@ func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, m
 		return a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), updateEventAction)
 	}
 
-	client, err := a.clientBuilder(machineProviderConfig.URI)
+	client, err := a.clientBuilder(machineProviderConfig.URI, machineProviderConfig.Volume.PoolName)
 	if err != nil {
 		return a.handleMachineError(machine, apierrors.UpdateMachine("error creating libvirt client: %v", err), updateEventAction)
 	}
@@ -218,7 +218,7 @@ func (a *Actuator) Exists(context context.Context, cluster *machinev1.Cluster, m
 		return false, a.handleMachineError(machine, apierrors.InvalidMachineConfiguration("error getting machineProviderConfig from spec: %v", err), noEventAction)
 	}
 
-	client, err := a.clientBuilder(machineProviderConfig.URI)
+	client, err := a.clientBuilder(machineProviderConfig.URI, machineProviderConfig.Volume.PoolName)
 	if err != nil {
 		return false, errWrapper.WithLog(err, "error creating libvirt client")
 	}
@@ -245,10 +245,9 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 	// Create volume
 	if err := client.CreateVolume(
 		libvirtclient.CreateVolumeInput{
-			VolumeName:   domainName,
-			PoolName:     machineProviderConfig.Volume.PoolName,
-			BaseVolumeID: machineProviderConfig.Volume.BaseVolumeID,
-			VolumeFormat: "qcow2",
+			VolumeName:     domainName,
+			BaseVolumeName: machineProviderConfig.Volume.BaseVolumeID,
+			VolumeFormat:   "qcow2",
 		}); err != nil {
 		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating volume %v", err), createEventAction)
 	}
@@ -261,7 +260,6 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 		VolumeName:              domainName,
 		CloudInitVolumeName:     cloudInitVolumeName(domainName),
 		IgnitionVolumeName:      ignitionVolumeName(domainName),
-		VolumePoolName:          machineProviderConfig.Volume.PoolName,
 		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
 		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
 		AddressRange:            a.cidrOffset,

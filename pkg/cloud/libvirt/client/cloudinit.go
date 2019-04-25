@@ -19,7 +19,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
 
-func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, poolName, domainName string) error {
+func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, domainName string) error {
 
 	// At least user data or ssh access needs to be set to create the cloud init
 	if cloudInit.UserDataSecret == "" && !cloudInit.SSHAccess {
@@ -56,7 +56,7 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit
 	cloudInitDef.UserData = string(userData)
 	cloudInitDef.MetaData = string(metaData)
 	cloudInitDef.Name = cloudInitISOName
-	cloudInitDef.PoolName = poolName
+	cloudInitDef.PoolName = client.poolName
 
 	glog.Infof("cloudInitDef: %+v", cloudInitDef)
 
