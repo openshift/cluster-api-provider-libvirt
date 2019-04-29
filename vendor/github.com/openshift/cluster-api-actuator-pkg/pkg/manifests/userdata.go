@@ -19,7 +19,7 @@ setenforce 0
 yum install -y docker
 systemctl enable docker
 systemctl start docker
-yum install -y kubelet-1.11.3 kubeadm-1.11.3 kubectl-1.11.3 --disableexcludes=kubernetes
+yum install -y kubelet-1.12.3 kubeadm-1.12.3 kubectl-1.12.3 kubernetes-cni-0.6.0-0 --disableexcludes=kubernetes
 
 cat <<EOF > /etc/default/kubelet
 KUBELET_KUBEADM_EXTRA_ARGS=--cgroup-driver=systemd
@@ -70,7 +70,7 @@ setenforce 0
 yum install -y docker
 systemctl enable docker
 systemctl start docker
-yum install -y kubelet-1.11.3 kubeadm-1.11.3 --disableexcludes=kubernetes
+yum install -y kubelet-1.12.3 kubeadm-1.12.3 kubernetes-cni-0.6.0-0 --disableexcludes=kubernetes
 
 cat <<EOF > /etc/default/kubelet
 KUBELET_KUBEADM_EXTRA_ARGS=--cgroup-driver=systemd

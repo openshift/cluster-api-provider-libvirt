@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/glog"
-	autoscalingv1alpha1 "github.com/openshift/cluster-autoscaler-operator/pkg/apis/autoscaling/v1alpha1"
+	autoscalingv1 "github.com/openshift/cluster-autoscaler-operator/pkg/apis/autoscaling/v1"
+	"github.com/openshift/cluster-autoscaler-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/reference"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -27,7 +29,6 @@ import (
 
 const (
 	controllerName      = "cluster-autoscaler-controller"
-	criticalPod         = "scheduler.alpha.kubernetes.io/critical-pod"
 	caServiceAccount    = "cluster-autoscaler"
 	caPriorityClassName = "system-cluster-critical"
 )
@@ -101,7 +102,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	// Watch for changes to primary resource ClusterAutoscaler
-	err = c.Watch(&source.Kind{Type: &autoscalingv1alpha1.ClusterAutoscaler{}}, &handler.EnqueueRequestForObject{}, p)
+	err = c.Watch(&source.Kind{Type: &autoscalingv1.ClusterAutoscaler{}}, &handler.EnqueueRequestForObject{}, p)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	// Watch for changes to secondary resources owned by a ClusterAutoscaler
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &autoscalingv1alpha1.ClusterAutoscaler{},
+		OwnerType:    &autoscalingv1.ClusterAutoscaler{},
 	})
 
 	if err != nil {
@@ -123,10 +124,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // object and makes changes based on the state read and what is in the
 // ClusterAutoscaler.Spec
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconciling ClusterAutoscaler %s\n", request.Name)
+	klog.Infof("Reconciling ClusterAutoscaler %s\n", request.Name)
 
 	// Fetch the ClusterAutoscaler instance
-	ca := &autoscalingv1alpha1.ClusterAutoscaler{}
+	ca := &autoscalingv1.ClusterAutoscaler{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, ca)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -134,19 +135,25 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// reconcile request.  Owned objects are automatically
 			// garbage collected. For additional cleanup logic use
 			// finalizers.  Return and don't requeue.
+			klog.Infof("ClusterAutoscaler %s not found, will not reconcile", request.Name)
 			return reconcile.Result{}, nil
 		}
 
 		// Error reading the object - requeue the request.
-		glog.Errorf("Error reading ClusterAutoscaler: %v", err)
+		klog.Errorf("Error reading ClusterAutoscaler: %v", err)
 		return reconcile.Result{}, err
 	}
+
+	// caRef is a reference to the ClusterAutoscaler object, but with the
+	// namespace for cluster-autoscaler deployments set.  This keeps events
+	// generated for these cluster scoped objects out of the default namespace.
+	caRef := r.objectReference(ca)
 
 	_, err = r.GetAutoscaler(ca)
 	if err != nil && !errors.IsNotFound(err) {
 		errMsg := fmt.Sprintf("Error getting cluster-autoscaler deployment: %v", err)
-		r.recorder.Event(ca, corev1.EventTypeWarning, "FailedGetDeployment", errMsg)
-		glog.Error(errMsg)
+		r.recorder.Event(caRef, corev1.EventTypeWarning, "FailedGetDeployment", errMsg)
+		klog.Error(errMsg)
 
 		return reconcile.Result{}, err
 	}
@@ -154,63 +161,32 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if errors.IsNotFound(err) {
 		if err := r.CreateAutoscaler(ca); err != nil {
 			errMsg := fmt.Sprintf("Error creating ClusterAutoscaler deployment: %v", err)
-			r.recorder.Event(ca, corev1.EventTypeWarning, "FailedCreate", errMsg)
-			glog.Error(errMsg)
+			r.recorder.Event(caRef, corev1.EventTypeWarning, "FailedCreate", errMsg)
+			klog.Error(errMsg)
 
 			return reconcile.Result{}, err
 		}
 
 		msg := fmt.Sprintf("Created ClusterAutoscaler deployment: %s", r.AutoscalerName(ca))
-		r.recorder.Eventf(ca, corev1.EventTypeNormal, "SuccessfulCreate", msg)
-		glog.V(2).Info(msg)
+		r.recorder.Eventf(caRef, corev1.EventTypeNormal, "SuccessfulCreate", msg)
+		klog.Info(msg)
 
 		return reconcile.Result{}, nil
 	}
 
 	if err := r.UpdateAutoscaler(ca); err != nil {
 		errMsg := fmt.Sprintf("Error updating cluster-autoscaler deployment: %v", err)
-		r.recorder.Event(ca, corev1.EventTypeWarning, "FailedUpdate", errMsg)
-		glog.Error(errMsg)
+		r.recorder.Event(caRef, corev1.EventTypeWarning, "FailedUpdate", errMsg)
+		klog.Error(errMsg)
 
 		return reconcile.Result{}, err
 	}
 
 	msg := fmt.Sprintf("Updated ClusterAutoscaler deployment: %s", r.AutoscalerName(ca))
-	r.recorder.Eventf(ca, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
-	glog.V(2).Info(msg)
+	r.recorder.Eventf(caRef, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
+	klog.Info(msg)
 
 	return reconcile.Result{}, nil
-}
-
-// AvailableAndUpdated returns true if all cluster autoscalers are running and at the latest version
-// as defined by the operator.
-func (r *Reconciler) AvailableAndUpdated() (bool, error) {
-	ca := &autoscalingv1alpha1.ClusterAutoscaler{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: r.config.Namespace, Name: r.config.Name}, ca)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// no CA, do nothing
-			return true, nil
-		}
-		return false, err
-	}
-	dep, err := r.GetAutoscaler(ca)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// waiting for deployment to be created
-			return false, nil
-		}
-		return false, err
-	}
-	if dep.ObjectMeta.Annotations["release.openshift.io/version"] != r.config.ReleaseVersion {
-		// still haven't synced the release version
-		return false, nil
-	}
-	if dep.Status.ObservedGeneration < dep.Generation || dep.Status.UpdatedReplicas != dep.Status.Replicas || dep.Status.AvailableReplicas == 0 {
-		// deployment hasn't rolled out a new controller or we still have the old version hanging around
-		return false, nil
-	}
-	return true, nil
 }
 
 // SetConfig sets the given config on the reconciler.
@@ -224,7 +200,7 @@ func (r *Reconciler) SetConfig(cfg *Config) {
 func (r *Reconciler) NamePredicate(meta metav1.Object) bool {
 	// Only process events for objects matching the configured resource name.
 	if meta.GetName() != r.config.Name {
-		glog.Warningf("Not processing ClusterAutoscaler %s", meta.GetName())
+		klog.Warningf("Not processing ClusterAutoscaler %s", meta.GetName())
 		return false
 	}
 
@@ -233,8 +209,8 @@ func (r *Reconciler) NamePredicate(meta metav1.Object) bool {
 
 // CreateAutoscaler will create the deployment for the given the
 // ClusterAutoscaler custom resource instance.
-func (r *Reconciler) CreateAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler) error {
-	glog.Infof("Creating ClusterAutoscaler deployment: %s\n", r.AutoscalerName(ca))
+func (r *Reconciler) CreateAutoscaler(ca *autoscalingv1.ClusterAutoscaler) error {
+	klog.Infof("Creating ClusterAutoscaler deployment: %s\n", r.AutoscalerName(ca))
 
 	deployment := r.AutoscalerDeployment(ca)
 
@@ -248,7 +224,7 @@ func (r *Reconciler) CreateAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler)
 
 // UpdateAutoscaler will retrieve the deployment for the given ClusterAutoscaler
 // custom resource instance and update it to match the expected spec if needed.
-func (r *Reconciler) UpdateAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler) error {
+func (r *Reconciler) UpdateAutoscaler(ca *autoscalingv1.ClusterAutoscaler) error {
 	existingDeployment, err := r.GetAutoscaler(ca)
 	if err != nil {
 		return err
@@ -257,18 +233,23 @@ func (r *Reconciler) UpdateAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler)
 	existingSpec := existingDeployment.Spec.Template.Spec
 	expectedSpec := r.AutoscalerPodSpec(ca)
 
-	// Only comparing podSpec for now.
-	if equality.Semantic.DeepEqual(existingSpec, expectedSpec) {
+	// Only comparing podSpec and release version for now.
+	if equality.Semantic.DeepEqual(existingSpec, expectedSpec) &&
+		util.ReleaseVersionMatches(ca, r.config.ReleaseVersion) {
 		return nil
 	}
 
 	existingDeployment.Spec.Template.Spec = *expectedSpec
+
+	r.UpdateAnnotations(existingDeployment)
+	r.UpdateAnnotations(&existingDeployment.Spec.Template)
+
 	return r.client.Update(context.TODO(), existingDeployment)
 }
 
 // GetAutoscaler will return the deployment for the given ClusterAutoscaler
 // custom resource instance.
-func (r *Reconciler) GetAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler) (*appsv1.Deployment, error) {
+func (r *Reconciler) GetAutoscaler(ca *autoscalingv1.ClusterAutoscaler) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
 	nn := r.AutoscalerName(ca)
 
@@ -281,16 +262,31 @@ func (r *Reconciler) GetAutoscaler(ca *autoscalingv1alpha1.ClusterAutoscaler) (*
 
 // AutoscalerName returns the expected NamespacedName for the deployment
 // belonging to the given ClusterAutoscaler.
-func (r *Reconciler) AutoscalerName(ca *autoscalingv1alpha1.ClusterAutoscaler) types.NamespacedName {
+func (r *Reconciler) AutoscalerName(ca *autoscalingv1.ClusterAutoscaler) types.NamespacedName {
 	return types.NamespacedName{
 		Name:      fmt.Sprintf("cluster-autoscaler-%s", ca.Name),
 		Namespace: r.config.Namespace,
 	}
 }
 
+// UpdateAnnotations updates the annotations on the given object to the values
+// currently expected by the controller.
+func (r *Reconciler) UpdateAnnotations(obj metav1.Object) {
+	annotations := obj.GetAnnotations()
+
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[util.CriticalPodAnnotation] = ""
+	annotations[util.ReleaseVersionAnnotation] = r.config.ReleaseVersion
+
+	obj.SetAnnotations(annotations)
+}
+
 // AutoscalerDeployment returns the expected deployment belonging to the given
 // ClusterAutoscaler.
-func (r *Reconciler) AutoscalerDeployment(ca *autoscalingv1alpha1.ClusterAutoscaler) *appsv1.Deployment {
+func (r *Reconciler) AutoscalerDeployment(ca *autoscalingv1.ClusterAutoscaler) *appsv1.Deployment {
 	namespacedName := r.AutoscalerName(ca)
 
 	labels := map[string]string{
@@ -299,8 +295,8 @@ func (r *Reconciler) AutoscalerDeployment(ca *autoscalingv1alpha1.ClusterAutosca
 	}
 
 	annotations := map[string]string{
-		criticalPod:                    "",
-		"release.openshift.io/version": r.config.ReleaseVersion,
+		util.CriticalPodAnnotation:    "",
+		util.ReleaseVersionAnnotation: r.config.ReleaseVersion,
 	}
 
 	podSpec := r.AutoscalerPodSpec(ca)
@@ -335,7 +331,7 @@ func (r *Reconciler) AutoscalerDeployment(ca *autoscalingv1alpha1.ClusterAutosca
 
 // AutoscalerPodSpec returns the expected podSpec for the deployment belonging
 // to the given ClusterAutoscaler.
-func (r *Reconciler) AutoscalerPodSpec(ca *autoscalingv1alpha1.ClusterAutoscaler) *corev1.PodSpec {
+func (r *Reconciler) AutoscalerPodSpec(ca *autoscalingv1.ClusterAutoscaler) *corev1.PodSpec {
 	args := AutoscalerArgs(ca, r.config)
 
 	if r.config.ExtraArgs != "" {
@@ -372,4 +368,22 @@ func (r *Reconciler) AutoscalerPodSpec(ca *autoscalingv1alpha1.ClusterAutoscaler
 	}
 
 	return spec
+}
+
+// objectReference returns a reference to the given object, but will set the
+// configured deployment namesapce if no namespace was previously set.  This is
+// useful for referencing cluster scoped objects in events without the events
+// being created in the default namespace.
+func (r *Reconciler) objectReference(obj runtime.Object) *corev1.ObjectReference {
+	ref, err := reference.GetReference(r.scheme, obj)
+	if err != nil {
+		klog.Errorf("Error creating object reference: %v", err)
+		return nil
+	}
+
+	if ref != nil && ref.Namespace == "" {
+		ref.Namespace = r.config.Namespace
+	}
+
+	return ref
 }

@@ -43,7 +43,6 @@ func TestMachineEvents(t *testing.T) {
 
 	machineInvalidProviderConfig := machine.DeepCopy()
 	machineInvalidProviderConfig.Spec.ProviderSpec.Value = nil
-	machineInvalidProviderConfig.Spec.ProviderSpec.ValueFrom = nil
 
 	cases := []struct {
 		name               string
