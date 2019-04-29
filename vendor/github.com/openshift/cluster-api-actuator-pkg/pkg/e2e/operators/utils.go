@@ -45,7 +45,7 @@ func deleteDeployment(client runtimeclient.Client, deployment *kappsapi.Deployme
 }
 
 func isDeploymentAvailable(client runtimeclient.Client, name string) bool {
-	if err := wait.PollImmediate(1*time.Second, e2e.WaitShort, func() (bool, error) {
+	if err := wait.PollImmediate(1*time.Second, e2e.WaitLong, func() (bool, error) {
 		d, err := getDeployment(client, name)
 		if err != nil {
 			glog.Errorf("Error getting deployment: %v", err)
@@ -84,8 +84,8 @@ func isStatusAvailable(client runtimeclient.Client, name string) bool {
 			glog.Errorf("Condition: %q is true", osconfigv1.OperatorProgressing)
 			return false, nil
 		}
-		if cov1helpers.IsStatusConditionTrue(clusterOperator.Status.Conditions, osconfigv1.OperatorFailing) {
-			glog.Errorf("Condition: %q is true", osconfigv1.OperatorFailing)
+		if cov1helpers.IsStatusConditionTrue(clusterOperator.Status.Conditions, osconfigv1.OperatorFailing) || cov1helpers.IsStatusConditionTrue(clusterOperator.Status.Conditions, osconfigv1.OperatorDegraded) {
+			glog.Errorf("Condition: %q is true", osconfigv1.OperatorDegraded)
 			return false, nil
 		}
 		return true, nil

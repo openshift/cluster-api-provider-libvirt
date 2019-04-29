@@ -5,8 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golang/glog"
-	"github.com/openshift/cluster-autoscaler-operator/pkg/apis/autoscaling/v1alpha1"
+	"github.com/openshift/cluster-autoscaler-operator/pkg/apis/autoscaling/v1beta1"
 	"github.com/openshift/cluster-autoscaler-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -16,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -57,8 +57,8 @@ var (
 // supported as targets for a MachineAutocaler instance.
 func DefaultSupportedTargetGVKs() []schema.GroupVersionKind {
 	return []schema.GroupVersionKind{
-		{Group: "cluster.k8s.io", Version: "v1alpha1", Kind: "MachineDeployment"},
-		{Group: "cluster.k8s.io", Version: "v1alpha1", Kind: "MachineSet"},
+		{Group: "cluster.k8s.io", Version: "v1beta1", Kind: "MachineDeployment"},
+		{Group: "cluster.k8s.io", Version: "v1beta1", Kind: "MachineSet"},
 		{Group: "machine.openshift.io", Version: "v1beta1", Kind: "MachineDeployment"},
 		{Group: "machine.openshift.io", Version: "v1beta1", Kind: "MachineSet"},
 	}
@@ -96,7 +96,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 
 	// Watch for changes to primary resource MachineAutoscaler
-	err = c.Watch(&source.Kind{Type: &v1alpha1.MachineAutoscaler{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &v1beta1.MachineAutoscaler{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		// If the type is later registered, a restart of the operator will pick
 		// it up and properly reconcile any MachineAutoscalers referencing it.
 		if err != nil && meta.IsNoMatchError(err) {
-			glog.Warningf("Removing support for unregistered target type: %s", gvk)
+			klog.Warningf("Removing support for unregistered target type: %s", gvk)
 			missingGVKs = append(missingGVKs, gvk)
 		} else if err != nil {
 			return err
@@ -156,10 +156,10 @@ type Reconciler struct {
 // makes changes based on the state read and what is in the
 // MachineAutoscaler.Spec
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconciling MachineAutoscaler %s/%s\n", request.Namespace, request.Name)
+	klog.Infof("Reconciling MachineAutoscaler %s/%s\n", request.Namespace, request.Name)
 
 	// Fetch the MachineAutoscaler instance
-	ma := &v1alpha1.MachineAutoscaler{}
+	ma := &v1beta1.MachineAutoscaler{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, ma)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -171,7 +171,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}
 
 		// Error reading the object - requeue the request.
-		glog.Errorf("Error reading MachineAutoscaler: %v", err)
+		klog.Errorf("Error reading MachineAutoscaler: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -187,7 +187,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		errMsg := fmt.Sprintf("Error getting target: %v", err)
 		r.recorder.Event(ma, corev1.EventTypeWarning, "FailedGetTarget", errMsg)
-		glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+		klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 		return reconcile.Result{}, err
 	}
@@ -197,7 +197,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		errMsg := fmt.Sprintf("Error setting target owner: %v", err)
 		r.recorder.Event(ma, corev1.EventTypeWarning, "FailedSetOwner", errMsg)
-		glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+		klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 		return reconcile.Result{}, err
 	}
@@ -212,7 +212,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// status, and it has changed relative to the current target, the
 	// previous target must be finalized, e.g. annotations removed.
 	if ma.Status.LastTargetRef != nil && r.TargetChanged(ma) {
-		glog.V(2).Infof("%s: Target changed", request.NamespacedName)
+		klog.V(2).Infof("%s: Target changed", request.NamespacedName)
 
 		lastTargetRef := objectReference(*ma.Status.LastTargetRef)
 
@@ -223,7 +223,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// retain autoscaling configuration.
 			errMsg := fmt.Sprintf("Error fetching previous target: %v", err)
 			r.recorder.Event(ma, corev1.EventTypeWarning, "FailedGetLastTarget", errMsg)
-			glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+			klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 			return reconcile.Result{}, err
 		}
@@ -237,7 +237,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			if err != nil && !apierrors.IsNotFound(err) {
 				errMsg := fmt.Sprintf("Error finalizing previous target: %v", err)
 				r.recorder.Event(ma, corev1.EventTypeWarning, "FailedFinalizeTarget", errMsg)
-				glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+				klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 				return reconcile.Result{}, err
 			}
@@ -247,7 +247,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if err := r.SetLastTarget(ma, targetRef); err != nil {
 			errMsg := fmt.Sprintf("Error setting previous target: %v", err)
 			r.recorder.Event(ma, corev1.EventTypeWarning, "FailedSetLastTarget", errMsg)
-			glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+			klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 			return reconcile.Result{}, err
 		}
@@ -258,7 +258,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		if err := r.SetLastTarget(ma, targetRef); err != nil {
 			errMsg := fmt.Sprintf("Error setting previous target: %v", err)
 			r.recorder.Event(ma, corev1.EventTypeWarning, "FailedSetLastTarget", errMsg)
-			glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+			klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 			return reconcile.Result{}, err
 		}
@@ -266,7 +266,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Ensure our finalizers have been added.
 	if err := r.EnsureFinalizer(ma); err != nil {
-		glog.Errorf("Error setting finalizer: %v", err)
+		klog.Errorf("Error setting finalizer: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -276,26 +276,26 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err := r.UpdateTarget(target, min, max); err != nil {
 		errMsg := fmt.Sprintf("Error updating target: %v", err)
 		r.recorder.Event(ma, corev1.EventTypeWarning, "FailedUpdateTarget", errMsg)
-		glog.Errorf("%s: %s", request.NamespacedName, errMsg)
+		klog.Errorf("%s: %s", request.NamespacedName, errMsg)
 
 		return reconcile.Result{}, err
 	}
 
 	msg := fmt.Sprintf("Updated MachineAutoscaler target: %s", target.NamespacedName())
 	r.recorder.Eventf(ma, corev1.EventTypeNormal, "SuccessfulUpdate", msg)
-	glog.V(2).Infof("%s: %s", request.NamespacedName, msg)
+	klog.V(2).Infof("%s: %s", request.NamespacedName, msg)
 
 	return reconcile.Result{}, nil
 }
 
 // HandleDelete is called by Reconcile to handle MachineAutoscaler deletion,
 // i.e. finalize the resource and remove finalizers.
-func (r *Reconciler) HandleDelete(ma *v1alpha1.MachineAutoscaler) (reconcile.Result, error) {
+func (r *Reconciler) HandleDelete(ma *v1beta1.MachineAutoscaler) (reconcile.Result, error) {
 	targetRef := objectReference(ma.Spec.ScaleTargetRef)
 
 	target, err := r.GetTarget(targetRef)
 	if err != nil && !apierrors.IsNotFound(err) {
-		glog.Errorf("Error getting target for finalization: %v", err)
+		klog.Errorf("Error getting target for finalization: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -304,13 +304,13 @@ func (r *Reconciler) HandleDelete(ma *v1alpha1.MachineAutoscaler) (reconcile.Res
 
 		// Ignore 404s, the resource has most likely been deleted.
 		if err != nil && !apierrors.IsNotFound(err) {
-			glog.Errorf("Error finalizing target: %v", err)
+			klog.Errorf("Error finalizing target: %v", err)
 			return reconcile.Result{}, err
 		}
 	}
 
 	if err := r.RemoveFinalizer(ma); err != nil {
-		glog.Errorf("Error removing finalizer: %v", err)
+		klog.Errorf("Error removing finalizer: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -339,7 +339,7 @@ func (r *Reconciler) GetTarget(ref *corev1.ObjectReference) (*MachineTarget, err
 
 	target, err := MachineTargetFromObject(obj)
 	if err != nil {
-		glog.Errorf("Failed to convert object to MachineTarget: %v", err)
+		klog.Errorf("Failed to convert object to MachineTarget: %v", err)
 		return nil, err
 	}
 
@@ -371,7 +371,7 @@ func (r *Reconciler) FinalizeTarget(target *MachineTarget) error {
 
 // TargetChanged indicates whether a MachineAutoscaler's current target has
 // changed relative to the last observed target noted in the status.
-func (r *Reconciler) TargetChanged(ma *v1alpha1.MachineAutoscaler) bool {
+func (r *Reconciler) TargetChanged(ma *v1beta1.MachineAutoscaler) bool {
 	currentRef := ma.Spec.ScaleTargetRef
 	lastRef := ma.Status.LastTargetRef
 
@@ -384,8 +384,8 @@ func (r *Reconciler) TargetChanged(ma *v1alpha1.MachineAutoscaler) bool {
 
 // SetLastTarget updates the give MachineAutoscaler's status with the given
 // object as the last observed target.
-func (r *Reconciler) SetLastTarget(ma *v1alpha1.MachineAutoscaler, ref *corev1.ObjectReference) error {
-	ma.Status.LastTargetRef = &v1alpha1.CrossVersionObjectReference{
+func (r *Reconciler) SetLastTarget(ma *v1beta1.MachineAutoscaler, ref *corev1.ObjectReference) error {
+	ma.Status.LastTargetRef = &v1beta1.CrossVersionObjectReference{
 		APIVersion: ref.APIVersion,
 		Kind:       ref.Kind,
 		Name:       ref.Name,
@@ -395,7 +395,7 @@ func (r *Reconciler) SetLastTarget(ma *v1alpha1.MachineAutoscaler, ref *corev1.O
 }
 
 // EnsureFinalizer adds finalizers to the given MachineAutoscaler if necessary.
-func (r *Reconciler) EnsureFinalizer(ma *v1alpha1.MachineAutoscaler) error {
+func (r *Reconciler) EnsureFinalizer(ma *v1beta1.MachineAutoscaler) error {
 	for _, f := range ma.GetFinalizers() {
 		// Bail early if we already have the finalizer.
 		if f == MachineTargetFinalizer {
@@ -411,7 +411,7 @@ func (r *Reconciler) EnsureFinalizer(ma *v1alpha1.MachineAutoscaler) error {
 
 // RemoveFinalizer removes this packages's finalizers from the given
 // MachineAutoscaler instance.
-func (r *Reconciler) RemoveFinalizer(ma *v1alpha1.MachineAutoscaler) error {
+func (r *Reconciler) RemoveFinalizer(ma *v1beta1.MachineAutoscaler) error {
 	f, found := util.FilterString(ma.GetFinalizers(), MachineTargetFinalizer)
 
 	if found == 0 {
@@ -481,17 +481,17 @@ func (r *Reconciler) ValidateReference(obj *corev1.ObjectReference) (bool, error
 func targetOwnerRequest(a handler.MapObject) []reconcile.Request {
 	target, err := MachineTargetFromObject(a.Object)
 	if err != nil {
-		glog.Errorf("Failed to convert object to MachineTarget: %v", err)
+		klog.Errorf("Failed to convert object to MachineTarget: %v", err)
 		return nil
 	}
 
 	owner, err := target.GetOwner()
 	if err != nil {
-		glog.V(2).Infof("Will not reconcile: %v", err)
+		klog.V(2).Infof("Will not reconcile: %v", err)
 		return nil
 	}
 
-	glog.V(2).Infof("Queuing reconcile for owner of %s/%s.",
+	klog.V(2).Infof("Queuing reconcile for owner of %s/%s.",
 		target.GetNamespace(), target.GetName())
 
 	return []reconcile.Request{{NamespacedName: owner}}
@@ -499,7 +499,7 @@ func targetOwnerRequest(a handler.MapObject) []reconcile.Request {
 
 // objectReference returns a new corev1.ObjectReference for the given
 // CrossVersionObjectReference from a MachineAutoscaler target.
-func objectReference(ref v1alpha1.CrossVersionObjectReference) *corev1.ObjectReference {
+func objectReference(ref v1beta1.CrossVersionObjectReference) *corev1.ObjectReference {
 	obj := &corev1.ObjectReference{}
 	gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
 
