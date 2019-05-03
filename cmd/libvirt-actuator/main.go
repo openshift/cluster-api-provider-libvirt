@@ -25,7 +25,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	clusterv1 "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/openshift/cluster-api-actuator-pkg/pkg/e2e/framework"
@@ -212,17 +212,17 @@ func bootstrapCommand() *cobra.Command {
 
 			machinePrefix := cmd.Flag("environment-id").Value.String()
 
-			testCluster := &machinev1.Cluster{
+			testCluster := &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      machinePrefix,
 					Namespace: testNamespace.Name,
 				},
-				Spec: machinev1.ClusterSpec{
-					ClusterNetwork: machinev1.ClusterNetworkingConfig{
-						Services: machinev1.NetworkRanges{
+				Spec: clusterv1.ClusterSpec{
+					ClusterNetwork: clusterv1.ClusterNetworkingConfig{
+						Services: clusterv1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
-						Pods: machinev1.NetworkRanges{
+						Pods: clusterv1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
 						ServiceDomain: "example.com",

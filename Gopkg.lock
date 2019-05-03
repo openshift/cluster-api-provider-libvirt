@@ -412,7 +412,7 @@
 
 [[projects]]
   branch = "openshift-4.0-cluster-api-0.0.0-alpha.4"
-  digest = "1:43b90c55a82c4be0bb8524534a92f2c7bd909e041a51e7b1ed6d52300978ef6a"
+  digest = "1:4700944f85b629a06b45a541430c0e6d3e7fe8bf1d757511448e27c7b0e5f701"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis",
@@ -434,11 +434,11 @@
     "pkg/util",
   ]
   pruneopts = "T"
-  revision = "d8958b539e331bf5ebb056b7f872541e13fb8e01"
+  revision = "0b649f443f830353db113f92aa86db2d4d34943a"
 
 [[projects]]
   branch = "master"
-  digest = "1:e5a3d16ae5e88ee05f61a5f098d510e726633f2ba33d4edefb565182f62679fb"
+  digest = "1:ef8aa91d781d10937321173c6f482a1ce4fda450df095a2409e490eb178afcc9"
   name = "github.com/openshift/cluster-api-actuator-pkg"
   packages = [
     "pkg/e2e/framework",
@@ -446,7 +446,7 @@
     "pkg/types",
   ]
   pruneopts = "T"
-  revision = "286578aa9fd0510b7c37fbd4b4ab9c0eab7b03eb"
+  revision = "dc2d4c7f4e839792f76b43e4844a5f87a09300b2"
 
 [[projects]]
   branch = "master"
@@ -1177,6 +1177,7 @@
     "github.com/openshift/cluster-api-actuator-pkg/pkg/e2e/framework",
     "github.com/openshift/cluster-api-actuator-pkg/pkg/manifests",
     "github.com/openshift/cluster-api/pkg/apis",
+    "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",

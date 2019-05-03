@@ -13,12 +13,13 @@ import (
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/test"
+	clusterv1 "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1"
 	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 )
 
-func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*machinev1.Cluster, *machinev1.Machine, *apiv1.Secret, error) {
+func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*clusterv1.Cluster, *machinev1.Machine, *apiv1.Secret, error) {
 	machine := &machinev1.Machine{}
 	{
 		bytes, err := ioutil.ReadFile(machineLoc)
@@ -31,7 +32,7 @@ func ReadClusterResources(clusterLoc, machineLoc, userDataLoc string) (*machinev
 		}
 	}
 
-	cluster := &machinev1.Cluster{}
+	cluster := &clusterv1.Cluster{}
 	{
 		bytes, err := ioutil.ReadFile(clusterLoc)
 		if err != nil {
