@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
+	clusterv1 "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1"
 	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	apierrors "github.com/openshift/cluster-api/pkg/errors"
@@ -109,7 +110,7 @@ func (a *Actuator) handleMachineError(machine *machinev1.Machine, err *apierrors
 }
 
 // Create creates a machine and is invoked by the Machine Controller
-func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Creating machine %q", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
@@ -149,7 +150,7 @@ func (a *Actuator) Create(context context.Context, cluster *machinev1.Cluster, m
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
-func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Delete(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Deleting machine %q", machine.Name)
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
@@ -176,7 +177,7 @@ func (a *Actuator) Delete(context context.Context, cluster *machinev1.Cluster, m
 }
 
 // Update updates a machine and is invoked by the Machine Controller
-func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
 	glog.Infof("Updating machine %v", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
@@ -209,7 +210,7 @@ func (a *Actuator) Update(context context.Context, cluster *machinev1.Cluster, m
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
-func (a *Actuator) Exists(context context.Context, cluster *machinev1.Cluster, machine *machinev1.Machine) (bool, error) {
+func (a *Actuator) Exists(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v exists.", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 

@@ -17,7 +17,7 @@ import (
 	"github.com/openshift/cluster-api-actuator-pkg/pkg/manifests"
 	"github.com/openshift/cluster-api-provider-libvirt/test/utils"
 
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	clusterv1alpha1 "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -124,17 +124,17 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 				clusterID = "cluster-" + string(uuid.NewUUID())
 			}
 
-			cluster := &machinev1beta1.Cluster{
+			cluster := &clusterv1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      clusterID,
 					Namespace: testNamespace.Name,
 				},
-				Spec: machinev1beta1.ClusterSpec{
-					ClusterNetwork: machinev1beta1.ClusterNetworkingConfig{
-						Services: machinev1beta1.NetworkRanges{
+				Spec: clusterv1alpha1.ClusterSpec{
+					ClusterNetwork: clusterv1alpha1.ClusterNetworkingConfig{
+						Services: clusterv1alpha1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
-						Pods: machinev1beta1.NetworkRanges{
+						Pods: clusterv1alpha1.NetworkRanges{
 							CIDRBlocks: []string{"10.0.0.1/24"},
 						},
 						ServiceDomain: "example.com",
@@ -186,17 +186,17 @@ var _ = framework.SigKubeDescribe("Machines", func() {
 			clusterID = "cluster-" + clusterUUID[:8]
 		}
 
-		cluster := &machinev1beta1.Cluster{
+		cluster := &clusterv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      clusterID,
 				Namespace: testNamespace.Name,
 			},
-			Spec: machinev1beta1.ClusterSpec{
-				ClusterNetwork: machinev1beta1.ClusterNetworkingConfig{
-					Services: machinev1beta1.NetworkRanges{
+			Spec: clusterv1alpha1.ClusterSpec{
+				ClusterNetwork: clusterv1alpha1.ClusterNetworkingConfig{
+					Services: clusterv1alpha1.NetworkRanges{
 						CIDRBlocks: []string{"10.0.0.1/24"},
 					},
-					Pods: machinev1beta1.NetworkRanges{
+					Pods: clusterv1alpha1.NetworkRanges{
 						CIDRBlocks: []string{"10.0.0.1/24"},
 					},
 					ServiceDomain: "example.com",
