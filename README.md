@@ -1,7 +1,11 @@
 
-# Kubernetes cluster-api-provider-libvirt
+# OpenShift cluster-api-provider-libvirt
 
-This repository hosts an implementation of a provider for Libvirt for the [cluster-api project](https://sigs.k8s.io/cluster-api).
+This repository hosts an implementation of a provider for libvirt for the
+OpenShift [machine-api](https://github.com/openshift/cluster-api).
+
+This provider runs as a machine-controller deployed by the
+[machine-api-operator](https://github.com/openshift/machine-api-operator)
 
 ## Allowing the actuator to connect to the libvirt daemon running on the host machine:
 
