@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"github.com/golang/glog"
 
@@ -16,7 +17,14 @@ const (
 	netModeNat      = "nat"
 	netModeRoute    = "route"
 	netModeBridge   = "bridge"
+	workerIPCidr    = 51
 )
+
+// Leases contains list of DHCP leases
+type Leases struct {
+	Items map[string]string
+	sync.Mutex
+}
 
 // Network interface used to expose a libvirt.Network
 type Network interface {
@@ -112,4 +120,13 @@ func randomMACAddress() (string, error) {
 
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]), nil
+}
+
+// FillReservedLeases will fill Leases structure with existing DHCP leases
+func FillReservedLeases(leases *Leases, libvirtLeases []libvirt.NetworkDHCPLease) {
+	leases.Lock()
+	for _, libvirtLease := range libvirtLeases {
+		leases.Items[libvirtLease.IPaddr] = ""
+	}
+	leases.Unlock()
 }

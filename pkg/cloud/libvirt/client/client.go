@@ -46,7 +46,7 @@ type CreateDomainInput struct {
 	HostName string
 
 	// AddressRange as IP subnet address range
-	AddressRange int
+	ReservedLeases *Leases
 
 	// Autostart as domain autostart
 	Autostart bool
@@ -107,6 +107,9 @@ type Client interface {
 
 	// DeleteVolume deletes a domain based on its name
 	DeleteVolume(name string) error
+
+	// GetDHCPLeasesByNetwork get all network DHCP leases by network name
+	GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDHCPLease, error)
 
 	// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
 	LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error)
@@ -217,9 +220,16 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	}
 	// TODO: support more than 1 interface
 	partialNetIfaces := make(map[string]*pendingMapping, 1)
-	if err := setNetworkInterfaces(&domainDef, client.connection, partialNetIfaces, &waitForLeases,
-		hostName, input.NetworkInterfaceName,
-		input.NetworkInterfaceAddress, input.AddressRange); err != nil {
+	if err := setNetworkInterfaces(
+		&domainDef,
+		client.connection,
+		partialNetIfaces,
+		&waitForLeases,
+		hostName,
+		input.NetworkInterfaceName,
+		input.NetworkInterfaceAddress,
+		input.ReservedLeases,
+	); err != nil {
 		return err
 	}
 
@@ -526,15 +536,20 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	return nil
 }
 
-// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
-func (client *libvirtClient) LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error) {
+// GetDHCPLeasesByNetwork returns all network DHCP leases by network name
+func (client *libvirtClient) GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDHCPLease, error) {
 	network, err := client.connection.LookupNetworkByName(networkName)
 	if err != nil {
 		glog.Errorf("Failed to fetch network %s from the libvirt", networkName)
-		return "", err
+		return nil, err
 	}
 
-	dchpLeases, err := network.GetDHCPLeases()
+	return network.GetDHCPLeases()
+}
+
+// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
+func (client *libvirtClient) LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error) {
+	dchpLeases, err := client.GetDHCPLeasesByNetwork(networkName)
 	if err != nil {
 		glog.Errorf("Failed to fetch dhcp leases for the network %s", networkName)
 		return "", err
