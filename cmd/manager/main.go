@@ -100,7 +100,7 @@ func initActuator(m manager.Manager) {
 		KubeClient:    kubeClient,
 		ClientBuilder: libvirtclient.NewClient,
 		Codec:         codec,
-		EventRecorder: m.GetRecorder("libvirt-controller"),
+		EventRecorder: m.GetEventRecorderFor("libvirt-controller"),
 	}
 
 	machineactuator.MachineActuator, err = machineactuator.NewActuator(params)
