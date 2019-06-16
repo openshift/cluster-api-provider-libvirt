@@ -85,6 +85,12 @@ func newWorkLoad() *batchv1.Job {
 // Build default CA resource to allow fast scaling up and down
 func clusterAutoscalerResource(maxNodesTotal int) *caov1.ClusterAutoscaler {
 	tenSecondString := "10s"
+
+	// Choose a time that is at least twice as the sync period
+	// and that has high least common multiple to avoid a case
+	// when a node is considered to be empty even if there are
+	// pods already scheduled and running on the node.
+	unneededTimeString := "23s"
 	return &caov1.ClusterAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default",
@@ -103,7 +109,7 @@ func clusterAutoscalerResource(maxNodesTotal int) *caov1.ClusterAutoscaler {
 				DelayAfterAdd:     &tenSecondString,
 				DelayAfterDelete:  &tenSecondString,
 				DelayAfterFailure: &tenSecondString,
-				UnneededTime:      &tenSecondString,
+				UnneededTime:      &unneededTimeString,
 			},
 			ResourceLimits: &caov1.ResourceLimits{
 				MaxNodesTotal: pointer.Int32Ptr(int32(maxNodesTotal)),
@@ -173,6 +179,19 @@ func newScaleDownCounter(w *eventWatcher, v uint32) *eventCounter {
 	}
 
 	c := newEventCounter(w, isAutoscalerScaleDownEvent, v, decrement)
+	c.enable()
+	return c
+}
+
+func newMaxNodesTotalReachedCounter(w *eventWatcher, v uint32) *eventCounter {
+	isAutoscalerMaxNodesTotalEvent := func(event *corev1.Event) bool {
+		return event.Source.Component == clusterAutoscalerComponent &&
+			event.Reason == clusterAutoscalerMaxNodesTotalReached &&
+			event.InvolvedObject.Kind == clusterAutoscalerObjectKind &&
+			strings.HasPrefix(event.Message, "Max total nodes in cluster reached")
+	}
+
+	c := newEventCounter(w, isAutoscalerMaxNodesTotalEvent, v, increment)
 	c.enable()
 	return c
 }
@@ -262,6 +281,7 @@ var _ = g.Describe("[Feature:Machines][Serial] Autoscaler should", func() {
 			scaledGroups[path.Join(machineSets[i].Namespace, machineSets[i].Name)] = false
 		}
 		scaleUpCounter := newScaleUpCounter(eventWatcher, 0, scaledGroups)
+		maxNodesTotalReachedCounter := newMaxNodesTotalReachedCounter(eventWatcher, 0)
 		workload := newWorkLoad()
 		o.Expect(client.Create(context.TODO(), workload)).Should(o.Succeed())
 		cleanupObjects = append(cleanupObjects, runtime.Object(workload))
@@ -280,10 +300,14 @@ var _ = g.Describe("[Feature:Machines][Serial] Autoscaler should", func() {
 		// clusterExpansionSize -1). We run for a period of
 		// time asserting that the cluster does not exceed the
 		// capped size.
-		//
-		// TODO(frobware): switch to matching on
-		// MaxNodesTotalReached when that is available in the
-		// cluster-autoscaler image.
+		testDuration = time.Now().Add(time.Duration(e2e.WaitShort))
+		o.Eventually(func() uint32 {
+			v := maxNodesTotalReachedCounter.get()
+			glog.Infof("[%s remaining] Waiting for %s to generate a %q event; observed %v",
+				remaining(testDuration), clusterAutoscalerComponent, clusterAutoscalerMaxNodesTotalReached, v)
+			return v
+		}, e2e.WaitShort, 3*time.Second).Should(o.BeNumerically(">=", 1))
+
 		testDuration = time.Now().Add(time.Duration(e2e.WaitShort))
 		o.Consistently(func() bool {
 			v := scaleUpCounter.get()
