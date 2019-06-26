@@ -479,6 +479,11 @@ func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInte
 					Type:    corev1.NodeHostName,
 					Address: hostname,
 				})
+
+				addrs = append(addrs, corev1.NodeAddress{
+					Type:    corev1.NodeInternalDNS,
+					Address: hostname,
+				})
 			}
 		}
 	}
