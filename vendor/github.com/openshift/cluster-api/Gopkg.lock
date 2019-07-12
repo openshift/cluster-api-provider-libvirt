@@ -350,11 +350,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f7646c654e93258958dba300641f8f674d5a9ed015c11119793ba1156e2acbe9"
+  digest = "1:b79de44700bc7fc32b4f898e283754fa027616f87074be1cf65a7be5a961cc85"
   name = "github.com/openshift/kubernetes-drain"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c2e51be1758efa30d71a4d30dc4e2db86b70a4df"
+  revision = "4b061affbd00bfc62036a5cd3a57493db6c94151"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -1086,7 +1086,8 @@
   revision = "324c5df7d3f0fafd8ab337871d9f2c86afd1fe64"
 
 [[projects]]
-  digest = "1:5bfbcd19f444fc4bf9ae6cc938a8e9bc0a98050c8357e8b038ec03c3482c974c"
+  branch = "release-0.2"
+  digest = "1:2212c932307779541b20f07c46728a2ff0caca9ada465a1072d4d83187174566"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1126,7 +1127,7 @@
     "pkg/webhook/internal/metrics",
   ]
   pruneopts = "UT"
-  revision = "96b67f231945a8e8550dbdd8bfbd550a0c68097b"
+  revision = "f60c87ec713cb8da81257228530605457ebf7220"
 
 [[projects]]
   digest = "1:77a19ea61ca4e01817ad2bc3e91689c5097b4b439668127d1fb5d8b95c3aca03"

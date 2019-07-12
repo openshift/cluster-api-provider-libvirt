@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "openshift-4.2-cluster-api-0.1.0"
-  digest = "1:39b28a2133488606e41fd0f6f13ec4239169424432fb0eb0dadb9d6f8ee4bf91"
+  digest = "1:54dfec845e2fb5631fa1fc556a677a473a7efe663df4a4808621dca5e0358b23"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis",
@@ -407,7 +407,7 @@
     "pkg/util",
   ]
   pruneopts = "T"
-  revision = "e911af77e9a33cfb45f82ba9778876d715cdb4ea"
+  revision = "72ebbaa0456c052d886259dc26420644178a0c5f"
 
 [[projects]]
   branch = "master"
@@ -434,11 +434,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f7646c654e93258958dba300641f8f674d5a9ed015c11119793ba1156e2acbe9"
+  digest = "1:b79de44700bc7fc32b4f898e283754fa027616f87074be1cf65a7be5a961cc85"
   name = "github.com/openshift/kubernetes-drain"
   packages = ["."]
   pruneopts = "T"
-  revision = "c2e51be1758efa30d71a4d30dc4e2db86b70a4df"
+  revision = "4b061affbd00bfc62036a5cd3a57493db6c94151"
 
 [[projects]]
   digest = "1:b8fec16794e7d426d17af8c201367278369aee7ea1de19d6c1b701787e03df79"
