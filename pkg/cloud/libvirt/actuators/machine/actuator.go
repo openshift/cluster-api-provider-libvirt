@@ -16,6 +16,7 @@ package machine
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -23,6 +24,7 @@ import (
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
+	controllererrors "github.com/openshift/cluster-api/pkg/controller/error"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -460,6 +462,11 @@ func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInte
 	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(ifaces) == 0 {
+		glog.Infof("The domain does not have any network interfaces")
+		return nil, &controllererrors.RequeueAfterError{RequeueAfter: time.Second}
 	}
 
 	for _, iface := range ifaces {

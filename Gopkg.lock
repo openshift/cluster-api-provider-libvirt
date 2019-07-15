@@ -411,7 +411,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3247b963f680c21d5a7158bb4720a20b39f32eeba8e09a5bb62aebfa13d68146"
+  digest = "1:3c9fe8f4fd2b974bbd9c7bdea10395833e6ab00856bd5875a22b5d9fea72d127"
   name = "github.com/openshift/cluster-api-actuator-pkg"
   packages = [
     "pkg/e2e/framework",
@@ -419,7 +419,7 @@
     "pkg/types",
   ]
   pruneopts = "T"
-  revision = "7628df78fb4c697fd8244495271b45af95a2184a"
+  revision = "42228d06a2ca38d6f0f007a1f9e4ac7758d4ff45"
 
 [[projects]]
   branch = "master"
@@ -1131,6 +1131,7 @@
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
+    "github.com/openshift/cluster-api/pkg/controller/error",
     "github.com/openshift/cluster-api/pkg/controller/machine",
     "github.com/openshift/cluster-api/pkg/errors",
     "github.com/spf13/cobra",
