@@ -292,10 +292,16 @@ func xmlMarshallIndented(b interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-func setNetworkInterfaces(domainDef *libvirtxml.Domain,
-	virConn *libvirt.Connect, partialNetIfaces map[string]*pendingMapping,
+func setNetworkInterfaces(
+	domainDef *libvirtxml.Domain,
+	virConn *libvirt.Connect,
+	partialNetIfaces map[string]*pendingMapping,
 	waitForLeases *[]*libvirtxml.DomainInterface,
-	networkInterfaceHostname string, networkInterfaceName string, networkInterfaceAddress string, offset int) error {
+	networkInterfaceHostname string,
+	networkInterfaceName string,
+	networkInterfaceAddress string,
+	reservedLeases *Leases,
+) error {
 
 	// TODO: support more than 1 interface
 	for i := 0; i < 1; i++ {
@@ -306,6 +312,7 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 		}
 
 		// calculate the MAC address
+		// TODO: possible MAC collision
 		var err error
 		mac, err := randomMACAddress()
 		if err != nil {
@@ -344,10 +351,25 @@ func setNetworkInterfaces(domainDef *libvirtxml.Domain,
 					if err != nil {
 						return fmt.Errorf("failed to parse libvirt network ipRange: %v", err)
 					}
+
+					// generate new IP's until we will have the IP that not leased to another machine
 					var ip net.IP
-					if ip, err = cidr.GenerateIP(networkCIDR, offset); err != nil {
-						return fmt.Errorf("failed to generate ip: %v", err)
+					baseWokerIPCidr := workerIPCidr
+					for {
+						ip, err = cidr.GenerateIP(networkCIDR, baseWokerIPCidr)
+						if err != nil {
+							return fmt.Errorf("failed to generate ip: %v", err)
+						}
+						if _, ok := reservedLeases.Items[ip.String()]; !ok {
+							break
+						}
+						baseWokerIPCidr++
 					}
+
+					// add generated IP to reserved leases map
+					reservedLeases.Lock()
+					reservedLeases.Items[ip.String()] = ""
+					reservedLeases.Unlock()
 
 					glog.Infof("Adding IP/MAC/host=%s/%s/%s to %s", ip.String(), mac, hostname, networkName)
 					if err := updateOrAddHost(network, ip.String(), mac, hostname); err != nil {

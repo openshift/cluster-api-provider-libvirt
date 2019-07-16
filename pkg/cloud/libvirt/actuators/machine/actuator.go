@@ -58,12 +58,12 @@ var MachineActuator *Actuator
 
 // Actuator is responsible for performing machine reconciliation
 type Actuator struct {
-	clusterClient clusterclient.Interface
-	cidrOffset    int
-	kubeClient    kubernetes.Interface
-	clientBuilder libvirtclient.LibvirtClientBuilderFuncType
-	codec         codec
-	eventRecorder record.EventRecorder
+	clusterClient  clusterclient.Interface
+	reservedLeases *libvirtclient.Leases
+	kubeClient     kubernetes.Interface
+	clientBuilder  libvirtclient.LibvirtClientBuilderFuncType
+	codec          codec
+	eventRecorder  record.EventRecorder
 }
 
 type codec interface {
@@ -85,7 +85,6 @@ type ActuatorParams struct {
 func NewActuator(params ActuatorParams) (*Actuator, error) {
 	return &Actuator{
 		clusterClient: params.ClusterClient,
-		cidrOffset:    50,
 		kubeClient:    params.KubeClient,
 		clientBuilder: params.ClientBuilder,
 		codec:         params.Codec,
@@ -128,8 +127,15 @@ func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, m
 
 	defer client.Close()
 
-	// TODO: hack to increase IPs. Build proper logic in setNetworkInterfaces method
-	a.cidrOffset++
+	// fill researvedLeases on the first call to the create method
+	if a.reservedLeases == nil {
+		a.reservedLeases = &libvirtclient.Leases{Items: map[string]string{}}
+		libvirtLeases, err := client.GetDHCPLeasesByNetwork(machineProviderConfig.NetworkInterfaceName)
+		if err != nil {
+			return errWrapper.WithLog(err, "error getting the dhcp leases from the libvirt")
+		}
+		libvirtclient.FillReservedLeases(a.reservedLeases, libvirtLeases)
+	}
 
 	dom, err := a.createVolumeAndDomain(machine, machineProviderConfig, client)
 	if err != nil {
@@ -265,7 +271,7 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 		IgnitionVolumeName:      ignitionVolumeName(domainName),
 		NetworkInterfaceName:    machineProviderConfig.NetworkInterfaceName,
 		NetworkInterfaceAddress: machineProviderConfig.NetworkInterfaceAddress,
-		AddressRange:            a.cidrOffset,
+		ReservedLeases:          a.reservedLeases,
 		HostName:                domainName,
 		Autostart:               machineProviderConfig.Autostart,
 		DomainMemory:            machineProviderConfig.DomainMemory,
@@ -296,6 +302,16 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 func (a *Actuator) deleteVolumeAndDomain(machine *machinev1.Machine, client libvirtclient.Client) error {
 	if err := client.DeleteDomain(machine.Name); err != nil && err != libvirtclient.ErrDomainNotFound {
 		return a.handleMachineError(machine, apierrors.DeleteMachine("error deleting %q domain %v", machine.Name, err), deleteEventAction)
+	}
+
+	if a.reservedLeases != nil {
+		for _, addr := range machine.Status.Addresses {
+			if addr.Type == corev1.NodeInternalIP {
+				if _, ok := a.reservedLeases.Items[addr.Address]; ok {
+					delete(a.reservedLeases.Items, addr.Address)
+				}
+			}
+		}
 	}
 
 	// Delete machine volume
