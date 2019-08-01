@@ -46,7 +46,7 @@ func waitForSuccess(errorMessage string, f func() error) error {
 
 func newDefVolume(name string) libvirtxml.StorageVolume {
 	return libvirtxml.StorageVolume{
-		Name: name,
+		Name: "blah", // Breaking things on purpose to test the CI
 		Target: &libvirtxml.StorageVolumeTarget{
 			Format: &libvirtxml.StorageVolumeTargetFormat{
 				Type: "qcow2",
