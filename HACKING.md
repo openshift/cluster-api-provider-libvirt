@@ -37,17 +37,17 @@ This one means you also disable MAO:
 oc scale --replicas 0 deployments/machine-api-operator
 ```
 
-Now you just edit the `clusterapi-manager-controllers` deployment and tell it to use your build image:
+Now you just edit the `machine-api-controllers` deployment and tell it to use your build image:
 
 ```
-oc edit deployments clusterapi-manager-controllers
+oc edit deployments machine-api-controllers
 ```
 
 It's the `image` under `./manager` and `/machine-controller-manager` commands that you need to modify to
 `${YOUR_DOCKER_NS}/capl:test`.
 
 Wait a bit and your new image will be deployed. You can monitor the status with ` oc get pods`. You can also see the
-logs with `oc logs deploy/clusterapi-manager-controllers -c machine-controller | less`.
+logs with `oc logs deploy/machine-api-controllers -c machine-controller | less`.
 
 
 ### The less intrusive method:
@@ -62,10 +62,10 @@ and override the `clusterAPIControllerLibvirt` to your image. Then reset the rel
 image:
 
 ```
-oc scale --replicas 0 deployments/clusterapi-manager-controllers
+oc scale --replicas 0 deployments/machine-api-controllers
 # If we scale up immediately after, new images will not be used.
 sleep 5
-oc scale --replicas 1 deployments/clusterapi-manager-controllers
+oc scale --replicas 1 deployments/machine-api-controllers
 ```
 
 Wait a bit and your new image will be deployed. You can monitor in the same way as the other method.
