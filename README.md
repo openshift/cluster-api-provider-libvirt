@@ -25,19 +25,19 @@ Edit `/etc/systemd/system/libvirt-bin.service` to set:
 
 Then:
 
-```
+```sh
 systemctl restart libvirtd
 ```
 
 Allow incoming connections:
 
-```
+```sh
 iptables -I INPUT -p tcp --dport 16509 -j ACCEPT -m comment --comment "Allow insecure libvirt clients"
 ```
 
 Verify you can connect through your host private ip:
 
-```
+```sh
 virsh -c qemu+tcp://host_private_ip/system
 ```
 

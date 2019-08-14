@@ -3,7 +3,7 @@
 Firstly you should have a Openshift 4.0 cluster up and running. This is already documented elsewhere so I won't get
 into that. Then you need to build a custom image for cluster-api-provider-libvirt:
 
-```
+```sh
 # In ${GOPATH}/src/github.com/openshift/
 git clone git@github.com:openshift/cluster-api-provider-libvirt.git
 cd cluster-api-provider-libvirt
@@ -15,7 +15,7 @@ sudo docker push ${YOUR_DOCKER_NS}/capl:test
 
 Let's avoid having to specify namespace all the time to `oc`:
 
-```
+```sh
 oc project openshift-machine-api
 ```
 
@@ -23,7 +23,7 @@ oc project openshift-machine-api
 
 Before you can deploy your custom image, you need to disable CVO:
 
-```
+```sh
 oc scale --replicas 0 deployments/cluster-version-operator -n openshift-cluster-version
 ```
 
@@ -33,13 +33,13 @@ There are at least two paths to deploying the image, the intrusive one and less-
 
 This one means you also disable MAO:
 
-```
+```sh
 oc scale --replicas 0 deployments/machine-api-operator
 ```
 
 Now you just edit the `machine-api-controllers` deployment and tell it to use your build image:
 
-```
+```sh
 oc edit deployments machine-api-controllers
 ```
 
@@ -54,7 +54,7 @@ logs with `oc logs deploy/machine-api-controllers -c machine-controller | less`.
 
 Instead of disabling MAO, you just update the relevant configmaps:
 
-```
+```sh
 oc edit configmaps/machine-api-operator-images
 ```
 
@@ -62,6 +62,8 @@ and override the `clusterAPIControllerLibvirt` to your image. Then reset the rel
 image:
 
 ```
+
+```sh
 oc scale --replicas 0 deployments/machine-api-controllers
 # If we scale up immediately after, new images will not be used.
 sleep 5
@@ -75,7 +77,7 @@ Wait a bit and your new image will be deployed. You can monitor in the same way 
 So far you've only seen your new modified fancy provider coming up successfully. Let's make it work a bit by scaling up
 the worker nodes:
 
-```
+```sh
 oc get machinesets
 # The output will tell you the name of the worker machineset
 # Let's assume it's "test1-wk7xq-worker-0" below
