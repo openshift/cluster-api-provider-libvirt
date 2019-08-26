@@ -425,7 +425,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		// create the volume
 		// Refresh the pool of the volume so that libvirt knows it is
 		// not longer in use.
-		waitForSuccess("error refreshing pool for volume", func() error {
+		err = waitForSuccess("error refreshing pool for volume", func() error {
 			return client.pool.Refresh(0)
 		})
 		if err != nil {
