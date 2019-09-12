@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/xml"
 	"fmt"
+	"runtime"
 
 	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
@@ -177,32 +178,6 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
 	}
 
-	glog.Info("Create ignition configuration")
-	if input.Ignition != nil {
-		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
-			return err
-		}
-	} else if input.IgnKey != "" {
-		ignVolume, err := client.getVolume(input.IgnKey)
-		if err != nil {
-			return fmt.Errorf("error getting ignition volume: %v", err)
-		}
-		ignVolumePath, err := ignVolume.GetPath()
-		if err != nil {
-			return fmt.Errorf("error getting ignition volume path: %v", err)
-		}
-
-		if err := setCoreOSIgnition(&domainDef, ignVolumePath); err != nil {
-			return err
-		}
-	} else if input.CloudInit != nil {
-		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.DomainName); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
-	}
-
 	glog.Info("Create volume")
 	diskVolume, err := client.getVolume(input.VolumeName)
 	if err != nil {
@@ -210,6 +185,42 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	}
 	if err := setDisks(&domainDef, diskVolume); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
+	}
+
+	glog.Info("Create ignition configuration")
+
+	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
+	if runtime.GOARCH == "s390x" || runtime.GOARCH == "s390" {
+		if input.Ignition != nil {
+			if err := setIgnitionForS390X(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
+				return err
+			}
+		}
+	} else {
+		if input.Ignition != nil {
+			if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
+				return err
+			}
+		} else if input.IgnKey != "" {
+			ignVolume, err := client.getVolume(input.IgnKey)
+			if err != nil {
+				return fmt.Errorf("error getting ignition volume: %v", err)
+			}
+			ignVolumePath, err := ignVolume.GetPath()
+			if err != nil {
+				return fmt.Errorf("error getting ignition volume path: %v", err)
+			}
+
+			if err := setCoreOSIgnition(&domainDef, ignVolumePath); err != nil {
+				return err
+			}
+		} else if input.CloudInit != nil {
+			if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.DomainName); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("machine does not has a IgnKey nor CloudInit value")
+		}
 	}
 
 	glog.Info("Set up network interface")

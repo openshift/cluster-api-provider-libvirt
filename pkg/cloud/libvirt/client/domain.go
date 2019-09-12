@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -36,7 +37,6 @@ type pendingMapping struct {
 }
 
 func newDomainDef() libvirtxml.Domain {
-	var serialPort uint
 	domainDef := libvirtxml.Domain{
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
@@ -51,44 +51,8 @@ func newDomainDef() libvirtxml.Domain {
 			Placement: "static",
 			Value:     1,
 		},
-		CPU: &libvirtxml.DomainCPU{},
-		Devices: &libvirtxml.DomainDeviceList{
-			Graphics: []libvirtxml.DomainGraphic{
-				{
-					Spice: &libvirtxml.DomainGraphicSpice{
-						AutoPort: "yes",
-					},
-				},
-			},
-			Channels: []libvirtxml.DomainChannel{
-				{
-					Target: &libvirtxml.DomainChannelTarget{
-						VirtIO: &libvirtxml.DomainChannelTargetVirtIO{
-							Name: "org.qemu.guest_agent.0",
-						},
-					},
-				},
-			},
-			RNGs: []libvirtxml.DomainRNG{
-				{
-					Model: "virtio",
-					Backend: &libvirtxml.DomainRNGBackend{
-						Random: &libvirtxml.DomainRNGBackendRandom{},
-					},
-				},
-			},
-			Consoles: []libvirtxml.DomainConsole{
-				{
-					Source: &libvirtxml.DomainChardevSource{
-						Pty: &libvirtxml.DomainChardevSourcePty{},
-					},
-					Target: &libvirtxml.DomainConsoleTarget{
-						Type: "virtio",
-						Port: &serialPort,
-					},
-				},
-			},
-		},
+		CPU:     &libvirtxml.DomainCPU{},
+		Devices: newDevicesDef(),
 		Features: &libvirtxml.DomainFeatureList{
 			PAE:  &libvirtxml.DomainFeature{},
 			ACPI: &libvirtxml.DomainFeature{},
@@ -103,6 +67,55 @@ func newDomainDef() libvirtxml.Domain {
 	}
 
 	return domainDef
+}
+
+func newDevicesDef() *libvirtxml.DomainDeviceList {
+	var serialPort uint
+
+	domainList := libvirtxml.DomainDeviceList{
+		Channels: []libvirtxml.DomainChannel{
+			{
+				Target: &libvirtxml.DomainChannelTarget{
+					VirtIO: &libvirtxml.DomainChannelTargetVirtIO{
+						Name: "org.qemu.guest_agent.0",
+					},
+				},
+			},
+		},
+		RNGs: []libvirtxml.DomainRNG{
+			{
+				Model: "virtio",
+				Backend: &libvirtxml.DomainRNGBackend{
+					Random: &libvirtxml.DomainRNGBackendRandom{},
+				},
+			},
+		},
+		Consoles: []libvirtxml.DomainConsole{
+			{
+				Source: &libvirtxml.DomainChardevSource{
+					Pty: &libvirtxml.DomainChardevSourcePty{},
+				},
+				Target: &libvirtxml.DomainConsoleTarget{
+					Type: "virtio",
+					Port: &serialPort,
+				},
+			},
+		},
+	}
+
+	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
+	// Graphics/Spice isn't supported on s390/s390x platform.
+	if runtime.GOARCH != "s390x" && runtime.GOARCH != "s390" {
+		domainList.Graphics = []libvirtxml.DomainGraphic{
+			{
+				Spice: &libvirtxml.DomainGraphicSpice{
+					AutoPort: "yes",
+				},
+			},
+		}
+	}
+
+	return &domainList
 }
 
 func getHostArchitecture(virConn *libvirt.Connect) (string, error) {
