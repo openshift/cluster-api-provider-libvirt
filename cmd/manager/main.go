@@ -1,6 +1,9 @@
 package main
 
 import (
+	"flag"
+
+	"github.com/golang/glog"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
@@ -8,16 +11,14 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
 	machineapis "github.com/openshift/cluster-api/pkg/apis"
 	"github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/klog"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	"flag"
-
-	"github.com/golang/glog"
-	"k8s.io/klog"
 )
 
 func main() {
