@@ -24,19 +24,10 @@ else
   IMAGE_BUILD_CMD = docker build
 endif
 
-.PHONY: depend
-depend:
-	dep version || go get -u github.com/golang/dep/cmd/dep
-	dep ensure
-
 .PHONY: depend-update
 depend-update:
-	dep ensure -update
-
-.PHONY: vendor
-vendor:
-	dep version || go get -u github.com/golang/dep/cmd/dep
-	dep ensure -v
+	GO111MODULE=on go mod tidy
+	GO111MODULE=on go mod vendor
 
 .PHONY: generate
 generate: gendeepcopy gencode
