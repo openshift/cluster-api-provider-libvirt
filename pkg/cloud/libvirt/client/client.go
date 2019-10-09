@@ -531,14 +531,6 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 		return volPool.Refresh(0)
 	})
 
-	// Workaround for redhat#1293804
-	// https://bugzilla.redhat.com/show_bug.cgi?id=1293804#c12
-	// Does not solve the problem but it makes it happen less often.
-	_, err = volume.GetXMLDesc(0)
-	if err != nil {
-		return fmt.Errorf("Can't retrieve volume %s XML desc: %s", name, err)
-	}
-
 	err = volume.Delete(0)
 	if err != nil {
 		return fmt.Errorf("Can't delete volume %s: %s", name, err)
