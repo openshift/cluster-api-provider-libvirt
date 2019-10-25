@@ -116,6 +116,13 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 		return err
 	}
 
+	// guestfish --remote -- mkdir-p /ignition
+	args = []string{"--remote", "--", "mkdir-p", "/ignition"}
+	_, err = execCmd(runAsRoot, env, args...)
+	if err != nil {
+		return fmt.Errorf("Mkdir failed: %v", err)
+	}
+
 	/*
 	 * Upload the ignition file, execute the following command,
 	 *     guestfish --remote -- upload ${ignition_filepath} /ignition/config.ign
