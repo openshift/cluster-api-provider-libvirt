@@ -47,6 +47,14 @@ func setIgnitionForS390X(domainDef *libvirtxml.Domain, client *libvirtClient, ig
 	}
 
 	// _fw_cfg isn't supported on s390x, so we use guestfish to inject the ignition for now
+	connURI, err := client.connection.GetURI()
+	if err != nil {
+		return err
+	}
+	virHost := strings.Split(strings.SplitAfter(connURI, "//")[1], "/")[0]
+	if virHost != "" {
+		return sshInjectIgnitionByGuestfish(domainDef, ignitionVolumeName, virHost)
+	}
 	return injectIgnitionByGuestfish(domainDef, ignitionVolumeName)
 }
 
