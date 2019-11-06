@@ -9,6 +9,8 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -78,6 +80,9 @@ type CreateVolumeInput struct {
 
 	// VolumeFormat as volume format
 	VolumeFormat string
+
+	// VolumeSize contains the size of the volume
+	VolumeSize *resource.Quantity
 }
 
 // LibvirtClientBuilderFuncType is function type for building aws client
@@ -415,11 +420,21 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume info %s", input.BaseVolumeName)
 		}
-		if baseVolumeInfo.Capacity > uint64(defaultSize) {
+
+		var volumeSize uint64
+		if input.VolumeSize != nil {
+			size, _ := input.VolumeSize.AsInt64()
+			volumeSize = uint64(size)
+		} else {
+			volumeSize = uint64(defaultSize)
+		}
+
+		if baseVolumeInfo.Capacity > volumeSize {
 			volumeDef.Capacity.Value = baseVolumeInfo.Capacity
 		} else {
-			volumeDef.Capacity.Value = uint64(defaultSize)
+			volumeDef.Capacity.Value = volumeSize
 		}
+
 		backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
 		if err != nil {
 			return fmt.Errorf("Could not retrieve backing store %s", input.BaseVolumeName)

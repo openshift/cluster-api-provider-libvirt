@@ -4,18 +4,17 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 const (
-	// TODO: support size in the API
 	defaultSize = 17706254336
 )
 

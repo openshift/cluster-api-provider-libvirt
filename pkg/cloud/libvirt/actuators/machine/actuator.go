@@ -257,6 +257,7 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 			VolumeName:     domainName,
 			BaseVolumeName: machineProviderConfig.Volume.BaseVolumeID,
 			VolumeFormat:   "qcow2",
+			VolumeSize:     machineProviderConfig.Volume.VolumeSize,
 		}); err != nil {
 		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating volume %v", err), createEventAction)
 	}
