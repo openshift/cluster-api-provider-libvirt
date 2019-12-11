@@ -18,7 +18,7 @@ import (
 var execCommand = exec.Command
 
 func setIgnitionForS390X(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string) error {
-	glog.Info("Creating ignition file for s390x")
+	glog.Infof("Creating ignition file for s390x")
 	ignitionDef := newIgnitionDef()
 
 	if ignition.UserDataSecret == "" {
