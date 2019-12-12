@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/xml"
 	"fmt"
-	"runtime"
 
 	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
@@ -189,8 +188,12 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 
 	glog.Info("Create ignition configuration")
 
+	arch, err := getHostArchitecture(client.connection)
+	if err != nil {
+		return fmt.Errorf("Error retrieving host architecture: %s", err)
+	}
 	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
-	if runtime.GOARCH == "s390x" || runtime.GOARCH == "s390" {
+	if arch == "s390x" || arch == "s390" {
 		if input.Ignition != nil {
 			if err := setIgnitionForS390X(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
 				return err
