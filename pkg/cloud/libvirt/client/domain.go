@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -36,7 +35,7 @@ type pendingMapping struct {
 	network  *libvirt.Network
 }
 
-func newDomainDef() libvirtxml.Domain {
+func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
 	domainDef := libvirtxml.Domain{
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
@@ -52,7 +51,7 @@ func newDomainDef() libvirtxml.Domain {
 			Value:     1,
 		},
 		CPU:     &libvirtxml.DomainCPU{},
-		Devices: newDevicesDef(),
+		Devices: newDevicesDef(virConn),
 		Features: &libvirtxml.DomainFeatureList{
 			PAE:  &libvirtxml.DomainFeature{},
 			ACPI: &libvirtxml.DomainFeature{},
@@ -69,7 +68,7 @@ func newDomainDef() libvirtxml.Domain {
 	return domainDef
 }
 
-func newDevicesDef() *libvirtxml.DomainDeviceList {
+func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 	var serialPort uint
 
 	domainList := libvirtxml.DomainDeviceList{
@@ -103,9 +102,13 @@ func newDevicesDef() *libvirtxml.DomainDeviceList {
 		},
 	}
 
+	arch, err := getHostArchitecture(virConn)
+	if err != nil {
+		glog.Errorf("Error retrieving host architecture: %s", err)
+	}
 	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
 	// Graphics/Spice isn't supported on s390/s390x platform.
-	if runtime.GOARCH != "s390x" && runtime.GOARCH != "s390" {
+	if arch != "s390x" && arch != "s390" {
 		domainList.Graphics = []libvirtxml.DomainGraphic{
 			{
 				Spice: &libvirtxml.DomainGraphicSpice{
@@ -184,7 +187,7 @@ func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string,
 }
 
 func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, error) {
-	d := newDomainDef()
+	d := newDomainDef(virConn)
 
 	arch, err := getHostArchitecture(virConn)
 	if err != nil {
