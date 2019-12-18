@@ -17,8 +17,9 @@ import (
 
 var execCommand = exec.Command
 
-func setIgnitionForS390X(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string) error {
-	glog.Infof("Creating ignition file for s390x")
+// Currently used for s390 and PowerPC arches
+func setIgnitionWithConfigDrive(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string) error {
+	glog.Infof("Creating ignition file with config drive")
 	ignitionDef := newIgnitionDef()
 
 	if ignition.UserDataSecret == "" {
@@ -55,7 +56,7 @@ func setIgnitionForS390X(domainDef *libvirtxml.Domain, client *libvirtClient, ig
 		return fmt.Errorf("Error create and upload iso file: %s", err)
 	}
 
-	glog.Infof("Calling newDiskForConfigDrive for coreos_ignition on s390x ")
+	glog.Infof("Calling newDiskForConfigDrive for coreos_ignition ")
 	disk, err := newDiskForConfigDrive(client.connection, ignitionVolumeName)
 	if err != nil {
 		return err
@@ -105,7 +106,7 @@ func newDiskForConfigDrive(virConn *libvirt.Connect, volumeKey string) (libvirtx
 	disk := libvirtxml.DomainDisk{
 		Device: "cdrom",
 		Target: &libvirtxml.DomainDiskTarget{
-			// s390 platform doesn't support IDE controller, it shoule be virtio controller
+			// s390 and ppc platforms doesn't support IDE controller, it shoule be virtio controller
 			Dev: "vdb",
 			Bus: "scsi",
 		},
