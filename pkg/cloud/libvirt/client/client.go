@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	libvirt "github.com/libvirt/libvirt-go"
@@ -198,9 +199,10 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 		return fmt.Errorf("Error retrieving host architecture: %s", err)
 	}
 	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
-	if arch == "s390x" || arch == "s390" {
+	// PowerPC architectures require this support as well
+	if strings.HasPrefix(arch, "s390") || strings.HasPrefix(arch, "ppc64") {
 		if input.Ignition != nil {
-			if err := setIgnitionForS390X(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
+			if err := setIgnitionWithConfigDrive(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName); err != nil {
 				return err
 			}
 		}
