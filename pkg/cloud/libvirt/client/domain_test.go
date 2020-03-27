@@ -1,6 +1,7 @@
 package client
 
 import (
+	"runtime"
 	"testing"
 
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
@@ -28,7 +29,7 @@ TestCases:
 	for i, tc := range testCases {
 		domainDef := libvirtxml.Domain{}
 
-		err := setCoreOSIgnition(&domainDef, tc.ignKey)
+		err := setCoreOSIgnition(&domainDef, tc.ignKey, runtime.GOARCH)
 		// if err, verify it returns expected error
 		if err != nil {
 			if err.Error() != tc.errorMessage {
