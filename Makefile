@@ -48,7 +48,6 @@ gendeepcopy:
 .PHONY: build
 build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller "$(REPO_PATH)/cmd/manager"
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/manager "$(REPO_PATH)/vendor/$(CLUSTER_API)/cmd/manager"
 	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test "$(REPO_PATH)/test/machines"
 
 .PHONY: libvirt-actuator

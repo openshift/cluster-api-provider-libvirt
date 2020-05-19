@@ -43,7 +43,7 @@ Now you just edit the `machine-api-controllers` deployment and tell it to use yo
 oc edit deployments machine-api-controllers
 ```
 
-It's the `image` under `./manager` and `/machine-controller-manager` commands that you need to modify to
+It's the `image` under the `/machine-controller-manager` command that you need to modify to
 `${YOUR_DOCKER_NS}/capl:test`.
 
 Wait a bit and your new image will be deployed. You can monitor the status with ` oc get pods`. You can also see the
