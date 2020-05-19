@@ -8,9 +8,9 @@ into that. Then you need to build a custom image for cluster-api-provider-libvir
 git clone git@github.com:openshift/cluster-api-provider-libvirt.git
 cd cluster-api-provider-libvirt
 # Make any changes you need to in the source code
-sudo docker build -t ${YOUR_DOCKER_NS}/capl:test .
-sudo docker login # If not already done
-sudo docker push ${YOUR_DOCKER_NS}/capl:test
+podman build -t ${YOUR_DOCKER_NS}/capl:test .
+podman login # If not already done
+podman push ${YOUR_DOCKER_NS}/capl:test
 ```
 
 Let's avoid having to specify namespace all the time to `oc`:
