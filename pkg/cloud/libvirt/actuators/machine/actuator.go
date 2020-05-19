@@ -24,7 +24,6 @@ import (
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
-	controllererrors "github.com/openshift/cluster-api/pkg/controller/error"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,10 +31,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
-	clusterv1 "github.com/openshift/cluster-api/pkg/apis/cluster/v1alpha1"
-	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
-	apierrors "github.com/openshift/cluster-api/pkg/errors"
+	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	apierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
+	clusterclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,7 +109,7 @@ func (a *Actuator) handleMachineError(machine *machinev1.Machine, err *apierrors
 }
 
 // Create creates a machine and is invoked by the Machine Controller
-func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Create(context context.Context, machine *machinev1.Machine) error {
 	glog.Infof("Creating machine %q", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
@@ -137,7 +135,7 @@ func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, m
 		libvirtclient.FillReservedLeases(a.reservedLeases, libvirtLeases)
 	}
 
-	dom, err := a.createVolumeAndDomain(machine, machineProviderConfig, client)
+	dom, err := a.createVolumeAndDomain(context, machine, machineProviderConfig, client)
 	if err != nil {
 		return errWrapper.WithLog(err, "error creating libvirt machine")
 	}
@@ -148,7 +146,7 @@ func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, m
 		}
 	}()
 
-	if err := a.updateStatus(machine, dom, client); err != nil {
+	if err := a.updateStatus(context, machine, dom, client); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
 
@@ -158,7 +156,7 @@ func (a *Actuator) Create(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Delete deletes a machine and is invoked by the Machine Controller
-func (a *Actuator) Delete(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Delete(context context.Context, machine *machinev1.Machine) error {
 	glog.Infof("Deleting machine %q", machine.Name)
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
@@ -185,7 +183,7 @@ func (a *Actuator) Delete(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Update updates a machine and is invoked by the Machine Controller
-func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) error {
+func (a *Actuator) Update(context context.Context, machine *machinev1.Machine) error {
 	glog.Infof("Updating machine %v", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
@@ -210,7 +208,7 @@ func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, m
 
 	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", machine.Name)
 
-	if err := a.updateStatus(machine, dom, client); err != nil {
+	if err := a.updateStatus(context, machine, dom, client); err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
 
@@ -218,7 +216,7 @@ func (a *Actuator) Update(context context.Context, cluster *clusterv1.Cluster, m
 }
 
 // Exists test for the existance of a machine and is invoked by the Machine Controller
-func (a *Actuator) Exists(context context.Context, cluster *clusterv1.Cluster, machine *machinev1.Machine) (bool, error) {
+func (a *Actuator) Exists(context context.Context, machine *machinev1.Machine) (bool, error) {
 	glog.Infof("Checking if machine %v exists.", machine.Name)
 	errWrapper := errorWrapper{machine: machine}
 
@@ -248,7 +246,7 @@ func ignitionVolumeName(volumeName string) string {
 // CreateVolumeAndMachine creates a volume and domain which consumes the former one.
 // Note: Upon success a pointer to the created domain is returned.  It
 // is the caller's responsiblity to free this.
-func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, client libvirtclient.Client) (*libvirt.Domain, error) {
+func (a *Actuator) createVolumeAndDomain(ctx context.Context, machine *machinev1.Machine, machineProviderConfig *providerconfigv1.LibvirtMachineProviderConfig, client libvirtclient.Client) (*libvirt.Domain, error) {
 	domainName := machine.Name
 
 	// Create volume
@@ -263,7 +261,7 @@ func (a *Actuator) createVolumeAndDomain(machine *machinev1.Machine, machineProv
 	}
 
 	// Create domain
-	if err := client.CreateDomain(libvirtclient.CreateDomainInput{
+	if err := client.CreateDomain(ctx, libvirtclient.CreateDomainInput{
 		DomainName:              domainName,
 		IgnKey:                  machineProviderConfig.IgnKey,
 		Ignition:                machineProviderConfig.Ignition,
@@ -352,7 +350,7 @@ func ProviderConfigMachine(codec codec, ms *machinev1.MachineSpec) (*providercon
 }
 
 // updateStatus updates a machine object's status.
-func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain, client libvirtclient.Client) error {
+func (a *Actuator) updateStatus(context context.Context, machine *machinev1.Machine, dom *libvirt.Domain, client libvirtclient.Client) error {
 	glog.Infof("Updating status for %s", machine.Name)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
@@ -378,7 +376,7 @@ func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain,
 		return err
 	}
 
-	if err := a.applyMachineStatus(machine, status, addrs); err != nil {
+	if err := a.applyMachineStatus(context, machine, status, addrs); err != nil {
 		glog.Errorf("Unable to apply machine status: %v", err)
 		return err
 	}
@@ -387,6 +385,7 @@ func (a *Actuator) updateStatus(machine *machinev1.Machine, dom *libvirt.Domain,
 }
 
 func (a *Actuator) applyMachineStatus(
+	context context.Context,
 	machine *machinev1.Machine,
 	status *providerconfigv1.LibvirtMachineProviderStatus,
 	addrs []corev1.NodeAddress,
@@ -414,7 +413,7 @@ func (a *Actuator) applyMachineStatus(
 	now := metav1.Now()
 	machineCopy.Status.LastUpdated = &now
 	_, err = a.clusterClient.MachineV1beta1().
-		Machines(machineCopy.Namespace).UpdateStatus(machineCopy)
+		Machines(machineCopy.Namespace).UpdateStatus(context, machineCopy, metav1.UpdateOptions{})
 	return err
 }
 
@@ -483,7 +482,7 @@ func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInte
 
 	if len(ifaces) == 0 {
 		glog.Infof("The domain does not have any network interfaces")
-		return nil, &controllererrors.RequeueAfterError{RequeueAfter: time.Second}
+		return nil, &apierrors.RequeueAfterError{RequeueAfter: time.Second}
 	}
 
 	for _, iface := range ifaces {

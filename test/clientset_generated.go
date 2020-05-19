@@ -19,11 +19,9 @@ limitations under the License.
 package test
 
 import (
-	clientset "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
-	clusterv1alpha1 "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1"
-	fakeclusterv1alpha1 "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1"
-	fakemachinev1beta1 "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake"
+	clientset "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/typed/machine/v1beta1"
+	fakemachinev1beta1 "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/typed/machine/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -73,14 +71,4 @@ func (c *Clientset) MachineV1beta1() machinev1beta1.MachineV1beta1Interface {
 // Machine retrieves the MachineV1beta1Client
 func (c *Clientset) Machine() machinev1beta1.MachineV1beta1Interface {
 	return c.MachineV1beta1()
-}
-
-// ClusterV1alpha1 retrieves the ClusterV1alpha1Client
-func (c *Clientset) ClusterV1alpha1() clusterv1alpha1.ClusterV1alpha1Interface {
-	return &fakeclusterv1alpha1.FakeClusterV1alpha1{Fake: c.Fake}
-}
-
-// Cluster retrieves the ClusterV1alpha1Client
-func (c *Clientset) Cluster() clusterv1alpha1.ClusterV1alpha1Interface {
-	return c.ClusterV1alpha1()
 }
