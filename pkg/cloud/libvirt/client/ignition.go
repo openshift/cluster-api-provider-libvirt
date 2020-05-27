@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,44 +43,8 @@ func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *
 		return err
 	}
 
-	if strings.HasPrefix(arch, "s390") || strings.HasPrefix(arch, "ppc64") {
-		// System Z and PowerPC do not support the Firmware Configuration
-		// device. After a discussion about the best way to support a similar
-		// method for qemu in https://github.com/coreos/ignition/issues/928,
-		// decided on creating a virtio-blk device with a serial of ignition
-		// which contains the ignition config and have ignition support for
-		// reading from the device which landed in https://github.com/coreos/ignition/pull/936
-		igndisk := libvirtxml.DomainDisk{
-			Device: "disk",
-			Source: &libvirtxml.DomainDiskSource{
-				File: &libvirtxml.DomainDiskSourceFile{
-					File: ignitionVolumeName,
-				},
-			},
-			Target: &libvirtxml.DomainDiskTarget{
-				Dev: "vdb",
-				Bus: "virtio",
-			},
-			Driver: &libvirtxml.DomainDiskDriver{
-				Name: "qemu",
-				Type: "raw",
-			},
-			ReadOnly: &libvirtxml.DomainDiskReadOnly{},
-			Serial:   "ignition",
-		}
-		domainDef.Devices.Disks = append(domainDef.Devices.Disks, igndisk)
-	} else {
-		domainDef.QEMUCommandline = &libvirtxml.DomainQEMUCommandline{
-			Args: []libvirtxml.DomainQEMUCommandlineArg{
-				{
-					// https://github.com/qemu/qemu/blob/master/docs/specs/fw_cfg.txt
-					Value: "-fw_cfg",
-				},
-				{
-					Value: fmt.Sprintf("name=opt/com.coreos/config,file=%s", ignitionVolumeName),
-				},
-			},
-		}
+	if err = setCoreOSIgnition(domainDef, ignitionVolumeName, arch); err != nil {
+		return err
 	}
 	return nil
 }
