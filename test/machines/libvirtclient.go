@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	libvirt "github.com/libvirt/libvirt-go"
-	machinev1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 )
 
 type libvirtClient struct {

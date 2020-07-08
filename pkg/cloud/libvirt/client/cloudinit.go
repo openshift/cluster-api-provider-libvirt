@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
 
-func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, domainName string) error {
+func setCloudInit(ctx context.Context, domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit *providerconfigv1.CloudInit, kubeClient kubernetes.Interface, machineNamespace, volumeName, domainName string) error {
 
 	// At least user data or ssh access needs to be set to create the cloud init
 	if cloudInit.UserDataSecret == "" && !cloudInit.SSHAccess {
@@ -29,7 +30,7 @@ func setCloudInit(domainDef *libvirtxml.Domain, client *libvirtClient, cloudInit
 	// default to bash noop
 	userDataSecret := []byte(":")
 	if cloudInit.UserDataSecret != "" {
-		secret, err := kubeClient.CoreV1().Secrets(machineNamespace).Get(cloudInit.UserDataSecret, metav1.GetOptions{})
+		secret, err := kubeClient.CoreV1().Secrets(machineNamespace).Get(ctx, cloudInit.UserDataSecret, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("can not retrieve user data secret '%v/%v' when constructing cloud init volume: %v", machineNamespace, cloudInit.UserDataSecret, err)
 		}

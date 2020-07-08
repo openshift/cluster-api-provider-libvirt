@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +16,7 @@ import (
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 )
 
-func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string, arch string) error {
+func setIgnition(ctx context.Context, domainDef *libvirtxml.Domain, client *libvirtClient, ignition *providerconfigv1.Ignition, kubeClient kubernetes.Interface, machineNamespace, volumeName string, arch string) error {
 	glog.Info("Creating ignition file")
 	ignitionDef := newIgnitionDef()
 
@@ -23,7 +24,7 @@ func setIgnition(domainDef *libvirtxml.Domain, client *libvirtClient, ignition *
 		return fmt.Errorf("ignition.userDataSecret not set")
 	}
 
-	secret, err := kubeClient.CoreV1().Secrets(machineNamespace).Get(ignition.UserDataSecret, metav1.GetOptions{})
+	secret, err := kubeClient.CoreV1().Secrets(machineNamespace).Get(ctx, ignition.UserDataSecret, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("can not retrieve user data secret '%v/%v' when constructing cloud init volume: %v", machineNamespace, ignition.UserDataSecret, err)
 	}

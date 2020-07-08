@@ -5,6 +5,7 @@
 package mock
 
 import (
+	"context"
 	gomock "github.com/golang/mock/gomock"
 	libvirt_go "github.com/libvirt/libvirt-go"
 	client "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
@@ -49,7 +50,7 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // CreateDomain mocks base method
-func (m *MockClient) CreateDomain(arg0 client.CreateDomainInput) error {
+func (m *MockClient) CreateDomain(ctx context.Context, arg0 client.CreateDomainInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateDomain", arg0)
 	ret0, _ := ret[0].(error)

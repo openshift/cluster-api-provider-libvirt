@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 
@@ -93,7 +94,7 @@ type Client interface {
 	Close() error
 
 	// CreateDomain creates domain based on CreateDomainInput
-	CreateDomain(CreateDomainInput) error
+	CreateDomain(context.Context, CreateDomainInput) error
 
 	// DeleteDomain deletes a domain
 	DeleteDomain(name string) error
@@ -165,7 +166,7 @@ func (client *libvirtClient) Close() error {
 }
 
 // CreateDomain creates domain based on CreateDomainInput
-func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
+func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomainInput) error {
 	if input.DomainName == "" {
 		return fmt.Errorf("Failed to create domain, name is empty")
 	}
@@ -199,7 +200,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	}
 
 	if input.Ignition != nil {
-		if err := setIgnition(&domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, arch); err != nil {
+		if err := setIgnition(ctx, &domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, arch); err != nil {
 			return err
 		}
 	} else if input.IgnKey != "" {
@@ -216,7 +217,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 			return err
 		}
 	} else if input.CloudInit != nil {
-		if err := setCloudInit(&domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.DomainName); err != nil {
+		if err := setCloudInit(ctx, &domainDef, client, input.CloudInit, input.KubeClient, input.MachineNamespace, input.CloudInitVolumeName, input.DomainName); err != nil {
 			return err
 		}
 	} else {
@@ -549,6 +550,7 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	return nil
 }
 
+// This may also be implementable with https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainInterfaceAddresses
 // GetDHCPLeasesByNetwork returns all network DHCP leases by network name
 func (client *libvirtClient) GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDHCPLease, error) {
 	network, err := client.connection.LookupNetworkByName(networkName)
