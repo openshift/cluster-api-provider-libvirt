@@ -155,9 +155,14 @@ func NewClient(URI string, poolName string) (Client, error) {
 
 // Close closes the client's libvirt connection.
 func (client *libvirtClient) Close() error {
-	glog.Infof("Closing libvirt connection: %p", client.connection)
+	glog.Infof("Freeing the client pool")
+	err := client.pool.Free()
+	if err != nil {
+		glog.Infof("Error freeing the client pool: %v", err)
+	}
 
-	_, err := client.connection.Close()
+	glog.Infof("Closing libvirt connection: %p", client.connection)
+	_, err = client.connection.Close()
 	if err != nil {
 		glog.Infof("Error closing libvirt connection: %v", err)
 	}
@@ -558,6 +563,7 @@ func (client *libvirtClient) GetDHCPLeasesByNetwork(networkName string) ([]libvi
 		glog.Errorf("Failed to fetch network %s from the libvirt", networkName)
 		return nil, err
 	}
+	defer network.Free()
 
 	return network.GetDHCPLeases()
 }
