@@ -162,9 +162,12 @@ func (client *libvirtClient) Close() error {
 	}
 
 	glog.Infof("Closing libvirt connection: %p", client.connection)
-	_, err = client.connection.Close()
+	remainingRefs, err := client.connection.Close()
 	if err != nil {
 		glog.Infof("Error closing libvirt connection: %v", err)
+	}
+	if remainingRefs != 0 {
+		glog.Warningf("libvirt connection %p was not closed, some objects are still holding references to it", client.connection)
 	}
 
 	return err
