@@ -195,6 +195,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 	if err != nil {
 		return fmt.Errorf("can't retrieve volume %s for pool %s: %v", input.VolumeName, client.poolName, err)
 	}
+	defer diskVolume.Free()
 	if err := setDisks(&domainDef, diskVolume); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
@@ -215,6 +216,7 @@ func (client *libvirtClient) CreateDomain(input CreateDomainInput) error {
 		if err != nil {
 			return fmt.Errorf("error getting ignition volume: %v", err)
 		}
+		defer ignVolume.Free()
 		ignVolumePath, err := ignVolume.GetPath()
 		if err != nil {
 			return fmt.Errorf("error getting ignition volume path: %v", err)
@@ -386,6 +388,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 
 	volume, err := client.getVolume(input.VolumeName)
 	if err == nil {
+		volume.Free()
 		return fmt.Errorf("storage volume '%s' already exists", input.VolumeName)
 	}
 
@@ -418,6 +421,7 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeName)
 		}
+		defer baseVolume.Free()
 		var baseVolumeInfo *libvirt.StorageVolInfo
 		baseVolumeInfo, err = baseVolume.GetInfo()
 		if err != nil {
