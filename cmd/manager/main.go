@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
@@ -25,6 +26,25 @@ func main() {
 	watchNamespace := flag.String("namespace", "", "Namespace that the controller watches to reconcile machine-api objects. If unspecified, the controller watches for machine-api objects across all namespaces.")
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(klogFlags)
+
+	leaderElectResourceNamespace := flag.String(
+		"leader-elect-resource-namespace",
+		"",
+		"The namespace of resource object that is used for locking during leader election. If unspecified and running in cluster, defaults to the service account namespace for the controller. Required for leader-election outside of a cluster.",
+	)
+
+	leaderElect := flag.Bool(
+		"leader-elect",
+		false,
+		"Start a leader election client and gain leadership before executing the main loop. Enable this when running replicated components for high availability.",
+	)
+
+	leaderElectLeaseDuration := flag.Duration(
+		"leader-elect-lease-duration",
+		15*time.Second,
+		"The duration that non-leader candidates will wait after observing a leadership renewal until attempting to acquire leadership of a led but unrenewed leader slot. This is effectively the maximum duration that a leader can be stopped before it is replaced by another candidate. This is only applicable if leader election is enabled.",
+	)
+
 	flag.Parse()
 	flag.VisitAll(func(f1 *flag.Flag) {
 		f2 := klogFlags.Lookup(f1.Name)
@@ -40,7 +60,12 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	opts := manager.Options{}
+	opts := manager.Options{
+		LeaderElection:          *leaderElect,
+		LeaderElectionNamespace: *leaderElectResourceNamespace,
+		LeaderElectionID:        "cluster-api-provider-libvirt-leader",
+		LeaseDuration:           leaderElectLeaseDuration,
+	}
 
 	if *watchNamespace != "" {
 		opts.Namespace = *watchNamespace
