@@ -14,14 +14,16 @@ endif
 .PHONY: all
 all: build images check
 
+CONTAINER_RUNTIME ?= podman
+
 NO_DOCKER ?= 0
 ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
   CGO_ENABLED = 1
 else
-  DOCKER_CMD := docker run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" openshift/origin-release:golang-1.13
-  IMAGE_BUILD_CMD = docker build
+  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" openshift/origin-release:golang-1.13
+  IMAGE_BUILD_CMD = $(CONTAINER_RUNTIME) build
 endif
 
 .PHONY: depend-update
@@ -60,8 +62,8 @@ images: ## Create images
 
 .PHONY: push
 push:
-	docker push "$(IMAGE):$(VERSION)"
-	docker push "$(IMAGE):$(MUTABLE_TAG)"
+	$(CONTAINER_RUNTIME) push "$(IMAGE):$(VERSION)"
+	$(CONTAINER_RUNTIME) push "$(IMAGE):$(MUTABLE_TAG)"
 
 .PHONY: check
 check: fmt vet lint test check-pkg ## Check your code
