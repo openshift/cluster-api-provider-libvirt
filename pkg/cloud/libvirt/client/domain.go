@@ -109,7 +109,10 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
 	// Graphics/Spice isn't supported on s390/s390x platform.
 	// Same case for PowerPC systems as well
-	if !strings.HasPrefix(arch, "s390") && !strings.HasPrefix(arch, "ppc64") {
+	switch arch {
+	case "s390", "s390x", "ppc64", "ppc64le", "aarch64":
+		break
+	default:
 		domainList.Graphics = []libvirtxml.DomainGraphic{
 			{
 				Spice: &libvirtxml.DomainGraphicSpice{
