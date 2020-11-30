@@ -33,6 +33,8 @@ type LibvirtMachineProviderConfig struct {
 	NetworkUUID              string     `json:"networkUUID"`
 	Autostart                bool       `json:"autostart"`
 	URI                      string     `json:"uri"`
+	Firmware                 string     `json:"firmware,omitempty"`
+	Nvram                    *Nvram     `json:"nvram,omitempty"`
 }
 
 // Ignition contains location of ignition to be run during bootstrapping
@@ -55,6 +57,12 @@ type Volume struct {
 	BaseVolumeID string             `json:"baseVolumeID"`
 	VolumeName   string             `json:"volumeName"`
 	VolumeSize   *resource.Quantity `json:"volumeSize,omitempty"`
+}
+
+// Nvram contains attributes related to NVRAM for UEFI architectures
+type Nvram struct {
+	NvramFile     string `json:"nvramFile"`
+	NvramTemplate string `json:"nvramTemplate"`
 }
 
 // LibvirtClusterProviderConfig is the type that will be embedded in a Cluster.Spec.ProviderSpec field.

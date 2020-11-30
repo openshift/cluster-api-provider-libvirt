@@ -65,6 +65,12 @@ type CreateDomainInput struct {
 
 	// MachineNamespace with machine object
 	MachineNamespace string
+
+	// ROM image location for UEFI architectures
+	Firmware string
+
+	// Nvram file and template location for UEFI architectures
+	Nvram *providerconfigv1.Nvram
 }
 
 // CreateVolumeInput specifies input parameters for CreateVolume operation
@@ -187,7 +193,7 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	}
 
 	// Get values from machineProviderConfig
-	if err := domainDefInit(&domainDef, input.DomainName, input.DomainMemory, input.DomainVcpu); err != nil {
+	if err := domainDefInit(&domainDef, &input); err != nil {
 		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
 	}
 

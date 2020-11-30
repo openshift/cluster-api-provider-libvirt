@@ -278,6 +278,8 @@ func (a *Actuator) createVolumeAndDomain(ctx context.Context, machine *machinev1
 		CloudInit:               machineProviderConfig.CloudInit,
 		KubeClient:              a.kubeClient,
 		MachineNamespace:        machine.Namespace,
+		Firmware:                machineProviderConfig.Firmware,
+		Nvram:                   machineProviderConfig.Nvram,
 	}); err != nil {
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
