@@ -460,35 +460,43 @@ type Config struct {
 	URI string
 }
 
-func domainDefInit(domainDef *libvirtxml.Domain, name string, memory, vcpu int) error {
-	if name != "" {
-		domainDef.Name = name
+func setFirmware(input *CreateDomainInput, domainDef *libvirtxml.Domain, arch string) {
+	// for aarch64 speciffying this will automatically select the firmware and NVRAM file
+	// reference: https://libvirt.org/formatdomain.html#bios-bootloader
+	if arch == "aarch64" {
+		domainDef.OS.Firmware = "efi"
+	}
+}
+
+func domainDefInit(domainDef *libvirtxml.Domain, input *CreateDomainInput, arch string) error {
+	if input.DomainName != "" {
+		domainDef.Name = input.DomainName
 	} else {
 		return fmt.Errorf("machine does not have an name set")
 	}
 
-	if memory != 0 {
+	if input.DomainMemory != 0 {
 		domainDef.Memory = &libvirtxml.DomainMemory{
-			Value: uint(memory),
+			Value: uint(input.DomainMemory),
 			Unit:  "MiB",
 		}
 	} else {
 		return fmt.Errorf("machine does not have an DomainMemory set")
 	}
 
-	if vcpu != 0 {
+	if input.DomainVcpu != 0 {
 		domainDef.VCPU = &libvirtxml.DomainVCPU{
-			Value: vcpu,
+			Value: input.DomainVcpu,
 		}
 	} else {
 		return fmt.Errorf("machine does not have an DomainVcpu set")
 	}
 
 	domainDef.CPU.Mode = "host-passthrough"
+	setFirmware(input, domainDef, arch)
 
 	//setConsoles(d, &domainDef)
 	//setCmdlineArgs(d, &domainDef)
-	//setFirmware(d, &domainDef)
 	//setBootDevices(d, &domainDef)
 
 	return nil

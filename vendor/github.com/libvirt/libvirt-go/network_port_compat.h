@@ -19,49 +19,49 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Copyright (c) 2013 Alex Zorin
- * Copyright (C) 2016 Red Hat, Inc.
+ * Copyright (C) 2019 Red Hat, Inc.
  *
  */
 
-#ifndef LIBVIRT_GO_SECRET_COMPAT_H__
-#define LIBVIRT_GO_SECRET_COMPAT_H__
+#ifndef LIBVIRT_GO_NETWORK_PORT_COMPAT_H__
+#define LIBVIRT_GO_NETWORK_PORT_COMPAT_H__
 
-/* 3.0.0 */
+/* 5.5.0 */
 
-#ifndef VIR_SECRET_EVENT_DEFINED
-#define VIR_SECRET_EVENT_DEFINED 0
+#if LIBVIR_VERSION_NUMBER < 5005000
+typedef struct _virNetworkPort *virNetworkPortPtr;
 #endif
 
-#ifndef VIR_SECRET_EVENT_UNDEFINED
-#define VIR_SECRET_EVENT_UNDEFINED 1
+#ifndef VIR_NETWORK_PORT_CREATE_RECLAIM
+#define VIR_NETWORK_PORT_CREATE_RECLAIM (1 << 0)
 #endif
 
-#ifndef VIR_SECRET_EVENT_ID_LIFECYCLE
-#define VIR_SECRET_EVENT_ID_LIFECYCLE 0
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_IN_AVERAGE
+#define VIR_NETWORK_PORT_BANDWIDTH_IN_AVERAGE "inbound.average"
 #endif
 
-#ifndef VIR_SECRET_EVENT_ID_VALUE_CHANGED
-#define VIR_SECRET_EVENT_ID_VALUE_CHANGED 1
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_IN_PEAK
+#define VIR_NETWORK_PORT_BANDWIDTH_IN_PEAK "inbound.peak"
 #endif
 
-
-#if LIBVIR_VERSION_NUMBER < 3000000
-typedef void (*virConnectSecretEventGenericCallback)(virConnectPtr conn,
-						     virSecretPtr secret,
-						     void *opaque);
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_IN_BURST
+#define VIR_NETWORK_PORT_BANDWIDTH_IN_BURST "inbound.burst"
 #endif
 
-/* 2.2.1 */
-
-#ifndef VIR_SECRET_USAGE_TYPE_TLS
-#define VIR_SECRET_USAGE_TYPE_TLS 4
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_IN_FLOOR
+#define VIR_NETWORK_PORT_BANDWIDTH_IN_FLOOR "inbound.floor"
 #endif
 
-/* 5.6.0 */
-
-#ifndef VIR_SECRET_USAGE_TYPE_VTPM
-#define VIR_SECRET_USAGE_TYPE_VTPM 5
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_OUT_AVERAGE
+#define VIR_NETWORK_PORT_BANDWIDTH_OUT_AVERAGE "outbound.average"
 #endif
 
-#endif /* LIBVIRT_GO_SECRET_COMPAT_H__ */
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_OUT_PEAK
+#define VIR_NETWORK_PORT_BANDWIDTH_OUT_PEAK "outbound.peak"
+#endif
+
+#ifndef VIR_NETWORK_PORT_BANDWIDTH_OUT_BURST
+#define VIR_NETWORK_PORT_BANDWIDTH_OUT_BURST "outbound.burst"
+#endif
+
+#endif /* LIBVIRT_GO_NETWORK_PORT_COMPAT_H__ */

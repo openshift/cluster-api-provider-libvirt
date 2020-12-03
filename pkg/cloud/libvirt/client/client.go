@@ -186,8 +186,13 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 		return fmt.Errorf("Failed to newDomainDefForConnection: %s", err)
 	}
 
+	arch, err := getHostArchitecture(client.connection)
+	if err != nil {
+		return fmt.Errorf("Error retrieving host architecture: %s", err)
+	}
+
 	// Get values from machineProviderConfig
-	if err := domainDefInit(&domainDef, input.DomainName, input.DomainMemory, input.DomainVcpu); err != nil {
+	if err := domainDefInit(&domainDef, &input, arch); err != nil {
 		return fmt.Errorf("Failed to init domain definition from machineProviderConfig: %v", err)
 	}
 
@@ -202,11 +207,6 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	}
 
 	glog.Info("Create ignition configuration")
-
-	arch, err := getHostArchitecture(client.connection)
-	if err != nil {
-		return fmt.Errorf("Error retrieving host architecture: %s", err)
-	}
 
 	if input.Ignition != nil {
 		if err := setIgnition(ctx, &domainDef, client, input.Ignition, input.KubeClient, input.MachineNamespace, input.IgnitionVolumeName, arch); err != nil {
