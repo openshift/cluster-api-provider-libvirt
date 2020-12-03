@@ -23,50 +23,46 @@
  *
  */
 
-#ifndef LIBVIRT_GO_INTERFACE_WRAPPER_H__
-#define LIBVIRT_GO_INTERFACE_WRAPPER_H__
+#ifndef LIBVIRT_GO_DOMAIN_CHECKPOINT_WRAPPER_H__
+#define LIBVIRT_GO_DOMAIN_CHECKPOINT_WRAPPER_H__
 
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
+#include "domain_compat.h"
+#include "domain_checkpoint_compat.h"
 
 int
-virInterfaceCreateWrapper(virInterfacePtr iface,
-                          unsigned int flags,
-                          virErrorPtr err);
+virDomainCheckpointDeleteWrapper(virDomainCheckpointPtr checkpoint,
+				 unsigned int flags,
+				 virErrorPtr err);
 
 int
-virInterfaceDestroyWrapper(virInterfacePtr iface,
-                           unsigned int flags,
-                           virErrorPtr err);
-
-int
-virInterfaceFreeWrapper(virInterfacePtr iface,
-                        virErrorPtr err);
+virDomainCheckpointFreeWrapper(virDomainCheckpointPtr checkpoint,
+			       virErrorPtr err);
 
 const char *
-virInterfaceGetMACStringWrapper(virInterfacePtr iface,
-                                virErrorPtr err);
+virDomainCheckpointGetNameWrapper(virDomainCheckpointPtr checkpoint,
+				  virErrorPtr err);
 
-const char *
-virInterfaceGetNameWrapper(virInterfacePtr iface,
-                           virErrorPtr err);
+virDomainCheckpointPtr
+virDomainCheckpointGetParentWrapper(virDomainCheckpointPtr checkpoint,
+				    unsigned int flags,
+				    virErrorPtr err);
 
 char *
-virInterfaceGetXMLDescWrapper(virInterfacePtr iface,
-                              unsigned int flags,
-                              virErrorPtr err);
+virDomainCheckpointGetXMLDescWrapper(virDomainCheckpointPtr checkpoint,
+				     unsigned int flags,
+				     virErrorPtr err);
 
 int
-virInterfaceIsActiveWrapper(virInterfacePtr iface,
-                            virErrorPtr err);
+virDomainCheckpointListAllChildrenWrapper(virDomainCheckpointPtr checkpoint,
+					  virDomainCheckpointPtr **snaps,
+					  unsigned int flags,
+					  virErrorPtr err);
 
 int
-virInterfaceRefWrapper(virInterfacePtr iface,
-                       virErrorPtr err);
-
-int
-virInterfaceUndefineWrapper(virInterfacePtr iface,
-                            virErrorPtr err);
+virDomainCheckpointRefWrapper(virDomainCheckpointPtr checkpoint,
+			      virErrorPtr err);
 
 
-#endif /* LIBVIRT_GO_INTERFACE_WRAPPER_H__ */
+#endif /* LIBVIRT_GO_DOMAIN_CHECKPOINT_WRAPPER_H__ */

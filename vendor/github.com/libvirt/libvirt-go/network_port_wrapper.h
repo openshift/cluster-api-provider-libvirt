@@ -19,54 +19,61 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Copyright (C) 2018 Red Hat, Inc.
+ * Copyright (C) 2019 Red Hat, Inc.
  *
  */
 
-#ifndef LIBVIRT_GO_INTERFACE_WRAPPER_H__
-#define LIBVIRT_GO_INTERFACE_WRAPPER_H__
+#ifndef LIBVIRT_GO_NETWORK_PORT_WRAPPER_H__
+#define LIBVIRT_GO_NETWORK_PORT_WRAPPER_H__
 
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
+#include "network_port_compat.h"
 
-int
-virInterfaceCreateWrapper(virInterfacePtr iface,
-                          unsigned int flags,
-                          virErrorPtr err);
 
-int
-virInterfaceDestroyWrapper(virInterfacePtr iface,
-                           unsigned int flags,
-                           virErrorPtr err);
-
-int
-virInterfaceFreeWrapper(virInterfacePtr iface,
-                        virErrorPtr err);
-
-const char *
-virInterfaceGetMACStringWrapper(virInterfacePtr iface,
-                                virErrorPtr err);
-
-const char *
-virInterfaceGetNameWrapper(virInterfacePtr iface,
-                           virErrorPtr err);
+virNetworkPtr
+virNetworkPortGetNetworkWrapper(virNetworkPortPtr port,
+				virErrorPtr err);
 
 char *
-virInterfaceGetXMLDescWrapper(virInterfacePtr iface,
-                              unsigned int flags,
-                              virErrorPtr err);
+virNetworkPortGetXMLDescWrapper(virNetworkPortPtr port,
+				unsigned int flags,
+				virErrorPtr err);
 
 int
-virInterfaceIsActiveWrapper(virInterfacePtr iface,
-                            virErrorPtr err);
+virNetworkPortGetUUIDWrapper(virNetworkPortPtr port,
+			     unsigned char *uuid,
+			     virErrorPtr err);
+int
+virNetworkPortGetUUIDStringWrapper(virNetworkPortPtr port,
+				   char *buf,
+				   virErrorPtr err);
 
 int
-virInterfaceRefWrapper(virInterfacePtr iface,
-                       virErrorPtr err);
+virNetworkPortSetParametersWrapper(virNetworkPortPtr port,
+				   virTypedParameterPtr params,
+				   int nparams,
+				   unsigned int flags,
+				   virErrorPtr err);
+int
+virNetworkPortGetParametersWrapper(virNetworkPortPtr port,
+				   virTypedParameterPtr *params,
+				   int *nparams,
+				   unsigned int flags,
+				   virErrorPtr err);
 
 int
-virInterfaceUndefineWrapper(virInterfacePtr iface,
-                            virErrorPtr err);
+virNetworkPortDeleteWrapper(virNetworkPortPtr port,
+			    unsigned int flags,
+			    virErrorPtr err);
+
+int
+virNetworkPortFreeWrapper(virNetworkPortPtr port,
+			  virErrorPtr err);
+
+int
+virNetworkPortRefWrapper(virNetworkPortPtr port,
+			 virErrorPtr err);
 
 
-#endif /* LIBVIRT_GO_INTERFACE_WRAPPER_H__ */
+#endif /* LIBVIRT_GO_NETWORK_PORT_WRAPPER_H__ */

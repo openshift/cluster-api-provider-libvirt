@@ -11,8 +11,8 @@ require (
 	github.com/golang/mock v1.2.0
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
-	github.com/libvirt/libvirt-go v4.10.0+incompatible
-	github.com/libvirt/libvirt-go-xml v4.10.0+incompatible
+	github.com/libvirt/libvirt-go v5.10.0+incompatible
+	github.com/libvirt/libvirt-go-xml v5.10.0+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200513150041-09efe6c914b4
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/cobra v1.0.0 // indirect
@@ -34,9 +34,4 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/utils v0.0.0-20200414100711-2df71ebbae66 // indirect
 	sigs.k8s.io/controller-runtime v0.5.1-0.20200330174416-a11a908d91e0
-)
-
-replace (
-	github.com/libvirt/libvirt-go => github.com/libvirt/libvirt-go v4.6.0+incompatible
-	github.com/libvirt/libvirt-go-xml => github.com/libvirt/libvirt-go-xml v4.6.0+incompatible
 )

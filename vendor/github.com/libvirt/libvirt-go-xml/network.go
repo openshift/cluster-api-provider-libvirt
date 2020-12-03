@@ -34,6 +34,7 @@ type NetworkBridge struct {
 	STP             string `xml:"stp,attr,omitempty"`
 	Delay           string `xml:"delay,attr,omitempty"`
 	MACTableManager string `xml:"macTableManager,attr,omitempty"`
+	Zone            string `xml:"zone,attr,omitempty"`
 }
 
 type NetworkVirtualPort struct {
@@ -252,6 +253,8 @@ type Network struct {
 	Routes              []NetworkRoute      `xml:"route"`
 	VirtualPort         *NetworkVirtualPort `xml:"virtualport"`
 	PortGroups          []NetworkPortGroup  `xml:"portgroup"`
+
+	DnsmasqOptions *NetworkDnsmasqOptions
 }
 
 type NetworkPortGroup struct {
@@ -281,8 +284,18 @@ type NetworkBandwidthParams struct {
 }
 
 type NetworkBandwidth struct {
+	ClassID  uint                    `xml:"classID,attr,omitempty"`
 	Inbound  *NetworkBandwidthParams `xml:"inbound"`
 	Outbound *NetworkBandwidthParams `xml:"outbound"`
+}
+
+type NetworkDnsmasqOptions struct {
+	XMLName xml.Name               `xml:"http://libvirt.org/schemas/network/dnsmasq/1.0 options"`
+	Option  []NetworkDnsmasqOption `xml:"option"`
+}
+
+type NetworkDnsmasqOption struct {
+	Value string `xml:"value,attr"`
 }
 
 func (a *NetworkVirtualPortParams) MarshalXML(e *xml.Encoder, start xml.StartElement) error {

@@ -19,49 +19,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Copyright (c) 2013 Alex Zorin
- * Copyright (C) 2016 Red Hat, Inc.
+ * Copyright (C) 2019 Red Hat, Inc.
  *
  */
 
-#ifndef LIBVIRT_GO_SECRET_COMPAT_H__
-#define LIBVIRT_GO_SECRET_COMPAT_H__
+#ifndef LIBVIRT_GO_DOMAIN_SNAPSHOT_COMPAT_H__
+#define LIBVIRT_GO_DOMAIN_SNAPSHOT_COMPAT_H__
 
-/* 3.0.0 */
-
-#ifndef VIR_SECRET_EVENT_DEFINED
-#define VIR_SECRET_EVENT_DEFINED 0
-#endif
-
-#ifndef VIR_SECRET_EVENT_UNDEFINED
-#define VIR_SECRET_EVENT_UNDEFINED 1
-#endif
-
-#ifndef VIR_SECRET_EVENT_ID_LIFECYCLE
-#define VIR_SECRET_EVENT_ID_LIFECYCLE 0
-#endif
-
-#ifndef VIR_SECRET_EVENT_ID_VALUE_CHANGED
-#define VIR_SECRET_EVENT_ID_VALUE_CHANGED 1
-#endif
-
-
-#if LIBVIR_VERSION_NUMBER < 3000000
-typedef void (*virConnectSecretEventGenericCallback)(virConnectPtr conn,
-						     virSecretPtr secret,
-						     void *opaque);
-#endif
-
-/* 2.2.1 */
-
-#ifndef VIR_SECRET_USAGE_TYPE_TLS
-#define VIR_SECRET_USAGE_TYPE_TLS 4
+/* 5.2.0 */
+#ifndef VIR_DOMAIN_SNAPSHOT_LIST_TOPOLOGICAL
+# define VIR_DOMAIN_SNAPSHOT_LIST_TOPOLOGICAL (1 << 10)
 #endif
 
 /* 5.6.0 */
 
-#ifndef VIR_SECRET_USAGE_TYPE_VTPM
-#define VIR_SECRET_USAGE_TYPE_VTPM 5
+#ifndef VIR_DOMAIN_SNAPSHOT_CREATE_VALIDATE
+# define VIR_DOMAIN_SNAPSHOT_CREATE_VALIDATE (1 << 9)
 #endif
 
-#endif /* LIBVIRT_GO_SECRET_COMPAT_H__ */
+#endif /* LIBVIRT_GO_DOMAIN_SNAPSHOT_COMPAT_H__ */
