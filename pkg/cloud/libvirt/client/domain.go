@@ -106,10 +106,8 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 	if err != nil {
 		glog.Errorf("Error retrieving host architecture: %s", err)
 	}
-	// Both "s390" and "s390x" are linux kernel architectures for Linux on IBM z Systems, and they are for 31-bit and 64-bit respectively.
-	// Graphics/Spice isn't supported on s390/s390x platform.
-	// Same case for PowerPC systems as well
-	if !strings.HasPrefix(arch, "s390") && !strings.HasPrefix(arch, "ppc64") {
+	// Currently SPICE is supported on x86_64 and aarch64. But it is only enabled in RHEL qemu for x86_64.
+	if arch == "x86_64" {
 		domainList.Graphics = []libvirtxml.DomainGraphic{
 			{
 				Spice: &libvirtxml.DomainGraphicSpice{
