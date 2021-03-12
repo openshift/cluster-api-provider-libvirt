@@ -12,6 +12,7 @@ import (
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
 	machineapis "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	clientset "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	"github.com/openshift/machine-api-operator/pkg/metrics"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -30,6 +31,13 @@ func main() {
 		":9440",
 		"The address for health checking.",
 	)
+
+	metricsAddress := flag.String(
+		"metrics-bind-address",
+		metrics.DefaultMachineMetricsAddress,
+		"Address for hosting metrics",
+	)
+
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(klogFlags)
 
@@ -72,6 +80,7 @@ func main() {
 		LeaderElectionID:        "cluster-api-provider-libvirt-leader",
 		LeaseDuration:           leaderElectLeaseDuration,
 		HealthProbeBindAddress:  *healthAddr,
+		MetricsBindAddress:      *metricsAddress,
 	}
 
 	if *watchNamespace != "" {
