@@ -23,15 +23,17 @@ import (
 	"time"
 
 	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	"github.com/openshift/machine-api-operator/pkg/metrics"
 	"github.com/openshift/machine-api-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/drain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -244,9 +246,9 @@ func (r *ReconcileMachine) Reconcile(request reconcile.Request) (reconcile.Resul
 		}
 
 		if m.Status.NodeRef != nil {
-			klog.Infof("%v: deleting node %q for machine", m.Status.NodeRef.Name, machineName)
+			klog.Infof("%v: deleting node %q for machine", machineName, m.Status.NodeRef.Name)
 			if err := r.deleteNode(ctx, m.Status.NodeRef.Name); err != nil {
-				klog.Errorf("%v: error deleting node %q for machine", machineName, err)
+				klog.Errorf("%v: error deleting node for machine: %v", machineName, err)
 				return reconcile.Result{}, err
 			}
 		}
@@ -422,27 +424,101 @@ func isInvalidMachineConfigurationError(err error) bool {
 func (r *ReconcileMachine) setPhase(machine *machinev1.Machine, phase string, errorMessage string) error {
 	if stringPointerDeref(machine.Status.Phase) != phase {
 		klog.V(3).Infof("%v: going into phase %q", machine.GetName(), phase)
+
+		// A call to Patch will mutate our local copy of the machine to match what is stored in the API.
+		// Before we make any changes to the status subresource on our local copy, we need to patch the object first,
+		// otherwise our local changes to the status subresource will be lost.
+		if phase == phaseFailed {
+			err := r.patchFailedMachineInstanceAnnotation(machine)
+			if err != nil {
+				klog.Errorf("Failed to update machine %q: %v", machine.GetName(), err)
+				return err
+			}
+		}
+
+		// Since we may have mutated the local copy of the machine above, we need to calculate baseToPatch here.
+		// Any updates to the status must be done after this point.
 		baseToPatch := client.MergeFrom(machine.DeepCopy())
+
+		if phase == phaseFailed {
+			if err := r.overrideFailedMachineProviderStatusState(machine); err != nil {
+				klog.Errorf("Failed to update machine provider status %q: %v", machine.GetName(), err)
+				return err
+			}
+		}
+
 		machine.Status.Phase = &phase
 		machine.Status.ErrorMessage = nil
 		now := metav1.Now()
 		machine.Status.LastUpdated = &now
 		if phase == phaseFailed && errorMessage != "" {
 			machine.Status.ErrorMessage = &errorMessage
-			if machine.Annotations == nil {
-				machine.Annotations = map[string]string{}
-			}
-			machine.Annotations[MachineInstanceStateAnnotationName] = unknownInstanceState
-			if err := r.Client.Patch(context.Background(), machine, baseToPatch); err != nil {
-				klog.Errorf("Failed to update machine %q: %v", machine.GetName(), err)
-				return err
-			}
 		}
 		if err := r.Client.Status().Patch(context.Background(), machine, baseToPatch); err != nil {
 			klog.Errorf("Failed to update machine status %q: %v", machine.GetName(), err)
 			return err
 		}
+
+		// Update the metric after everything else has succeeded to prevent duplicate
+		// entries when there are failures
+		if phase != phaseDeleting {
+			// Apart from deleting, update the transition metric
+			// Deleting would always end up in the infinite bucket
+			timeElapsed := time.Now().Sub(machine.GetCreationTimestamp().Time).Seconds()
+			metrics.MachinePhaseTransitionSeconds.With(map[string]string{"phase": phase}).Observe(timeElapsed)
+		}
 	}
+	return nil
+}
+
+func (r *ReconcileMachine) patchFailedMachineInstanceAnnotation(machine *machinev1.Machine) error {
+	baseToPatch := client.MergeFrom(machine.DeepCopy())
+	if machine.Annotations == nil {
+		machine.Annotations = map[string]string{}
+	}
+	machine.Annotations[MachineInstanceStateAnnotationName] = unknownInstanceState
+	if err := r.Client.Patch(context.Background(), machine, baseToPatch); err != nil {
+		return err
+	}
+	return nil
+}
+
+// overrideFailedMachineProviderStatusState patches the state of the VM in the provider status if it is set.
+// Not all providers set a state, but AWS, Azure, GCP and vSphere do.
+// If the machine has gone into the Failed phase, and the providerStatus has already been set,
+// the VM is in an unknown state. This function overrides the state.
+func (r *ReconcileMachine) overrideFailedMachineProviderStatusState(machine *machinev1.Machine) error {
+	if machine.Status.ProviderStatus == nil {
+		return nil
+	}
+
+	// instanceState is used by AWS, GCP and vSphere; vmState is used by Azure.
+	const instanceStateField = "instanceState"
+	const vmStateField = "vmState"
+
+	providerStatus, err := runtime.DefaultUnstructuredConverter.ToUnstructured(machine.Status.ProviderStatus)
+	if err != nil {
+		return fmt.Errorf("could not covert provider status to unstructured: %v", err)
+	}
+
+	// if the instanceState is set already, update it to unknown
+	if _, found, err := unstructured.NestedString(providerStatus, instanceStateField); err == nil && found {
+		if err := unstructured.SetNestedField(providerStatus, unknownInstanceState, instanceStateField); err != nil {
+			return fmt.Errorf("could not set %s: %v", instanceStateField, err)
+		}
+	}
+
+	// if the vmState is set already, update it to unknown
+	if _, found, err := unstructured.NestedString(providerStatus, vmStateField); err == nil && found {
+		if err := unstructured.SetNestedField(providerStatus, unknownInstanceState, vmStateField); err != nil {
+			return fmt.Errorf("could not set %s: %v", instanceStateField, err)
+		}
+	}
+
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(providerStatus, machine.Status.ProviderStatus); err != nil {
+		return fmt.Errorf("could not convert provider status from unstructured: %v", err)
+	}
+
 	return nil
 }
 
