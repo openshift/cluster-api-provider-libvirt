@@ -281,8 +281,14 @@ func (a *Actuator) createVolumeAndDomain(ctx context.Context, machine *machinev1
 	}); err != nil {
 		// Clean up the created volume if domain creation fails,
 		// otherwise subsequent runs will fail.
-		if err := client.DeleteVolume(domainName); err != nil {
+		if err := client.DeleteVolume(domainName); err != nil && err != libvirtclient.ErrVolumeNotFound {
 			glog.Errorf("Error cleaning up volume: %v", err)
+		}
+		if err := client.DeleteVolume(cloudInitVolumeName(domainName)); err != nil && err != libvirtclient.ErrVolumeNotFound {
+			glog.Errorf("Error cleaning up cloud-init volume: %v", err)
+		}
+		if err := client.DeleteVolume(ignitionVolumeName(domainName)); err != nil && err != libvirtclient.ErrVolumeNotFound {
+			glog.Errorf("Error cleaning up ignition volume: %v", err)
 		}
 
 		return nil, a.handleMachineError(machine, apierrors.CreateMachine("error creating domain %v", err), createEventAction)
