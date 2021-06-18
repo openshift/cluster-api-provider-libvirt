@@ -5,7 +5,7 @@ PROJECT     ?= cluster-api-provider-libvirt
 ORG_PATH    ?= github.com/openshift
 REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
 CLUSTER_API ?= github.com/openshift/cluster-api
-IMAGE        = origin-libvirt-machine-controllers
+IMAGE       ?= origin-libvirt-machine-controllers
 
 ifeq ($(DBG),1)
 GOGCFLAGS ?= -gcflags=all="-N -l"
@@ -22,7 +22,7 @@ ifeq ($(NO_DOCKER), 1)
   IMAGE_BUILD_CMD = imagebuilder
   CGO_ENABLED = 1
 else
-  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" openshift/origin-release:golang-1.13
+  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:golang-1.16
   IMAGE_BUILD_CMD = $(CONTAINER_RUNTIME) build
 endif
 
