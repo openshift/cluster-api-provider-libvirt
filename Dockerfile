@@ -1,9 +1,9 @@
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.16 AS builder
 WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 COPY . .
 RUN go build -o machine-controller-manager ./cmd/manager
 
-FROM docker.io/centos:7
+FROM docker.io/fedora:35
 RUN INSTALL_PKGS=" \
       libvirt-libs openssh-clients genisoimage \
       " && \
