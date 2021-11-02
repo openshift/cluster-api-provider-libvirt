@@ -146,11 +146,13 @@ func (a *Actuator) Create(context context.Context, machine *machinev1.Machine) e
 		}
 	}()
 
-	if err := a.updateStatus(context, machine, dom, client); err != nil {
+	updated, err := a.updateStatus(context, machine, dom, client)
+	if err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
 	}
-
-	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Created", "Created Machine %v", machine.Name)
+	if updated {
+		a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Created", "Created Machine %v", machine.Name)
+	}
 
 	return nil
 }
@@ -206,10 +208,12 @@ func (a *Actuator) Update(context context.Context, machine *machinev1.Machine) e
 
 	defer dom.Free()
 
-	a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", machine.Name)
-
-	if err := a.updateStatus(context, machine, dom, client); err != nil {
+	updated, err := a.updateStatus(context, machine, dom, client)
+	if err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
+	}
+	if updated {
+		a.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Updated", "Updated Machine %v", machine.Name)
 	}
 
 	return nil
@@ -356,19 +360,19 @@ func ProviderConfigMachine(codec codec, ms *machinev1.MachineSpec) (*providercon
 }
 
 // updateStatus updates a machine object's status.
-func (a *Actuator) updateStatus(context context.Context, machine *machinev1.Machine, dom *libvirt.Domain, client libvirtclient.Client) error {
+func (a *Actuator) updateStatus(context context.Context, machine *machinev1.Machine, dom *libvirt.Domain, client libvirtclient.Client) (bool, error) {
 	glog.Infof("Updating status for %s", machine.Name)
 
 	status, err := ProviderStatusFromMachine(a.codec, machine)
 	if err != nil {
 		glog.Errorf("Unable to get provider status from machine: %v", err)
-		return err
+		return false, err
 	}
 
 	// Update the libvirt provider status in-place.
 	if err := UpdateProviderStatus(status, dom); err != nil {
 		glog.Errorf("Unable to update provider status: %v", err)
-		return err
+		return false, err
 	}
 
 	machineProviderConfig, err := ProviderConfigMachine(a.codec, &machine.Spec)
@@ -379,15 +383,16 @@ func (a *Actuator) updateStatus(context context.Context, machine *machinev1.Mach
 	addrs, err := NodeAddresses(client, dom, machineProviderConfig.NetworkInterfaceName)
 	if err != nil {
 		glog.Errorf("Unable to get node addresses: %v", err)
-		return err
+		return false, err
 	}
 
-	if err := a.applyMachineStatus(context, machine, status, addrs); err != nil {
+	updated, err := a.applyMachineStatus(context, machine, status, addrs)
+	if err != nil {
 		glog.Errorf("Unable to apply machine status: %v", err)
-		return err
+		return false, err
 	}
 
-	return nil
+	return updated, nil
 }
 
 func (a *Actuator) applyMachineStatus(
@@ -395,11 +400,11 @@ func (a *Actuator) applyMachineStatus(
 	machine *machinev1.Machine,
 	status *providerconfigv1.LibvirtMachineProviderStatus,
 	addrs []corev1.NodeAddress,
-) error {
+) (bool, error) {
 	// Encode the new status as a raw extension.
 	rawStatus, err := EncodeProviderStatus(a.codec, status)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	machineCopy := machine.DeepCopy()
@@ -411,7 +416,7 @@ func (a *Actuator) applyMachineStatus(
 
 	if equality.Semantic.DeepEqual(machine.Status, machineCopy.Status) {
 		glog.V(4).Infof("Machine %s status is unchanged", machine.Name)
-		return nil
+		return false, nil
 	}
 
 	glog.Infof("Machine %s status has changed: %q", machine.Name, diff.ObjectReflectDiff(machine.Status, machineCopy.Status))
@@ -420,7 +425,7 @@ func (a *Actuator) applyMachineStatus(
 	machineCopy.Status.LastUpdated = &now
 	_, err = a.clusterClient.MachineV1beta1().
 		Machines(machineCopy.Namespace).UpdateStatus(context, machineCopy, metav1.UpdateOptions{})
-	return err
+	return true, err
 }
 
 // EncodeProviderStatus encodes a libvirt provider
