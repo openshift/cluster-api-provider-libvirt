@@ -243,7 +243,7 @@ virNetworkUpdateWrapper(virNetworkPtr network,
                         unsigned int flags,
                         virErrorPtr err)
 {
-    int ret = virNetworkUpdate(network, command, section, parentIndex, xml, flags);
+    int ret = virNetworkUpdate(network, section, command, parentIndex, xml, flags);
     if (ret < 0) {
         virCopyLastError(err);
     }
