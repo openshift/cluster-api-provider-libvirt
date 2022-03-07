@@ -193,7 +193,7 @@ func TestMachineEvents(t *testing.T) {
 			mockLibvirtClient.EXPECT().Close()
 			mockLibvirtClient.EXPECT().CreateVolume(gomock.Any()).Return(tc.createVolumeErr).AnyTimes()
 			mockLibvirtClient.EXPECT().DeleteVolume(gomock.Any()).Return(tc.deleteVolumeErr).AnyTimes()
-			mockLibvirtClient.EXPECT().CreateDomain(gomock.Any()).Return(tc.createDomainErr).AnyTimes()
+			mockLibvirtClient.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(tc.createDomainErr).AnyTimes()
 			mockLibvirtClient.EXPECT().DeleteDomain(gomock.Any()).Return(tc.deleteDomainErr).AnyTimes()
 			mockLibvirtClient.EXPECT().GetDHCPLeasesByNetwork(gomock.Any())
 			mockLibvirtClient.EXPECT().LookupDomainByName(gomock.Any()).Return(tc.lookupDomainOutput, tc.lookupDomainErr).AnyTimes()
