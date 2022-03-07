@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/glog"
 
-	libvirt "github.com/libvirt/libvirt-go"
+	libvirt "github.com/digitalocean/go-libvirt"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
@@ -31,8 +31,8 @@ type Network interface {
 	GetXMLDesc(flags libvirt.NetworkXMLFlags) (string, error)
 }
 
-func newDefNetworkfromLibvirt(network Network) (libvirtxml.Network, error) {
-	networkXMLDesc, err := network.GetXMLDesc(0)
+func newDefNetworkfromLibvirt(virtConn *libvirt.Libvirt, network libvirt.Network) (libvirtxml.Network, error) {
+	networkXMLDesc, err := virtConn.NetworkGetXMLDesc(network, 0)
 	if err != nil {
 		return libvirtxml.Network{}, fmt.Errorf("Error retrieving libvirt domain XML description: %s", err)
 	}
@@ -55,22 +55,22 @@ func HasDHCP(net libvirtxml.Network) bool {
 }
 
 // Tries to update first, if that fails, it will add it
-func updateOrAddHost(n *libvirt.Network, ip, mac, name string) error {
-	err := updateHost(n, ip, mac, name)
-	if virErr, ok := err.(libvirt.Error); ok && virErr.Code == libvirt.ERR_OPERATION_INVALID && virErr.Domain == libvirt.FROM_NETWORK {
-		return addHost(n, ip, mac, name)
+func updateOrAddHost(virtConn *libvirt.Libvirt, n *libvirt.Network, ip, mac, name string) error {
+	err := updateHost(virtConn, n, ip, mac, name)
+	if virErr, ok := err.(libvirt.Error); ok && virErr.Code == uint32(libvirt.ErrOperationInvalid) {
+		return addHost(virtConn, n, ip, mac, name)
 	}
 	return err
 }
 
 // Adds a new static host to the network
-func addHost(n *libvirt.Network, ip, mac, name string) error {
+func addHost(virtConn *libvirt.Libvirt, n *libvirt.Network, ip, mac, name string) error {
 	xmlDesc, err := getHostXMLDesc(ip, mac, name)
 	if err != nil {
 		return fmt.Errorf("error getting host xml desc: %v", err)
 	}
 	glog.Infof("Adding host with XML:\n%s", xmlDesc)
-	return n.Update(libvirt.NETWORK_UPDATE_COMMAND_ADD_LAST, libvirt.NETWORK_SECTION_IP_DHCP_HOST, -1, xmlDesc, libvirt.NETWORK_UPDATE_AFFECT_CURRENT)
+	return virtConn.NetworkUpdate(*n, uint32(libvirt.NetworkUpdateCommandAddLast), uint32(libvirt.NetworkSectionIPDhcpHost), -1, xmlDesc, libvirt.NetworkUpdateAffectCurrent)
 }
 
 func getHostXMLDesc(ip, mac, name string) (string, error) {
@@ -91,13 +91,13 @@ func getHostXMLDesc(ip, mac, name string) (string, error) {
 }
 
 // Update a static host from the network
-func updateHost(n *libvirt.Network, ip, mac, name string) error {
+func updateHost(virtConn *libvirt.Libvirt, n *libvirt.Network, ip, mac, name string) error {
 	xmlDesc, err := getHostXMLDesc(ip, mac, name)
 	if err != nil {
 		return fmt.Errorf("error getting host xml desc: %v", err)
 	}
 	glog.Infof("Updating host with XML:\n%s", xmlDesc)
-	return n.Update(libvirt.NETWORK_UPDATE_COMMAND_MODIFY, libvirt.NETWORK_SECTION_IP_DHCP_HOST, -1, xmlDesc, libvirt.NETWORK_UPDATE_AFFECT_CURRENT)
+	return virtConn.NetworkUpdate(*n, uint32(libvirt.NetworkUpdateCommandModify), uint32(libvirt.NetworkSectionIPDhcpHost), -1, xmlDesc, libvirt.NetworkUpdateAffectCurrent)
 }
 
 // randomMACAddress returns a randomized MAC address
@@ -123,10 +123,10 @@ func randomMACAddress() (string, error) {
 }
 
 // FillReservedLeases will fill Leases structure with existing DHCP leases
-func FillReservedLeases(leases *Leases, libvirtLeases []libvirt.NetworkDHCPLease) {
+func FillReservedLeases(leases *Leases, libvirtLeases []libvirt.NetworkDhcpLease) {
 	leases.Lock()
 	for _, libvirtLease := range libvirtLeases {
-		leases.Items[libvirtLease.IPaddr] = ""
+		leases.Items[libvirtLease.Ipaddr] = ""
 	}
 	leases.Unlock()
 }

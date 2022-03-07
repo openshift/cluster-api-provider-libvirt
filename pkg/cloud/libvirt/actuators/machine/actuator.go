@@ -19,8 +19,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 
-	libvirt "github.com/libvirt/libvirt-go"
+	libvirt "github.com/digitalocean/go-libvirt"
 
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
@@ -140,12 +141,6 @@ func (a *Actuator) Create(context context.Context, machine *machinev1.Machine) e
 		return errWrapper.WithLog(err, "error creating libvirt machine")
 	}
 
-	defer func() {
-		if dom != nil {
-			dom.Free()
-		}
-	}()
-
 	updated, err := a.updateStatus(context, machine, dom, client)
 	if err != nil {
 		return errWrapper.WithLog(err, "error updating machine status")
@@ -205,8 +200,6 @@ func (a *Actuator) Update(context context.Context, machine *machinev1.Machine) e
 	if err != nil {
 		return a.handleMachineError(machine, apierrors.UpdateMachine("failed to look up domain by name: %v", err), updateEventAction)
 	}
-
-	defer dom.Free()
 
 	updated, err := a.updateStatus(context, machine, dom, client)
 	if err != nil {
@@ -370,7 +363,7 @@ func (a *Actuator) updateStatus(context context.Context, machine *machinev1.Mach
 	}
 
 	// Update the libvirt provider status in-place.
-	if err := UpdateProviderStatus(status, dom); err != nil {
+	if err := UpdateProviderStatus(client, status, dom); err != nil {
 		glog.Errorf("Unable to update provider status: %v", err)
 		return false, err
 	}
@@ -449,7 +442,7 @@ func ProviderStatusFromMachine(codec codec, machine *machinev1.Machine) (*provid
 
 // UpdateProviderStatus updates the provider status in-place with info
 // from the given libvirt domain.
-func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus, dom *libvirt.Domain) error {
+func UpdateProviderStatus(client libvirtclient.Client, status *providerconfigv1.LibvirtMachineProviderStatus, dom *libvirt.Domain) error {
 	if dom == nil {
 		status.InstanceID = nil
 		status.InstanceState = nil
@@ -457,18 +450,16 @@ func UpdateProviderStatus(status *providerconfigv1.LibvirtMachineProviderStatus,
 		return nil
 	}
 
-	uuid, err := dom.GetUUIDString()
+	virtConn := client.GetConn()
+
+	state, _, err := virtConn.DomainGetState(*dom, 0)
 	if err != nil {
 		return err
 	}
 
-	state, _, err := dom.GetState()
-	if err != nil {
-		return err
-	}
+	stateString := DomainStateString(libvirt.DomainState(state))
 
-	stateString := DomainStateString(state)
-
+	uuid := uuid.UUID(dom.UUID).String()
 	status.InstanceID = &uuid
 	status.InstanceState = &stateString
 
@@ -485,8 +476,7 @@ func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInte
 		return addrs, nil
 	}
 
-	ifaceSource := libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
-	ifaces, err := dom.ListAllInterfaceAddresses(ifaceSource)
+	ifaces, err := client.ListAllInterfaceAddresses(dom, libvirt.DomainInterfaceAddressesSrcLease)
 	if err != nil {
 		return nil, err
 	}
@@ -528,21 +518,21 @@ func NodeAddresses(client libvirtclient.Client, dom *libvirt.Domain, networkInte
 // libvirt domain state.
 func DomainStateString(state libvirt.DomainState) string {
 	switch state {
-	case libvirt.DOMAIN_NOSTATE:
+	case libvirt.DomainNostate:
 		return "None"
-	case libvirt.DOMAIN_RUNNING:
+	case libvirt.DomainRunning:
 		return "Running"
-	case libvirt.DOMAIN_BLOCKED:
+	case libvirt.DomainBlocked:
 		return "Blocked"
-	case libvirt.DOMAIN_PAUSED:
+	case libvirt.DomainPaused:
 		return "Paused"
-	case libvirt.DOMAIN_SHUTDOWN:
+	case libvirt.DomainShutdown:
 		return "Shutdown"
-	case libvirt.DOMAIN_CRASHED:
+	case libvirt.DomainCrashed:
 		return "Crashed"
-	case libvirt.DOMAIN_PMSUSPENDED:
+	case libvirt.DomainPmsuspended:
 		return "Suspended"
-	case libvirt.DOMAIN_SHUTOFF:
+	case libvirt.DomainShutoff:
 		return "Shutoff"
 	default:
 		return "Unknown"

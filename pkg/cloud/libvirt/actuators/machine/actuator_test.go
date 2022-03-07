@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/golang/mock/gomock"
-	libvirt "github.com/libvirt/libvirt-go"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	mocklibvirt "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client/mock"

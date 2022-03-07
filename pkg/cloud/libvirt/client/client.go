@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"net"
 
+	libvirt "github.com/digitalocean/go-libvirt"
+	liburi "github.com/dmacvicar/terraform-provider-libvirt/libvirt/uri"
 	"github.com/golang/glog"
-	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 
@@ -115,14 +117,22 @@ type Client interface {
 	DeleteVolume(name string) error
 
 	// GetDHCPLeasesByNetwork get all network DHCP leases by network name
-	GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDHCPLease, error)
+	GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDhcpLease, error)
 
 	// LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
 	LookupDomainHostnameByDHCPLease(domIPAddress string, networkName string) (string, error)
+
+	GetConn() *libvirt.Libvirt
+
+	ListAllInterfaceAddresses(dom *libvirt.Domain, source libvirt.DomainInterfaceAddressesSource) ([]libvirt.DomainInterface, error)
 }
 
 type libvirtClient struct {
-	connection *libvirt.Connect
+	uri string
+
+	virt *libvirt.Libvirt
+
+	connection net.Conn
 
 	// storage pool that holds all volumes
 	pool *libvirt.StoragePool
@@ -134,43 +144,58 @@ var _ Client = &libvirtClient{}
 
 // NewClient returns libvirt client for the specified URI
 func NewClient(URI string, poolName string) (Client, error) {
-	connection, err := libvirt.NewConnect(URI)
+	glog.Infof("[INFO] libvirt NewClient to URI: %v poolName: %v\n", URI, poolName)
+	u, err := liburi.Parse(URI)
 	if err != nil {
 		return nil, err
 	}
 
-	glog.Infof("Created libvirt connection: %p", connection)
+	conn, err := u.DialTransport()
+	if err != nil {
+		return nil, err
+	}
 
-	pool, err := connection.LookupStoragePoolByName(poolName)
+	virt := libvirt.New(conn)
+	if err := virt.ConnectToURI(libvirt.ConnectURI(u.RemoteName())); err != nil {
+		return nil, fmt.Errorf("failed to connect to: %s", u.RemoteName())
+	}
+
+	v, err := virt.ConnectGetLibVersion()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve libvirt version: %w", err)
+	}
+	glog.Infof("[INFO] libvirt client libvirt version: %v\n", v)
+
+	pool, err := virt.StoragePoolLookupByName(poolName)
 	if err != nil {
 		return nil, fmt.Errorf("can't find storage pool %q: %v", poolName, err)
 	}
 
 	return &libvirtClient{
-		connection: connection,
-		pool:       pool,
+		uri:        URI,
+		virt:       virt,
+		connection: conn,
+		pool:       &pool,
 		poolName:   poolName,
 	}, nil
 }
 
 // Close closes the client's libvirt connection.
 func (client *libvirtClient) Close() error {
-	glog.Infof("Freeing the client pool")
-	err := client.pool.Free()
-	if err != nil {
-		glog.Infof("Error freeing the client pool: %v", err)
-	}
-
 	glog.Infof("Closing libvirt connection: %p", client.connection)
-	remainingRefs, err := client.connection.Close()
+	err := client.connection.Close()
 	if err != nil {
 		glog.Infof("Error closing libvirt connection: %v", err)
 	}
-	if remainingRefs != 0 {
-		glog.Warningf("libvirt connection %p was not closed, some objects are still holding references to it", client.connection)
-	}
-
 	return err
+}
+
+func (client *libvirtClient) GetConn() *libvirt.Libvirt {
+	return client.virt
+}
+
+func (client *libvirtClient) ListAllInterfaceAddresses(dom *libvirt.Domain, source libvirt.DomainInterfaceAddressesSource) ([]libvirt.DomainInterface, error) {
+	return client.virt.DomainInterfaceAddresses(*dom, uint32(source), 0)
 }
 
 // CreateDomain creates domain based on CreateDomainInput
@@ -181,12 +206,12 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	glog.Info("Create resource libvirt_domain")
 
 	// Get default values from Host
-	domainDef, err := newDomainDefForConnection(client.connection)
+	domainDef, err := newDomainDefForConnection(client.virt)
 	if err != nil {
 		return fmt.Errorf("Failed to newDomainDefForConnection: %s", err)
 	}
 
-	arch, err := getHostArchitecture(client.connection)
+	arch, err := getHostArchitecture(client.virt)
 	if err != nil {
 		return fmt.Errorf("Error retrieving host architecture: %s", err)
 	}
@@ -201,8 +226,7 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	if err != nil {
 		return fmt.Errorf("can't retrieve volume %s for pool %s: %v", input.VolumeName, client.poolName, err)
 	}
-	defer diskVolume.Free()
-	if err := setDisks(&domainDef, diskVolume); err != nil {
+	if err := setDisks(client.virt, &domainDef, &diskVolume); err != nil {
 		return fmt.Errorf("Failed to setDisks: %s", err)
 	}
 
@@ -217,8 +241,7 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 		if err != nil {
 			return fmt.Errorf("error getting ignition volume: %v", err)
 		}
-		defer ignVolume.Free()
-		ignVolumePath, err := ignVolume.GetPath()
+		ignVolumePath, err := client.virt.StorageVolGetPath(ignVolume)
 		if err != nil {
 			return fmt.Errorf("error getting ignition volume path: %v", err)
 		}
@@ -244,7 +267,7 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	partialNetIfaces := make(map[string]*pendingMapping, 1)
 	if err := setNetworkInterfaces(
 		&domainDef,
-		client.connection,
+		client.virt,
 		partialNetIfaces,
 		&waitForLeases,
 		hostName,
@@ -260,11 +283,7 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	//	return err
 	//}
 
-	connectURI, err := client.connection.GetURI()
-	if err != nil {
-		return fmt.Errorf("error retrieving libvirt connection URI: %v", err)
-	}
-	glog.Infof("Creating libvirt domain at %s", connectURI)
+	glog.Infof("Creating libvirt domain at %s", client.uri)
 
 	data, err := xmlMarshallIndented(domainDef)
 	if err != nil {
@@ -272,27 +291,25 @@ func (client *libvirtClient) CreateDomain(ctx context.Context, input CreateDomai
 	}
 
 	glog.Infof("Creating libvirt domain with XML:\n%s", data)
-	domain, err := client.connection.DomainDefineXML(data)
+	domain, err := client.virt.DomainDefineXML(data)
 	if err != nil {
 		return fmt.Errorf("error defining libvirt domain: %v", err)
 	}
 
-	if err := domain.SetAutostart(input.Autostart); err != nil {
+	autostart := int32(0)
+	if input.Autostart {
+		autostart = 1
+	}
+	if err := client.virt.DomainSetAutostart(domain, autostart); err != nil {
 		return fmt.Errorf("error setting Autostart: %v", err)
 	}
 
-	err = domain.Create()
+	err = client.virt.DomainCreate(domain)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt domain: %v", err)
 	}
-	defer domain.Free()
 
-	id, err := domain.GetUUIDString()
-	if err != nil {
-		return fmt.Errorf("error retrieving libvirt domain id: %v", err)
-	}
-
-	glog.Infof("Domain ID: %s", id)
+	glog.Infof("Domain ID: %s", domain.UUID)
 	return nil
 }
 
@@ -304,12 +321,12 @@ func (client *libvirtClient) LookupDomainByName(name string) (*libvirt.Domain, e
 		return nil, ErrLibVirtConIsNil
 	}
 
-	domain, err := client.connection.LookupDomainByName(name)
+	domain, err := client.virt.DomainLookupByName(name)
 	if err != nil {
 		return nil, err
 	}
 
-	return domain, nil
+	return &domain, nil
 }
 
 // DomainExists checks if domain exists
@@ -319,14 +336,13 @@ func (client *libvirtClient) DomainExists(name string) (bool, error) {
 		return false, ErrLibVirtConIsNil
 	}
 
-	domain, err := client.connection.LookupDomainByName(name)
+	_, err := client.virt.DomainLookupByName(name)
 	if err != nil {
-		if err.(libvirt.Error).Code == libvirt.ERR_NO_DOMAIN {
+		if libvirt.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err
 	}
-	defer domain.Free()
 
 	return true, nil
 }
@@ -347,27 +363,26 @@ func (client *libvirtClient) DeleteDomain(name string) error {
 
 	glog.Infof("Deleting domain %s", name)
 
-	domain, err := client.connection.LookupDomainByName(name)
+	domain, err := client.virt.DomainLookupByName(name)
 	if err != nil {
 		return fmt.Errorf("Error retrieving libvirt domain: %s", err)
 	}
-	defer domain.Free()
 
-	state, _, err := domain.GetState()
+	state, _, err := client.virt.DomainGetState(domain, 0)
 	if err != nil {
 		return fmt.Errorf("Couldn't get info about domain: %s", err)
 	}
 
-	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
-		if err := domain.Destroy(); err != nil {
+	if libvirt.DomainState(state) == libvirt.DomainRunning || libvirt.DomainState(state) == libvirt.DomainPaused {
+		if err := client.virt.DomainDestroy(domain); err != nil {
 			return fmt.Errorf("Couldn't destroy libvirt domain: %s", err)
 		}
 	}
 
-	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
-		if e := err.(libvirt.Error); e.Code == libvirt.ERR_NO_SUPPORT || e.Code == libvirt.ERR_INVALID_ARG {
+	if err := client.virt.DomainUndefineFlags(domain, libvirt.DomainUndefineNvram); err != nil {
+		if e := err.(libvirt.Error); e.Code == uint32(libvirt.ErrNoSupport) || e.Code == uint32(libvirt.ErrInvalidArg) {
 			glog.Info("libvirt does not support undefine flags: will try again without flags")
-			if err := domain.Undefine(); err != nil {
+			if err := client.virt.DomainUndefine(domain); err != nil {
 				return fmt.Errorf("couldn't undefine libvirt domain: %v", err)
 			}
 		} else {
@@ -387,11 +402,11 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 	//client.poolMutexKV.Lock(client.poolName)
 	//defer client.poolMutexKV.Unlock(client.poolName)
 
-	volume, err := client.getVolume(input.VolumeName)
+	v, err := client.getVolume(input.VolumeName)
 	if err == nil {
-		volume.Free()
 		return fmt.Errorf("storage volume '%s' already exists", input.VolumeName)
 	}
+	volume = &v
 
 	volumeDef := newDefVolume(input.VolumeName)
 	volumeDef.Target.Format.Type = input.VolumeFormat
@@ -422,28 +437,18 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume %s", input.BaseVolumeName)
 		}
-		defer baseVolume.Free()
-		var baseVolumeInfo *libvirt.StorageVolInfo
-		baseVolumeInfo, err = baseVolume.GetInfo()
+		_, baseVolumeCapacity, baseVolumeSize, err := client.virt.StorageVolGetInfo(baseVolume)
 		if err != nil {
 			return fmt.Errorf("Can't retrieve volume info %s", input.BaseVolumeName)
 		}
 
-		var volumeSize uint64
-		if input.VolumeSize != nil {
-			size, _ := input.VolumeSize.AsInt64()
-			volumeSize = uint64(size)
+		if baseVolumeCapacity > baseVolumeSize {
+			volumeDef.Capacity.Value = uint64(baseVolumeCapacity)
 		} else {
-			volumeSize = uint64(defaultSize)
+			volumeDef.Capacity.Value = baseVolumeSize
 		}
 
-		if baseVolumeInfo.Capacity > volumeSize {
-			volumeDef.Capacity.Value = baseVolumeInfo.Capacity
-		} else {
-			volumeDef.Capacity.Value = volumeSize
-		}
-
-		backingStoreDef, err := newDefBackingStoreFromLibvirt(baseVolume)
+		backingStoreDef, err := newDefBackingStoreFromLibvirt(client.virt, &baseVolume)
 		if err != nil {
 			return fmt.Errorf("Could not retrieve backing store %s", input.BaseVolumeName)
 		}
@@ -460,34 +465,34 @@ func (client *libvirtClient) CreateVolume(input CreateVolumeInput) error {
 		// Refresh the pool of the volume so that libvirt knows it is
 		// not longer in use.
 		err = waitForSuccess("error refreshing pool for volume", func() error {
-			return client.pool.Refresh(0)
+			_, err := client.virt.StoragePoolLookupByName(client.poolName)
+			return err
 		})
 		if err != nil {
 			return fmt.Errorf("can't find storage pool '%s'", client.poolName)
 		}
 
-		v, err := client.pool.StorageVolCreateXML(string(volumeDefXML), 0)
+		pool, err := client.virt.StoragePoolLookupByName(client.poolName)
+		if err != nil {
+			return fmt.Errorf("can't find storage pool '%s'", volume.Pool)
+		}
+
+		v, err := client.virt.StorageVolCreateXML(pool, string(volumeDefXML), 0)
 		if err != nil {
 			return fmt.Errorf("Error creating libvirt volume: %s", err)
 		}
-		volume = v
-		defer volume.Free()
+		volume = &v
 	}
 
 	// we use the key as the id
-	key, err := volume.GetKey()
-	if err != nil {
-		return fmt.Errorf("Error retrieving volume key: %s", err)
-	}
-
 	if input.Source != "" {
-		err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+		err = img.importImage(newCopier(client.virt, volume, volumeDef.Capacity.Value), volumeDef)
 		if err != nil {
 			return fmt.Errorf("Error while uploading source %s: %s", img.string(), err)
 		}
 	}
 
-	glog.Infof("Volume ID: %s", key)
+	glog.Infof("Volume ID: %s", volume.Key)
 	return nil
 }
 
@@ -498,23 +503,22 @@ func (client *libvirtClient) VolumeExists(name string) (bool, error) {
 		return false, ErrLibVirtConIsNil
 	}
 
-	volume, err := client.getVolume(name)
+	_, err := client.getVolume(name)
 	if err != nil {
 		return false, nil
 	}
-	volume.Free()
 	return true, nil
 }
 
-func (client *libvirtClient) getVolume(volumeName string) (*libvirt.StorageVol, error) {
+func (client *libvirtClient) getVolume(volumeName string) (libvirt.StorageVol, error) {
 	// Check whether the storage volume exists. Its name needs to be
 	// unique.
-	volume, err := client.pool.LookupStorageVolByName(volumeName)
+	volume, err := client.virt.StorageVolLookupByName(*client.pool, volumeName)
 	if err != nil {
 		// Let's try by ID in case of older Installer
-		volume, err = client.connection.LookupStorageVolByKey(volumeName)
+		volume, err = client.virt.StorageVolLookupByKey(volumeName)
 		if err != nil {
-			return nil, fmt.Errorf("can't retrieve volume %q: %v", volumeName, err)
+			return libvirt.StorageVol{}, fmt.Errorf("can't retrieve volume %q: %v", volumeName, err)
 		}
 	}
 	return volume, nil
@@ -536,25 +540,24 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 	if err != nil {
 		return fmt.Errorf("Can't retrieve volume %s", name)
 	}
-	defer volume.Free()
 
 	// Refresh the pool of the volume so that libvirt knows it is
 	// not longer in use.
-	volPool, err := volume.LookupPoolByVolume()
+	_, err = client.virt.StoragePoolLookupByVolume(volume)
 	if err != nil {
 		return fmt.Errorf("Error retrieving pool for volume: %s", err)
 	}
-	defer volPool.Free()
 
 	// TODO: add locking support
 	//client.poolMutexKV.Lock(client.poolName)
 	//defer client.poolMutexKV.Unlock(client.poolName)
 
 	waitForSuccess("Error refreshing pool for volume", func() error {
-		return volPool.Refresh(0)
+		_, err := client.virt.StoragePoolLookupByVolume(volume)
+		return err
 	})
 
-	err = volume.Delete(0)
+	err = client.virt.StorageVolDelete(volume, libvirt.StorageVolDeleteNormal)
 	if err != nil {
 		return fmt.Errorf("Can't delete volume %s: %s", name, err)
 	}
@@ -564,15 +567,14 @@ func (client *libvirtClient) DeleteVolume(name string) error {
 
 // This may also be implementable with https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainInterfaceAddresses
 // GetDHCPLeasesByNetwork returns all network DHCP leases by network name
-func (client *libvirtClient) GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDHCPLease, error) {
-	network, err := client.connection.LookupNetworkByName(networkName)
+func (client *libvirtClient) GetDHCPLeasesByNetwork(networkName string) ([]libvirt.NetworkDhcpLease, error) {
+	network, err := client.virt.NetworkLookupByName(networkName)
 	if err != nil {
 		glog.Errorf("Failed to fetch network %s from the libvirt", networkName)
 		return nil, err
 	}
-	defer network.Free()
-
-	return network.GetDHCPLeases()
+	leases, _, err := client.virt.NetworkGetDhcpLeases(network, []string{}, 1, 0)
+	return leases, err
 }
 
 // LookupDomainHostnameByDHCPLease looks up a domain hostname based on its DHCP lease
@@ -584,8 +586,8 @@ func (client *libvirtClient) LookupDomainHostnameByDHCPLease(domIPAddress string
 	}
 
 	for _, lease := range dchpLeases {
-		if lease.IPaddr == domIPAddress {
-			return lease.Hostname, nil
+		if lease.Ipaddr == domIPAddress {
+			return lease.Hostname[0], nil
 		}
 	}
 	return "", fmt.Errorf("Failed to find hostname for the DHCP lease with IP %s", domIPAddress)

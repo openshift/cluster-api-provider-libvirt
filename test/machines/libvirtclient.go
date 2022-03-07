@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"strings"
 
-	libvirt "github.com/libvirt/libvirt-go"
+	libvirt "github.com/digitalocean/go-libvirt"
+	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 )
 
 type libvirtClient struct {
-	conn *libvirt.Connect
+	conn libvirtclient.Client
 }
 
 func NewLibvirtClient(uri string) (*libvirtClient, error) {
-	conn, err := libvirt.NewConnect(uri)
+	virt, err := libvirtclient.NewClient(uri, "")
 	if err != nil {
 		return nil, err
 	}
-
 	return &libvirtClient{
-		conn: conn,
+		conn: virt,
 	}, nil
 }
 
@@ -48,7 +48,7 @@ func (client *libvirtClient) GetPrivateIP(machine *machinev1.Machine) (string, e
 		return "", fmt.Errorf("no domain with matching name %q found", machine.Name)
 	}
 
-	domainInterfaces, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+	domainInterfaces, err := client.conn.ListAllInterfaceAddresses(domain, libvirt.DomainInterfaceAddressesSrcLease)
 	if err != nil {
 		return "", err
 	}
@@ -74,12 +74,13 @@ func (client *libvirtClient) getRunningDomain(name string) (*libvirt.Domain, err
 		return nil, fmt.Errorf("error retrieving libvirt domain: %q", err)
 	}
 
-	state, _, err := domain.GetState()
+	virtConn := client.conn.GetConn()
+	state, _, err := virtConn.DomainGetState(*domain, 0)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't obtain domain state: %q", err)
+		return nil, err
 	}
 
-	if state != libvirt.DOMAIN_RUNNING {
+	if libvirt.DomainState(state) != libvirt.DomainRunning {
 		return nil, fmt.Errorf("no running machine instance found")
 	}
 

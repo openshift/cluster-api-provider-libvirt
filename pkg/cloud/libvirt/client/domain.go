@@ -13,8 +13,8 @@ import (
 	"math/rand"
 
 	"github.com/davecgh/go-spew/spew"
+	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/golang/glog"
-	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 	"github.com/openshift/cluster-api-provider-libvirt/lib/cidr"
 )
@@ -35,7 +35,7 @@ type pendingMapping struct {
 	network  *libvirt.Network
 }
 
-func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
+func newDomainDef(virConn *libvirt.Libvirt) libvirtxml.Domain {
 	domainDef := libvirtxml.Domain{
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
@@ -68,7 +68,7 @@ func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
 	return domainDef
 }
 
-func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
+func newDevicesDef(virConn *libvirt.Libvirt) *libvirtxml.DomainDeviceList {
 	var serialPort uint
 
 	domainList := libvirtxml.DomainDeviceList{
@@ -120,7 +120,7 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 	return &domainList
 }
 
-func getHostArchitecture(virConn *libvirt.Connect) (string, error) {
+func getHostArchitecture(virConn *libvirt.Libvirt) (string, error) {
 	type HostCapabilities struct {
 		XMLName xml.Name `xml:"capabilities"`
 		Host    struct {
@@ -132,7 +132,7 @@ func getHostArchitecture(virConn *libvirt.Connect) (string, error) {
 		}
 	}
 
-	info, err := virConn.GetCapabilities()
+	info, err := virConn.ConnectGetCapabilities()
 	if err != nil {
 		return "", err
 	}
@@ -143,11 +143,11 @@ func getHostArchitecture(virConn *libvirt.Connect) (string, error) {
 	return capabilities.Host.CPU.Arch, nil
 }
 
-func getHostCapabilities(virConn *libvirt.Connect) (libvirtxml.Caps, error) {
+func getHostCapabilities(virConn *libvirt.Libvirt) (libvirtxml.Caps, error) {
 	// We should perhaps think of storing this on the connect object
 	// on first call to avoid the back and forth
 	caps := libvirtxml.Caps{}
-	capsXML, err := virConn.GetCapabilities()
+	capsXML, err := virConn.ConnectGetCapabilities()
 	if err != nil {
 		return caps, err
 	}
@@ -185,7 +185,7 @@ func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string,
 	return "", fmt.Errorf("Cannot find machine type %s for %s/%s in %v", targetmachine, virttype, arch, caps)
 }
 
-func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, error) {
+func newDomainDefForConnection(virConn *libvirt.Libvirt) (libvirtxml.Domain, error) {
 	d := newDomainDef(virConn)
 
 	arch, err := getHostArchitecture(virConn)
@@ -304,10 +304,10 @@ func randomWWN(strlen int) string {
 	return oui + string(result)
 }
 
-func setDisks(domainDef *libvirtxml.Domain, diskVolume *libvirt.StorageVol) error {
+func setDisks(connection *libvirt.Libvirt, domainDef *libvirtxml.Domain, diskVolume *libvirt.StorageVol) error {
 	disk := newDefDisk(0)
 	glog.Info("Getting disk volume")
-	diskVolumeFile, err := diskVolume.GetPath()
+	diskVolumeFile, err := connection.StorageVolGetPath(*diskVolume)
 	if err != nil {
 		return fmt.Errorf("Error retrieving volume file: %s", err)
 	}
@@ -337,7 +337,7 @@ func xmlMarshallIndented(b interface{}) (string, error) {
 
 func setNetworkInterfaces(
 	domainDef *libvirtxml.Domain,
-	virConn *libvirt.Connect,
+	virtConn *libvirt.Libvirt,
 	partialNetIfaces map[string]*pendingMapping,
 	waitForLeases *[]*libvirtxml.DomainInterface,
 	networkInterfaceHostname string,
@@ -368,17 +368,14 @@ func setNetworkInterfaces(
 		if networkInterfaceName != "" {
 			// when using a "network_id" we are referring to a "network resource"
 			// we have defined somewhere else...
-			network, err := virConn.LookupNetworkByName(networkInterfaceName)
+			network, err := virtConn.NetworkLookupByName(networkInterfaceName)
 			if err != nil {
 				return fmt.Errorf("Can't retrieve network name %s", networkInterfaceName)
 			}
-			defer network.Free()
 
-			networkName, err := network.GetName()
-			if err != nil {
-				return fmt.Errorf("Error retrieving network name: %s", err)
-			}
-			networkDef, err := newDefNetworkfromLibvirt(network)
+			networkName := network.Name
+
+			networkDef, err := newDefNetworkfromLibvirt(virtConn, network)
 			if err != nil {
 				return fmt.Errorf("Error retrieving network definition: %v", err)
 			}
@@ -415,7 +412,7 @@ func setNetworkInterfaces(
 					reservedLeases.Unlock()
 
 					glog.Infof("Adding IP/MAC/host=%s/%s/%s to %s", ip.String(), mac, hostname, networkName)
-					if err := updateOrAddHost(network, ip.String(), mac, hostname); err != nil {
+					if err := updateOrAddHost(virtConn, &network, ip.String(), mac, hostname); err != nil {
 						return err
 					}
 				} else {
@@ -437,7 +434,7 @@ func setNetworkInterfaces(
 					partialNetIfaces[strings.ToUpper(mac)] = &pendingMapping{
 						mac:      strings.ToUpper(mac),
 						hostname: hostname,
-						network:  network,
+						network:  &network,
 					}
 				}
 			}
@@ -484,7 +481,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, input *CreateDomainInput, arch 
 
 	if input.DomainVcpu != 0 {
 		domainDef.VCPU = &libvirtxml.DomainVCPU{
-			Value: input.DomainVcpu,
+			Value: uint(input.DomainVcpu),
 		}
 	} else {
 		return fmt.Errorf("machine does not have an DomainVcpu set")

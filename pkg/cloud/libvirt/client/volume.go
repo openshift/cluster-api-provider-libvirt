@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/golang/glog"
-	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
@@ -61,12 +61,12 @@ func newDefVolume(name string) libvirtxml.StorageVolume {
 	}
 }
 
-func newDefBackingStoreFromLibvirt(baseVolume *libvirt.StorageVol) (libvirtxml.StorageVolumeBackingStore, error) {
-	baseVolumeDef, err := newDefVolumeFromLibvirt(baseVolume)
+func newDefBackingStoreFromLibvirt(virtConn *libvirt.Libvirt, baseVolume *libvirt.StorageVol) (libvirtxml.StorageVolumeBackingStore, error) {
+	baseVolumeDef, err := newDefVolumeFromLibvirt(virtConn, baseVolume)
 	if err != nil {
 		return libvirtxml.StorageVolumeBackingStore{}, fmt.Errorf("could not get volume: %s", err)
 	}
-	baseVolPath, err := baseVolume.GetPath()
+	baseVolPath, err := virtConn.StorageVolGetPath(*baseVolume)
 	if err != nil {
 		return libvirtxml.StorageVolumeBackingStore{}, fmt.Errorf("could not get base image path: %s", err)
 	}
@@ -79,12 +79,9 @@ func newDefBackingStoreFromLibvirt(baseVolume *libvirt.StorageVol) (libvirtxml.S
 	return backingStoreDef, nil
 }
 
-func newDefVolumeFromLibvirt(volume *libvirt.StorageVol) (libvirtxml.StorageVolume, error) {
-	name, err := volume.GetName()
-	if err != nil {
-		return libvirtxml.StorageVolume{}, fmt.Errorf("could not get name for volume: %s", err)
-	}
-	volumeDefXML, err := volume.GetXMLDesc(0)
+func newDefVolumeFromLibvirt(virtConn *libvirt.Libvirt, volume *libvirt.StorageVol) (libvirtxml.StorageVolume, error) {
+	name := volume.Name
+	volumeDefXML, err := virtConn.StorageVolGetXMLDesc(*volume, 0)
 	if err != nil {
 		return libvirtxml.StorageVolume{}, fmt.Errorf("could not get XML description for volume %s: %s", name, err)
 	}
@@ -118,11 +115,10 @@ func timeFromEpoch(str string) time.Time {
 }
 
 func uploadVolume(poolName string, client *libvirtClient, volumeDef libvirtxml.StorageVolume, img image) (string, error) {
-	pool, err := client.connection.LookupStoragePoolByName(poolName)
+	pool, err := client.virt.StoragePoolLookupByName(poolName)
 	if err != nil {
 		return "", fmt.Errorf("can't find storage pool %q", poolName)
 	}
-	defer pool.Free()
 
 	//client.poolMutexKV.Lock(poolName)
 	//defer client.poolMutexKV.Unlock(poolName)
@@ -130,7 +126,7 @@ func uploadVolume(poolName string, client *libvirtClient, volumeDef libvirtxml.S
 	// Refresh the pool of the volume so that libvirt knows it is
 	// not longer in use.
 	err = waitForSuccess("Error refreshing pool for volume", func() error {
-		return pool.Refresh(0)
+		return client.virt.StoragePoolRefresh(pool, 0)
 	})
 	if err != nil {
 		return "", fmt.Errorf("timeout when calling waitForSuccess: %v", err)
@@ -141,53 +137,51 @@ func uploadVolume(poolName string, client *libvirtClient, volumeDef libvirtxml.S
 		return "", fmt.Errorf("Error serializing libvirt volume: %s", err)
 	}
 	// create the volume
-	volume, err := pool.StorageVolCreateXML(string(volumeDefXML), 0)
+	volume, err := client.virt.StorageVolCreateXML(pool, string(volumeDefXML), 0)
 	if err != nil {
 		return "", fmt.Errorf("Error creating libvirt volume for device %s: %s", volumeDef.Name, err)
 	}
-	defer volume.Free()
 
 	// upload ISO file
-	err = img.importImage(newCopier(client.connection, volume, volumeDef.Capacity.Value), volumeDef)
+	err = img.importImage(newCopier(client.virt, &volume, volumeDef.Capacity.Value), volumeDef)
 	if err != nil {
 		return "", fmt.Errorf("Error while uploading volume %s: %s", img.string(), err)
 	}
 
-	volumeKey, err := volume.GetKey()
-	if err != nil {
-		return "", fmt.Errorf("Error retrieving volume key: %s", err)
-	}
-	glog.Infof("Volume ID: %s", volumeKey)
-	return volumeKey, nil
+	glog.Infof("Volume ID: %s", volume.Key)
+	return volume.Key, nil
 }
 
-func newCopier(virConn *libvirt.Connect, volume *libvirt.StorageVol, size uint64) func(src io.Reader) error {
+func newCopier(virConn *libvirt.Libvirt, volume *libvirt.StorageVol, size uint64) func(src io.Reader) error {
 	copier := func(src io.Reader) error {
-		var bytesCopied int64
+		r, w := io.Pipe()
+		defer w.Close()
 
-		stream, err := virConn.NewStream(0)
-		if err != nil {
-			return err
-		}
+		go func() error {
+			buffer := make([]byte, 4*1024*1024)
+			bytesCopied, err := io.CopyBuffer(w, src, buffer)
 
-		defer func() {
-			if uint64(bytesCopied) != size {
-				stream.Abort()
-			} else {
-				stream.Finish()
+			// if we get unexpected EOF this mean that connection was closed suddently from server side
+			// the problem is not on the plugin but on server hosting currupted images
+			if err == io.ErrUnexpectedEOF {
+				return fmt.Errorf("error: transfer was unexpectedly closed from the server while downloading. Please try again later or check the server hosting sources")
 			}
-			stream.Free()
+			if err != nil {
+				return fmt.Errorf("error while copying source to volume %s", err)
+			}
+
+			if uint64(bytesCopied) != size {
+				return fmt.Errorf("error during volume Upload. BytesCopied: %d != %d volume.size", bytesCopied, size)
+			}
+
+			return w.Close()
+
 		}()
 
-		volume.Upload(stream, 0, size, 0)
-
-		sio := newStreamIO(*stream)
-
-		bytesCopied, err = io.Copy(sio, src)
-		if err != nil {
-			return err
+		if err := virConn.StorageVolUpload(*volume, r, 0, size, 0); err != nil {
+			return fmt.Errorf("error while uploading volume %s", err)
 		}
-		glog.Infof("%d bytes uploaded\n", bytesCopied)
+
 		return nil
 	}
 	return copier
