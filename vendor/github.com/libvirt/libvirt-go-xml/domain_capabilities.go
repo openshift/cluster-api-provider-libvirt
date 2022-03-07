@@ -73,12 +73,14 @@ type DomainCapsCPUMode struct {
 	Models    []DomainCapsCPUModel   `xml:"model"`
 	Vendor    string                 `xml:"vendor,omitempty"`
 	Features  []DomainCapsCPUFeature `xml:"feature"`
+	Enums     []DomainCapsEnum       `xml:"enum"`
 }
 
 type DomainCapsCPUModel struct {
-	Name     string `xml:",chardata"`
-	Usable   string `xml:"usable,attr,omitempty"`
-	Fallback string `xml:"fallback,attr,omitempty"`
+	Name       string `xml:",chardata"`
+	Usable     string `xml:"usable,attr,omitempty"`
+	Fallback   string `xml:"fallback,attr,omitempty"`
+	Deprecated string `xml:"deprecated,attr,omitempty"`
 }
 
 type DomainCapsCPUFeature struct {
@@ -92,11 +94,12 @@ type DomainCapsEnum struct {
 }
 
 type DomainCapsDevices struct {
-	Disk     *DomainCapsDevice `xml:"disk"`
-	Graphics *DomainCapsDevice `xml:"graphics"`
-	Video    *DomainCapsDevice `xml:"video"`
-	HostDev  *DomainCapsDevice `xml:"hostdev"`
-	RNG      *DomainCapsDevice `xml:"rng"`
+	Disk       *DomainCapsDevice `xml:"disk"`
+	Graphics   *DomainCapsDevice `xml:"graphics"`
+	Video      *DomainCapsDevice `xml:"video"`
+	HostDev    *DomainCapsDevice `xml:"hostdev"`
+	RNG        *DomainCapsDevice `xml:"rng"`
+	FileSystem *DomainCapsDevice `xml:"filesystem"`
 }
 
 type DomainCapsDevice struct {
@@ -109,6 +112,7 @@ type DomainCapsFeatures struct {
 	VMCoreInfo        *DomainCapsFeatureVMCoreInfo        `xml:"vmcoreinfo"`
 	GenID             *DomainCapsFeatureGenID             `xml:"genid"`
 	BackingStoreInput *DomainCapsFeatureBackingStoreInput `xml:"backingStoreInput"`
+	Backup            *DomainCapsFeatureBackup            `xml:"backup"`
 	SEV               *DomainCapsFeatureSEV               `xml:"sev"`
 }
 
@@ -126,6 +130,10 @@ type DomainCapsFeatureGenID struct {
 }
 
 type DomainCapsFeatureBackingStoreInput struct {
+	Supported string `xml:"supported,attr"`
+}
+
+type DomainCapsFeatureBackup struct {
 	Supported string `xml:"supported,attr"`
 }
 
