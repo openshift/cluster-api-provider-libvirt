@@ -5,9 +5,9 @@
 package mock
 
 import (
-	"context"
+	context "context"
+	go_libvirt "github.com/digitalocean/go-libvirt"
 	gomock "github.com/golang/mock/gomock"
-	libvirt_go "github.com/libvirt/libvirt-go"
 	client "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	reflect "reflect"
 )
@@ -50,17 +50,17 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // CreateDomain mocks base method
-func (m *MockClient) CreateDomain(ctx context.Context, arg0 client.CreateDomainInput) error {
+func (m *MockClient) CreateDomain(arg0 context.Context, arg1 client.CreateDomainInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDomain", arg0)
+	ret := m.ctrl.Call(m, "CreateDomain", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateDomain indicates an expected call of CreateDomain
-func (mr *MockClientMockRecorder) CreateDomain(arg0 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateDomain(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomain", reflect.TypeOf((*MockClient)(nil).CreateDomain), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomain", reflect.TypeOf((*MockClient)(nil).CreateDomain), arg0, arg1)
 }
 
 // DeleteDomain mocks base method
@@ -93,10 +93,10 @@ func (mr *MockClientMockRecorder) DomainExists(name interface{}) *gomock.Call {
 }
 
 // LookupDomainByName mocks base method
-func (m *MockClient) LookupDomainByName(name string) (*libvirt_go.Domain, error) {
+func (m *MockClient) LookupDomainByName(name string) (*go_libvirt.Domain, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LookupDomainByName", name)
-	ret0, _ := ret[0].(*libvirt_go.Domain)
+	ret0, _ := ret[0].(*go_libvirt.Domain)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -151,10 +151,10 @@ func (mr *MockClientMockRecorder) DeleteVolume(name interface{}) *gomock.Call {
 }
 
 // GetDHCPLeasesByNetwork mocks base method
-func (m *MockClient) GetDHCPLeasesByNetwork(networkName string) ([]libvirt_go.NetworkDHCPLease, error) {
+func (m *MockClient) GetDHCPLeasesByNetwork(networkName string) ([]go_libvirt.NetworkDhcpLease, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDHCPLeasesByNetwork", networkName)
-	ret0, _ := ret[0].([]libvirt_go.NetworkDHCPLease)
+	ret0, _ := ret[0].([]go_libvirt.NetworkDhcpLease)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -178,4 +178,33 @@ func (m *MockClient) LookupDomainHostnameByDHCPLease(domIPAddress, networkName s
 func (mr *MockClientMockRecorder) LookupDomainHostnameByDHCPLease(domIPAddress, networkName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupDomainHostnameByDHCPLease", reflect.TypeOf((*MockClient)(nil).LookupDomainHostnameByDHCPLease), domIPAddress, networkName)
+}
+
+// GetConn mocks base method
+func (m *MockClient) GetConn() *go_libvirt.Libvirt {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConn")
+	ret0, _ := ret[0].(*go_libvirt.Libvirt)
+	return ret0
+}
+
+// GetConn indicates an expected call of GetConn
+func (mr *MockClientMockRecorder) GetConn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConn", reflect.TypeOf((*MockClient)(nil).GetConn))
+}
+
+// ListAllInterfaceAddresses mocks base method
+func (m *MockClient) ListAllInterfaceAddresses(dom *go_libvirt.Domain, source go_libvirt.DomainInterfaceAddressesSource) ([]go_libvirt.DomainInterface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllInterfaceAddresses", dom, source)
+	ret0, _ := ret[0].([]go_libvirt.DomainInterface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAllInterfaceAddresses indicates an expected call of ListAllInterfaceAddresses
+func (mr *MockClientMockRecorder) ListAllInterfaceAddresses(dom, source interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllInterfaceAddresses", reflect.TypeOf((*MockClient)(nil).ListAllInterfaceAddresses), dom, source)
 }
