@@ -401,14 +401,25 @@ func (a *Actuator) applyMachineStatus(
 	status *providerconfigv1.LibvirtMachineProviderStatus,
 	addrs []corev1.NodeAddress,
 ) (bool, error) {
-	// Encode the new status as a raw extension.
-	rawStatus, err := EncodeProviderStatus(a.codec, status)
+	machineCopy := machine.DeepCopy()
+
+	// Check if machine status has been modified.
+	machineStatus, err := ProviderStatusFromMachine(a.codec, machine)
 	if err != nil {
 		return false, err
 	}
 
-	machineCopy := machine.DeepCopy()
-	machineCopy.Status.ProviderStatus = rawStatus
+	// We need to update provider status only if it is nil (when we create new machines), or if
+	// the status has been modified.
+	if machineCopy.Status.ProviderStatus == nil || !equality.Semantic.DeepEqual(machineStatus, status) {
+		// Encode the new status as a raw extension.
+		rawStatus, err := EncodeProviderStatus(a.codec, status)
+		if err != nil {
+			return false, err
+		}
+
+		machineCopy.Status.ProviderStatus = rawStatus
+	}
 
 	if addrs != nil {
 		machineCopy.Status.Addresses = addrs
