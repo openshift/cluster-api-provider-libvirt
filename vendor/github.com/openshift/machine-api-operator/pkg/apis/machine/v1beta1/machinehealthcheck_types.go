@@ -30,6 +30,14 @@ type MachineHealthCheck struct {
 	Status MachineHealthCheckStatus `json:"status,omitempty"`
 }
 
+func (m *MachineHealthCheck) GetConditions() Conditions {
+	return m.Status.Conditions
+}
+
+func (m *MachineHealthCheck) SetConditions(conditions Conditions) {
+	m.Status.Conditions = conditions
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // MachineHealthCheckList contains a list of MachineHealthCheck
@@ -60,19 +68,29 @@ type MachineHealthCheckSpec struct {
 	// +kubebuilder:default:="100%"
 	// +kubebuilder:validation:Pattern="^((100|[0-9]{1,2})%|[0-9]+)$"
 	// +kubebuilder:validation:Type:=string
-	// +kubebuilder:validation:Minimum:=0
 	MaxUnhealthy *intstr.IntOrString `json:"maxUnhealthy,omitempty"`
 
 	// Machines older than this duration without a node will be considered to have
 	// failed and will be remediated.
+	// To prevent Machines without Nodes from being removed, disable startup checks
+	// by setting this value explicitly to "0".
 	// Expects an unsigned duration string of decimal numbers each with optional
 	// fraction and a unit suffix, eg "300ms", "1.5h" or "2h45m".
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 	// +optional
 	// +kubebuilder:default:="10m"
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +kubebuilder:validation:Pattern="^0|([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	// +kubebuilder:validation:Type:=string
-	NodeStartupTimeout metav1.Duration `json:"nodeStartupTimeout,omitempty"`
+	NodeStartupTimeout *metav1.Duration `json:"nodeStartupTimeout,omitempty"`
+
+	// RemediationTemplate is a reference to a remediation template
+	// provided by an infrastructure provider.
+	//
+	// This field is completely optional, when filled, the MachineHealthCheck controller
+	// creates a new object from the template referenced and hands off remediation of the machine to
+	// a controller that lives outside of Machine API Operator.
+	// +optional
+	RemediationTemplate *corev1.ObjectReference `json:"remediationTemplate,omitempty"`
 }
 
 // UnhealthyCondition represents a Node condition type and value with a timeout
@@ -104,4 +122,13 @@ type MachineHealthCheckStatus struct {
 	// total number of machines counted by this machine health check
 	// +kubebuilder:validation:Minimum=0
 	CurrentHealthy *int `json:"currentHealthy" protobuf:"varint,4,opt,name=currentHealthy"`
+
+	// RemediationsAllowed is the number of further remediations allowed by this machine health check before
+	// maxUnhealthy short circuiting will be applied
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	RemediationsAllowed int32 `json:"remediationsAllowed"`
+
+	// Conditions defines the current state of the MachineHealthCheck
+	Conditions Conditions `json:"conditions,omitempty"`
 }
