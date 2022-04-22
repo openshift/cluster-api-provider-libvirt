@@ -52,10 +52,6 @@ build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller "$(REPO_PATH)/cmd/manager"
 	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test "$(REPO_PATH)/test/machines"
 
-.PHONY: libvirt-actuator
-libvirt-actuator:
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator "$(REPO_PATH)/cmd/libvirt-actuator"
-
 .PHONY: images
 images: ## Create images
 	$(IMAGE_BUILD_CMD) -t "$(IMAGE):$(VERSION)" -t "$(IMAGE):$(MUTABLE_TAG)" ./
