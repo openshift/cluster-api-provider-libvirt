@@ -41,8 +41,8 @@ gencode:
 
 .PHONY: gendeepcopy
 gendeepcopy:
-	go build -o $$GOPATH/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
-	deepcopy-gen \
+	go build -o $(shell go env GOPATH)/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
+	$(shell go env GOPATH)/bin/deepcopy-gen \
           -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1beta1 \
           -O zz_generated.deepcopy \
           -h hack/boilerplate.go.txt
