@@ -5,7 +5,7 @@
 package mock
 
 import (
-	"context"
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	libvirt_go "github.com/libvirt/libvirt-go"
 	client "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
@@ -50,17 +50,17 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // CreateDomain mocks base method
-func (m *MockClient) CreateDomain(ctx context.Context, arg0 client.CreateDomainInput) error {
+func (m *MockClient) CreateDomain(arg0 context.Context, arg1 client.CreateDomainInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDomain", arg0)
+	ret := m.ctrl.Call(m, "CreateDomain", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateDomain indicates an expected call of CreateDomain
-func (mr *MockClientMockRecorder) CreateDomain(arg0 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateDomain(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomain", reflect.TypeOf((*MockClient)(nil).CreateDomain), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomain", reflect.TypeOf((*MockClient)(nil).CreateDomain), arg0, arg1)
 }
 
 // DeleteDomain mocks base method
