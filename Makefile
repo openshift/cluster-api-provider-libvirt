@@ -21,7 +21,7 @@ ifeq ($(NO_DOCKER), 1)
   IMAGE_BUILD_CMD = imagebuilder
   CGO_ENABLED = 1
 else
-  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:golang-1.16
+  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:rhel-8-release-golang-1.19-openshift-4.13
   IMAGE_BUILD_CMD = $(CONTAINER_RUNTIME) build
 endif
 
