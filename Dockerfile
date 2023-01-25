@@ -3,9 +3,9 @@ WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 COPY . .
 RUN go build -o machine-controller-manager ./cmd/manager
 
-FROM docker.io/fedora:35
+FROM quay.io/centos/centos:stream9
 RUN INSTALL_PKGS=" \
-      libvirt-libs openssh-clients genisoimage \
+      libvirt-libs openssh-clients xorriso \
       " && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
