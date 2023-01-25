@@ -11,6 +11,6 @@ else
     --env IS_CONTAINER=TRUE \
     --volume "${PWD}:/go/src/github.com/openshift/cluster-api-provider-libvirt:z" \
     --workdir /go/src/github.com/openshift/cluster-api-provider-libvirt \
-    registry.ci.openshift.org/openshift/release:golang-1.16 \
+    registry.ci.openshift.org/openshift/release:rhel-8-release-golang-1.19-openshift-4.12 \
     ./hack/go-fmt.sh "${@}"
 fi
