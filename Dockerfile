@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.16 AS builder
+FROM registry.ci.openshift.org/openshift/release:rhel-8-release-golang-1.17-openshift-4.10 AS builder
 WORKDIR /go/src/github.com/openshift/cluster-api-provider-libvirt
 COPY . .
 RUN go build -o machine-controller-manager ./cmd/manager
