@@ -9,13 +9,15 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/libvirt/libvirt-go v5.10.0+incompatible
 	github.com/libvirt/libvirt-go-xml v5.10.0+incompatible
-	github.com/openshift/machine-api-operator v0.2.1-0.20210820103535-d50698c302f5
+	github.com/openshift/api v0.0.0-20221018124113-7edcfe3c76cb
+	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+	github.com/openshift/machine-api-operator v0.2.1-0.20230110071516-a99a63b99440
 	k8s.io/api v0.25.6
 	k8s.io/apimachinery v0.25.6
 	k8s.io/client-go v0.25.6
 	k8s.io/code-generator v0.25.6
 	k8s.io/klog v1.0.0
-	sigs.k8s.io/controller-runtime v0.12.3
+	sigs.k8s.io/controller-runtime v0.13.0
 )
 
 require (
@@ -28,6 +30,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20200426045556-49ad98f6dac1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
@@ -60,9 +63,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/gomega v1.24.1 // indirect
-	github.com/openshift/api v0.0.0-20210816181336-8ff39b776da3 // indirect
-	github.com/openshift/client-go v0.0.0-20210730113412-1811c1b3fc0e // indirect
-	github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20210615203611-a02074e8d5bb // indirect
+	github.com/openshift/library-go v0.0.0-20220920133651-093893cf326b // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
@@ -96,8 +97,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/kubectl v0.25.6 // indirect
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029 // indirect
-	sigs.k8s.io/cluster-api-provider-aws v0.0.0-00010101000000-000000000000 // indirect
-	sigs.k8s.io/cluster-api-provider-azure v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect

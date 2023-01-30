@@ -31,9 +31,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
+	clusterclient "github.com/openshift/client-go/machine/clientset/versioned"
 	apierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
-	clusterclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

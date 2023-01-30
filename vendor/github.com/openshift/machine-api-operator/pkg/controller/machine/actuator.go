@@ -19,10 +19,9 @@ package machine
 import (
 	"context"
 
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 )
 
-/// [Actuator]
 // Actuator controls machines on a specific infrastructure. All
 // methods should be idempotent unless otherwise specified.
 type Actuator interface {
@@ -35,5 +34,3 @@ type Actuator interface {
 	// Checks if the machine currently exists.
 	Exists(context.Context, *machinev1.Machine) (bool, error)
 }
-
-/// [Actuator]
