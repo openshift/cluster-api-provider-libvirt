@@ -4,7 +4,6 @@ MUTABLE_TAG ?= latest
 PROJECT     ?= cluster-api-provider-libvirt
 ORG_PATH    ?= github.com/openshift
 REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
-CLUSTER_API ?= github.com/openshift/cluster-api
 IMAGE       ?= origin-libvirt-machine-controllers
 
 ifeq ($(DBG),1)
