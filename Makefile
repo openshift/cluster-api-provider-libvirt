@@ -34,7 +34,7 @@ depend-update:
 generate: gendeepcopy gencode
 
 .PHONY: gencode
-gencode:
+encode:
 	go install $(GOGCFLAGS) -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/github.com/golang/mock/mockgen
 	go generate ./pkg/... ./cmd/...
 
@@ -69,7 +69,7 @@ check-pkg:
 
 .PHONY: test
 test: # Run unit test
-	$(DOCKER_CMD) go test -race -cover ./cmd/... ./pkg/cloud/...
+	$(DOCKER_CMD) go test -race -cover ./cmd/... ./pkg/cloud/libvirt/client/...
 
 .PHONY: build-e2e
 build-e2e:
