@@ -4,7 +4,6 @@ MUTABLE_TAG ?= latest
 PROJECT     ?= cluster-api-provider-libvirt
 ORG_PATH    ?= github.com/openshift
 REPO_PATH   ?= $(ORG_PATH)/$(PROJECT)
-CLUSTER_API ?= github.com/openshift/cluster-api
 IMAGE       ?= origin-libvirt-machine-controllers
 
 ifeq ($(DBG),1)
@@ -22,7 +21,7 @@ ifeq ($(NO_DOCKER), 1)
   IMAGE_BUILD_CMD = imagebuilder
   CGO_ENABLED = 1
 else
-  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:golang-1.16
+  DOCKER_CMD := $(CONTAINER_RUNTIME) run --rm -e CGO_ENABLED=1 -v "$(PWD):/go/src/$(REPO_PATH):Z" -w "/go/src/$(REPO_PATH)" registry.ci.openshift.org/openshift/release:rhel-8-release-golang-1.19-openshift-4.13
   IMAGE_BUILD_CMD = $(CONTAINER_RUNTIME) build
 endif
 
@@ -35,14 +34,14 @@ depend-update:
 generate: gendeepcopy gencode
 
 .PHONY: gencode
-gencode:
+encode:
 	go install $(GOGCFLAGS) -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/github.com/golang/mock/mockgen
 	go generate ./pkg/... ./cmd/...
 
 .PHONY: gendeepcopy
 gendeepcopy:
-	go build -o $$GOPATH/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
-	deepcopy-gen \
+	go build -o $(shell go env GOPATH)/bin/deepcopy-gen "$(REPO_PATH)/vendor/k8s.io/code-generator/cmd/deepcopy-gen"
+	$(shell go env GOPATH)/bin/deepcopy-gen \
           -i ./pkg/apis/libvirtproviderconfig,./pkg/apis/libvirtproviderconfig/v1beta1 \
           -O zz_generated.deepcopy \
           -h hack/boilerplate.go.txt
@@ -51,10 +50,6 @@ gendeepcopy:
 build: ## build binaries
 	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/machine-controller "$(REPO_PATH)/cmd/manager"
 	$(DOCKER_CMD) go test $(GOGCFLAGS) -c -o bin/machines.test "$(REPO_PATH)/test/machines"
-
-.PHONY: libvirt-actuator
-libvirt-actuator:
-	$(DOCKER_CMD) go build $(GOGCFLAGS) -o bin/libvirt-actuator "$(REPO_PATH)/cmd/libvirt-actuator"
 
 .PHONY: images
 images: ## Create images
@@ -74,7 +69,7 @@ check-pkg:
 
 .PHONY: test
 test: # Run unit test
-	$(DOCKER_CMD) go test -race -cover ./cmd/... ./pkg/cloud/...
+	$(DOCKER_CMD) go test -race -cover ./cmd/... ./pkg/cloud/libvirt/client/...
 
 .PHONY: build-e2e
 build-e2e:

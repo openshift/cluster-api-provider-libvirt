@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	machineapis "github.com/openshift/api/machine/v1beta1"
+	clientset "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	machineactuator "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/actuators/machine"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	"github.com/openshift/cluster-api-provider-libvirt/pkg/controller"
-	machineapis "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	clientset "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/openshift/machine-api-operator/pkg/metrics"
 
 	"k8s.io/client-go/kubernetes"
@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {

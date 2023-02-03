@@ -3,8 +3,8 @@ package utils
 import (
 	"fmt"
 
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 )
 
 func TestingMachineProviderSpec(uri, clusterID string) (machinev1.ProviderSpec, error) {

@@ -1,9 +1,9 @@
 package metrics
 
 import (
-	mapiv1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	machineinformers "github.com/openshift/machine-api-operator/pkg/generated/informers/externalversions/machine/v1beta1"
-	machinelisters "github.com/openshift/machine-api-operator/pkg/generated/listers/machine/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
+	machineinformers "github.com/openshift/client-go/machine/informers/externalversions/machine/v1beta1"
+	machinelisters "github.com/openshift/client-go/machine/listers/machine/v1beta1"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	DefaultHealthCheckMetricsAddress = ":8083"
-	DefaultMachineSetMetricsAddress  = ":8082"
-	DefaultMachineMetricsAddress     = ":8081"
+	DefaultMachineSetMetricsAddress = ":8082"
+	DefaultMachineMetricsAddress    = ":8081"
+	DefaultMetal3MetricsAddress     = ":60000"
 )
 
 var (
@@ -63,8 +63,21 @@ var (
 	)
 )
 
+// Metrics for use in the Machine controller
+var (
+	// MachinePhaseTransitionSeconds is a metric to capute the time between a Machine being created and entering a particular phase
+	MachinePhaseTransitionSeconds = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "mapi_machine_phase_transition_seconds",
+			Help:    "Number of seconds between Machine creation and Machine transition to a phase.",
+			Buckets: []float64{5, 10, 20, 30, 60, 90, 120, 180, 240, 300, 360, 480, 600},
+		}, []string{"phase"},
+	)
+)
+
 func init() {
 	prometheus.MustRegister(MachineCollectorUp)
+	metrics.Registry.MustRegister(MachinePhaseTransitionSeconds)
 	metrics.Registry.MustRegister(
 		failedInstanceCreateCount,
 		failedInstanceUpdateCount,
@@ -188,11 +201,11 @@ func (mc MachineCollector) collectMachineSetMetrics(ch chan<- prometheus.Metric)
 	}
 }
 
-func (mc MachineCollector) listMachines() ([]*mapiv1beta1.Machine, error) {
+func (mc MachineCollector) listMachines() ([]*machinev1.Machine, error) {
 	return mc.machineLister.Machines(mc.namespace).List(labels.Everything())
 }
 
-func (mc MachineCollector) listMachineSets() ([]*mapiv1beta1.MachineSet, error) {
+func (mc MachineCollector) listMachineSets() ([]*machinev1.MachineSet, error) {
 	return mc.machineSetLister.MachineSets(mc.namespace).List(labels.Everything())
 }
 

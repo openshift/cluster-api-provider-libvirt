@@ -7,11 +7,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	libvirt "github.com/libvirt/libvirt-go"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	fakeclusterclientset "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	providerconfigv1 "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	libvirtclient "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client"
 	mocklibvirt "github.com/openshift/cluster-api-provider-libvirt/pkg/cloud/libvirt/client/mock"
-	fakeclusterclientset "github.com/openshift/cluster-api-provider-libvirt/test"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -193,7 +193,7 @@ func TestMachineEvents(t *testing.T) {
 			mockLibvirtClient.EXPECT().Close()
 			mockLibvirtClient.EXPECT().CreateVolume(gomock.Any()).Return(tc.createVolumeErr).AnyTimes()
 			mockLibvirtClient.EXPECT().DeleteVolume(gomock.Any()).Return(tc.deleteVolumeErr).AnyTimes()
-			mockLibvirtClient.EXPECT().CreateDomain(gomock.Any()).Return(tc.createDomainErr).AnyTimes()
+			mockLibvirtClient.EXPECT().CreateDomain(context.TODO(), gomock.Any()).Return(tc.createDomainErr).AnyTimes()
 			mockLibvirtClient.EXPECT().DeleteDomain(gomock.Any()).Return(tc.deleteDomainErr).AnyTimes()
 			mockLibvirtClient.EXPECT().GetDHCPLeasesByNetwork(gomock.Any())
 			mockLibvirtClient.EXPECT().LookupDomainByName(gomock.Any()).Return(tc.lookupDomainOutput, tc.lookupDomainErr).AnyTimes()
