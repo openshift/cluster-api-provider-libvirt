@@ -102,19 +102,12 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 		},
 	}
 
-	arch, err := getHostArchitecture(virConn)
-	if err != nil {
-		glog.Errorf("Error retrieving host architecture: %s", err)
-	}
-	// Currently SPICE is supported on x86_64 and aarch64. But it is only enabled in RHEL qemu for x86_64.
-	if arch == "x86_64" {
-		domainList.Graphics = []libvirtxml.DomainGraphic{
-			{
-				Spice: &libvirtxml.DomainGraphicSpice{
-					AutoPort: "yes",
-				},
+	domainList.Graphics = []libvirtxml.DomainGraphic{
+		{
+			VNC: &libvirtxml.DomainGraphicVNC{
+				AutoPort: "yes",
 			},
-		}
+		},
 	}
 
 	return &domainList
