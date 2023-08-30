@@ -16,7 +16,7 @@ all: build images check
 
 CONTAINER_RUNTIME ?= podman
 
-NO_DOCKER ?= 0
+NO_DOCKER ?= 1
 ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
