@@ -69,8 +69,6 @@ func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
 }
 
 func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
-	var serialPort uint
-
 	domainList := libvirtxml.DomainDeviceList{
 		Channels: []libvirtxml.DomainChannel{
 			{
@@ -93,10 +91,6 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 			{
 				Source: &libvirtxml.DomainChardevSource{
 					Pty: &libvirtxml.DomainChardevSourcePty{},
-				},
-				Target: &libvirtxml.DomainConsoleTarget{
-					Type: "virtio",
-					Port: &serialPort,
 				},
 			},
 		},
