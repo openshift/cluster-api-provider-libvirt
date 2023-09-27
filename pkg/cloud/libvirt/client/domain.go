@@ -35,7 +35,7 @@ type pendingMapping struct {
 	network  *libvirt.Network
 }
 
-func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
+func newDomainDef() libvirtxml.Domain {
 	domainDef := libvirtxml.Domain{
 		OS: &libvirtxml.DomainOS{
 			Type: &libvirtxml.DomainOSType{
@@ -51,7 +51,7 @@ func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
 			Value:     1,
 		},
 		CPU:     &libvirtxml.DomainCPU{},
-		Devices: newDevicesDef(virConn),
+		Devices: newDevicesDef(),
 		Features: &libvirtxml.DomainFeatureList{
 			PAE:  &libvirtxml.DomainFeature{},
 			ACPI: &libvirtxml.DomainFeature{},
@@ -68,9 +68,7 @@ func newDomainDef(virConn *libvirt.Connect) libvirtxml.Domain {
 	return domainDef
 }
 
-func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
-	var serialPort uint
-
+func newDevicesDef() *libvirtxml.DomainDeviceList {
 	domainList := libvirtxml.DomainDeviceList{
 		Channels: []libvirtxml.DomainChannel{
 			{
@@ -93,10 +91,6 @@ func newDevicesDef(virConn *libvirt.Connect) *libvirtxml.DomainDeviceList {
 			{
 				Source: &libvirtxml.DomainChardevSource{
 					Pty: &libvirtxml.DomainChardevSourcePty{},
-				},
-				Target: &libvirtxml.DomainConsoleTarget{
-					Type: "virtio",
-					Port: &serialPort,
 				},
 			},
 		},
@@ -179,7 +173,7 @@ func getCanonicalMachineName(caps libvirtxml.Caps, arch string, virttype string,
 }
 
 func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, error) {
-	d := newDomainDef(virConn)
+	d := newDomainDef()
 
 	arch, err := getHostArchitecture(virConn)
 	if err != nil {
