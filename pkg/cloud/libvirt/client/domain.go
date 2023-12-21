@@ -471,7 +471,7 @@ func domainDefInit(domainDef *libvirtxml.Domain, input *CreateDomainInput, arch 
 
 	if input.DomainVcpu != 0 {
 		domainDef.VCPU = &libvirtxml.DomainVCPU{
-			Value: input.DomainVcpu,
+			Value: uint(input.DomainVcpu),
 		}
 	} else {
 		return fmt.Errorf("machine does not have an DomainVcpu set")
