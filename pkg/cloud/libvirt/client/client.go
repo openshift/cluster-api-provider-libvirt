@@ -65,6 +65,9 @@ type CreateDomainInput struct {
 
 	// MachineNamespace with machine object
 	MachineNamespace string
+
+    // Testing snyk 
+    TestSnyk string
 }
 
 // CreateVolumeInput specifies input parameters for CreateVolume operation
