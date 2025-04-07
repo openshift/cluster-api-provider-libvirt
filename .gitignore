@@ -10,7 +10,7 @@ bin/
 *.out
 
 # For Konflux
-!vendor/github.com/go-errors/errors/cover.out
+!vendor/**
 
 ### Terraform ###
 # Local .terraform directories
