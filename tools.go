@@ -6,6 +6,6 @@
 package tools
 
 import (
-	_ "github.com/golang/mock/mockgen"
+	_ "go.uber.org/mock/mockgen"
 	_ "k8s.io/code-generator/cmd/deepcopy-gen"
 )

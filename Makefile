@@ -34,8 +34,8 @@ depend-update:
 generate: gendeepcopy gencode
 
 .PHONY: gencode
-encode:
-	go install $(GOGCFLAGS) -ldflags '-extldflags "-static"' github.com/openshift/cluster-api-provider-libvirt/vendor/github.com/golang/mock/mockgen
+gencode:
+	go install $(GOGCFLAGS) -ldflags '-extldflags "-static"' go.uber.org/mock/mockgen@v0.6.0
 	go generate ./pkg/... ./cmd/...
 
 .PHONY: gendeepcopy
