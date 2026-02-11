@@ -9,6 +9,9 @@ bin/
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# To fix hermetic builds
+!vendor/github.com/go-errors/errors/cover.out
+
 ### Terraform ###
 # Local .terraform directories
 **/.terraform/*
