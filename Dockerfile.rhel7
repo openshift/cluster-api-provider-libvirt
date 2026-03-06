@@ -11,5 +11,5 @@ RUN INSTALL_PKGS=" \
       " && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
-    yum clean all
+    yum clean all && rm -rf /var/cache/dnf/*
 COPY --from=builder /go/src/github.com/openshift/cluster-api-provider-libvirt/machine-controller-manager /
