@@ -68,6 +68,20 @@ func newDomainDef() libvirtxml.Domain {
 	return domainDef
 }
 
+// clearX86OnlyDomainFeaturesForArch removes PAE/ACPI/APIC features for
+// architectures where libvirt does not support them. newDomainDef() always
+// sets x86-style features; s390x guests use virtio-ccw / SCLP, and machine
+// types such as s390-ccw-virtio-rhel9.6.0 on RHEL 9 + QEMU 9 reject
+// <acpi/> with virError 67 (does not support ACPI).
+func clearX86OnlyDomainFeaturesForArch(d *libvirtxml.Domain) {
+	if d == nil || d.OS == nil || d.OS.Type == nil {
+		return
+	}
+	if strings.HasPrefix(d.OS.Type.Arch, "s390") {
+		d.Features = nil
+	}
+}
+
 func newDevicesDef() *libvirtxml.DomainDeviceList {
 	domainList := libvirtxml.DomainDeviceList{
 		Channels: []libvirtxml.DomainChannel{
@@ -201,6 +215,9 @@ func newDomainDefForConnection(virConn *libvirt.Connect) (libvirtxml.Domain, err
 		return d, err
 	}
 	d.OS.Type.Machine = canonicalmachine
+
+	clearX86OnlyDomainFeaturesForArch(&d)
+
 	return d, nil
 }
 
