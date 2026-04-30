@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -144,21 +143,21 @@ func (ci *defCloudInit) createISO() (string, error) {
 // object
 func (ci *defCloudInit) createFiles() (string, error) {
 	glog.Info("Creating ISO contents")
-	tmpDir, err := ioutil.TempDir("", "cloudinit")
+	tmpDir, err := os.MkdirTemp("", "cloudinit")
 	if err != nil {
 		return "", fmt.Errorf("Cannot create tmp directory for cloudinit ISO generation: %s",
 			err)
 	}
 	// user-data
-	if err = ioutil.WriteFile(filepath.Join(tmpDir, userDataFileName), []byte(ci.UserData), os.ModePerm); err != nil {
+	if err = os.WriteFile(filepath.Join(tmpDir, userDataFileName), []byte(ci.UserData), os.ModePerm); err != nil {
 		return "", fmt.Errorf("Error while writing user-data to file: %s", err)
 	}
 	// meta-data
-	if err = ioutil.WriteFile(filepath.Join(tmpDir, metaDataFileName), []byte(ci.MetaData), os.ModePerm); err != nil {
+	if err = os.WriteFile(filepath.Join(tmpDir, metaDataFileName), []byte(ci.MetaData), os.ModePerm); err != nil {
 		return "", fmt.Errorf("Error while writing meta-data to file: %s", err)
 	}
 	// network-config
-	if err = ioutil.WriteFile(filepath.Join(tmpDir, networkConfigFileName), []byte(ci.NetworkConfig), os.ModePerm); err != nil {
+	if err = os.WriteFile(filepath.Join(tmpDir, networkConfigFileName), []byte(ci.NetworkConfig), os.ModePerm); err != nil {
 		return "", fmt.Errorf("Error while writing network-config to file: %s", err)
 	}
 

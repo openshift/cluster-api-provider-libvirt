@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +99,7 @@ func (ign *defIgnition) createAndUpload(client *libvirtClient) (string, error) {
 // Dumps the Ignition object to a temporary ignition file
 func (ign *defIgnition) createFile() (string, error) {
 	glog.Info("Creating Ignition temporary file")
-	tempFile, err := ioutil.TempFile("", ign.Name)
+	tempFile, err := os.CreateTemp("", ign.Name)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create tmp file for Ignition: %s",
 			err)
